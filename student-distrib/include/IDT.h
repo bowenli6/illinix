@@ -2,10 +2,10 @@
 #define _IDT_H
 
 #include "../x86_desc.h"
-#include "exception_list.h"
-#include "interrupt_list.h"
+#include "exception.h"
+#include "interrupt.h"
 
-extern void init_idt();
+extern void idt_init();
 
 #endif
 

@@ -23,7 +23,7 @@ void SYSCAL_HANDLER () {
     printf("----------------| SYSCALL OCCURED |---------------- \n");
 }
 
-void init_idt() {
+void idt_init() {
     int i;
     for (i = 0; i < IDT_SIZE; i ++) {
         /* Set up each IDT descriptor value */

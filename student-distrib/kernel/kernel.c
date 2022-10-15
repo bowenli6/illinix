@@ -10,6 +10,7 @@
 #include "../tests.h"
 #include "../drivers/keyboard.h"
 #include "../include/page.h"
+#include "../include/IDT.h"
 
 #define RUN_TESTS
 
@@ -140,9 +141,11 @@ void entry(unsigned long magic, unsigned long addr) {
 
 /* Initialize devices, memory, filesystem, enable device interrupts on the
      * PIC, any other initialization stuff... */
-
-    i8259_init();               /* Init the PIC */
+    idt_init();                     /* Init the IDT */
+    i8259_init();                   /* Init the PIC */
     page_init();                /* Init page tables. */
+
+    printf("test passed.\n");
     // keyboard_init();            /* Init the Keyboard */
     
     /* Enable interrupts */

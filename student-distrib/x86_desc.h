@@ -280,8 +280,8 @@ typedef union pd_t {
 }pd_t;
 
 
-extern pd_t page_directory[ENTRY_NUM] __attribute__((aligned (PAGE_SIZE)));
-extern pte_t page_table[ENTRY_NUM] __attribute__((aligned (PAGE_SIZE)));
+pd_t page_directory[ENTRY_NUM] __attribute__((aligned (PAGE_SIZE)));
+pte_t page_table[ENTRY_NUM] __attribute__((aligned (PAGE_SIZE)));
 
 
 #endif /* ASM */
