@@ -1,6 +1,6 @@
-#include "lib.h"
-#include "x86_desc.h"
-#include "page.h"
+#include "../lib/lib.h"
+#include "../x86_desc.h"
+#include "../include/page.h"
 
 void page_init()
 {
