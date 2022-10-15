@@ -5,14 +5,18 @@ tests.o: tests.c tests.h x86_desc.h include/types.h lib/lib.h \
 keyboard.o: drivers/keyboard.c drivers/keyboard.h drivers/../lib/lib.h \
   drivers/../lib/../include/types.h drivers/../include/i8259.h \
   drivers/../include/types.h
-exception.o: kernel/exception.c kernel/../include/exception.h
+exception.o: kernel/exception.c kernel/../include/exception.h \
+  kernel/../lib/lib.c kernel/../lib/lib.h \
+  kernel/../lib/../include/types.h
 i8259.o: kernel/i8259.c kernel/../include/i8259.h \
   kernel/../include/types.h kernel/../lib/lib.h \
   kernel/../lib/../include/types.h
 IDT.o: kernel/IDT.c kernel/../include/IDT.h \
   kernel/../include/../x86_desc.h kernel/../include/../include/types.h \
   kernel/../include/exception.h kernel/../include/interrupt.h
-interrupt.o: kernel/interrupt.c kernel/../include/interrupt.h
+interrupt.o: kernel/interrupt.c kernel/../include/interrupt.h \
+  kernel/../lib/lib.c kernel/../lib/lib.h \
+  kernel/../lib/../include/types.h
 kernel.o: kernel/kernel.c kernel/../multiboot.h kernel/../include/types.h \
   kernel/../x86_desc.h kernel/../lib/lib.h \
   kernel/../lib/../include/types.h kernel/../include/i8259.h \
