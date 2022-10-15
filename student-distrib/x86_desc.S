@@ -114,5 +114,24 @@ _idt:
 
 idt_bottom:
 
+# page directory
+.align 4096
+page_directory:
+_page_directory:
+    .rept 1024
+    .long 0
+    .endr
+
+page_directory_bottom:
+
+# page table
+.align 4096
+page_table:
+_page_table:
+    .rept 1024
+    .long 0
+    .endr
+
+page_table_bottom:
 
 
