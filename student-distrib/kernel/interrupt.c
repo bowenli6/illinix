@@ -1,4 +1,5 @@
 #include "../include/interrupt.h"
+#include "../lib/lib.c"
 
 
 static char* interrupt_arr[2] = {

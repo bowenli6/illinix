@@ -2,6 +2,21 @@
 #include "../x86_desc.h"
 #include "../include/page.h"
 
+/* Turn on page size extension; set directory address; enable paging */
+void enable_paging()
+{
+    asm volatile(
+    "movl %%cr4, %%eax          ;"
+    "orl $0x10, %%eax           ;"
+    "movl %%eax, %%cr4          ;"
+	"movl %0, %%eax             ;"
+	"movl %%eax, %%cr3          ;"
+	"movl %%cr0, %%eax          ;"
+	"orl $0x80000000, %%eax     ;"
+	"movl %%eax, %%cr0          ;"
+	:  : "r"(page_directory): "eax" );
+}
+
 void page_init()
 {
     int i;
@@ -72,17 +87,3 @@ void page_init()
     return;
 }
 
-/* Turn on page size extension; set directory address; enable paging */
-void enable_paging()
-{
-    asm volatile(
-    "movl %%cr4, %%eax          ;"
-    "orl $0x10, %%eax           ;"
-    "movl %%eax, %%cr4          ;"
-	"movl %0, %%eax             ;"
-	"movl %%eax, %%cr3          ;"
-	"movl %%cr0, %%eax          ;"
-	"orl $0x80000000, %%eax     ;"
-	"movl %%eax, %%cr0          ;"
-	:  : "r"(page_directory): "eax" );
-}

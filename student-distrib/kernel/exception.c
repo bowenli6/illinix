@@ -1,4 +1,5 @@
 #include "../include/exception.h"
+#include "../lib/lib.c"
 
 /* According to IA32 page 6, we define the name for first 20 exceptions*/
 static char* exception_arr[EXCEPTION_COUNT] = {
