@@ -5,6 +5,9 @@
 void page_init()
 {
     int i;
+    /* turn on paging registers */
+    enable_paging();
+
     /* initialize first 4MB directory */
     page_directory[0].KB.present = 1;
     page_directory[0].KB.read_write = 1;
