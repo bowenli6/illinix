@@ -31,7 +31,6 @@ void page_init()
     page_directory[1].MB.read_write = 1;
     page_directory[1].MB.page_size = 1;
     page_directory[1].MB.global_page = 1;
-    page_directory[1].MB.available = 3;
     page_directory[1].MB.base_address = 1;
 
     /* initialize 8MB-4GB page directories */
