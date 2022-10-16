@@ -20,12 +20,8 @@ static inline void assertion_failure(){
 
 /* Checkpoint 1 tests */
 
-/* IDT Test - Example
- * 
- * Asserts that first 10 IDT entries are not NULL
- * Inputs: None
- * Outputs: PASS/FAIL
- * Side Effects: None
+/**
+ * @brief that first 10 IDT entries are not NULL
  * Coverage: Load IDT, IDT definition
  * Files: x86_desc.h/S
  */
@@ -44,15 +40,18 @@ int idt_test() {
 }
 
 
-
-int keyboard_scancodes() {
+/**
+ * @brief Observe if the exception handler 
+ * prints the error message.
+ */
+void divide_error() {
 	TEST_HEADER;
-	int result = PASS;
-	// TODO
-	return result;
+	int one = 1;
+	int zero = 0;
+	int check = one / zero;
+	printf("I don't like warning, so I don't care what %d is\n", check);
 }
 
-int 
 
 /* Checkpoint 2 tests */
 /* Checkpoint 3 tests */
@@ -64,7 +63,7 @@ int
 void launch_tests() {
 	printf("--------------------------- Test begins ---------------------------\n");
 	TEST_OUTPUT("idt_test", idt_test());
-
+	divide_error();
 	printf("---------------------------- Test Ends ----------------------------\n");
 
 }

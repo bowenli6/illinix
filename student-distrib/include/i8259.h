@@ -40,13 +40,9 @@ extern uint16_t irq_mask;
 
 /* Externally-visible functions */
 
-/* Initialize both PICs */
 void i8259_init(void);
-/* Enable (unmask) the specified IRQ */
 void enable_irq(uint32_t irq_num);
-/* Disable (mask) the specified IRQ */
 void disable_irq(uint32_t irq_num);
-/* Send end-of-interrupt signal for the specified IRQ */
 void send_eoi(uint32_t irq_num);
 
 #endif /* _I8259_H */

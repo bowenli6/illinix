@@ -21,7 +21,7 @@ void keyboard_init(void) {
  * Interrupt handler for the keyboard device.
  */
 void keyboard_handler(void) {
-    unsigned long interrupt_flag;
+    uint32_t interrupt_flag;
     cli_and_save(interrupt_flag);
     uint8_t scancode = inb(KEYBOARD_PORT);
     keyboard_print(scancode);

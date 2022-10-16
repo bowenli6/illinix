@@ -7,10 +7,10 @@
 #include "../lib/lib.h"
 #include "../include/i8259.h"
 #include "../debug.h"
-#include "../tests.h"
+#include "../test/tests.h"
 #include "../drivers/keyboard.h"
 #include "../include/page.h"
-#include "../include/IDT.h"
+#include "../include/idt.h"
 
 #define RUN_TESTS
 

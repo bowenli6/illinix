@@ -9,9 +9,7 @@
 uint16_t irq_mask = 0xffff;                 /* IRQs 0 ~ 15 */
 
 /**
- * i8259_init
- *
- * Initialize the 8259 PIC.
+ * @brief Initialize the 8259 PIC.
  */
 void i8259_init(void) {
 	outb(0xff, PIC_MASTER_IMR);	            /* mask all of 8259A-1 */
@@ -34,10 +32,10 @@ void i8259_init(void) {
 }
 
 /**
- * enable_irq
+ * @brief Enable (unmask) the specified IRQ.
+ * 
  * @irq_num: The number of mask should be set to 0
  * 
- * Enable (unmask) the specified IRQ. 
  */
 void enable_irq(uint32_t irq_num) {
     unsigned int mask = ~(1 << irq_num);            
@@ -49,10 +47,10 @@ void enable_irq(uint32_t irq_num) {
 }
 
 /**
- * enable_irq
+ * @brief Disable (mask) the specified IRQ.
+ * 
  * @irq_num: The number of mask should be set to 1
  * 
- * Disable (mask) the specified IRQ.
  */
 void disable_irq(uint32_t irq_num) {
     unsigned int mask = 1 << irq_num;
@@ -64,10 +62,10 @@ void disable_irq(uint32_t irq_num) {
 }
 
 /**
- * send_eoi
+ * @brief Send end-of-interrupt signal for the specified IRQ
+ * 
  * @irq_num: The number of interrupt that has just done.
  * 
- * Send end-of-interrupt signal for the specified IRQ
  */
 void send_eoi(uint32_t irq_num) {
 	uint8_t eoi = EOI;								

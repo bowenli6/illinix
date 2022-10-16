@@ -1,29 +1,51 @@
-#ifndef _EXCEPTION_LIST_H
-#define _EXCEPTION_LIST_H
-
+#ifndef _EXCEPTION_H
+#define _EXCEPTION_H
 
 #define EXCEPTION_COUNT             20
-#define IDT_SIZE                    256
 
-void DIVIDE_ZERO_HANDLER ();
-void DEBUG_HANDLER  ();
-void NON_MASKABLE_HANDLER  ();
-void BREAKPOINT_HANDLER  ();
-void OVERFLOW_HANDLER  ();
-void RANGE_EXCEEDED_HANDLER  ();
-void INVALID_OP_HANDLER  ();
-void DEVICE_UNALIBLE_HANDLER  ();
-void DOUBLE_FAULT_HANDLER  ();
-void COPROCESSOR_OVERRUN_HANDLER  ();
-void INVALID_TSS_HANDLER  ();
-void SEGMENT_NOT_PRESENT_HANDLER  ();
-void STACK_FAULT_HANDLER  ();
-void GENRAL_PROTECTION_HANDLER  ();
-void PAGE_FAULT_HANDLER  ();
-void RESERVED_HANDLER  ();
-void X87_FLOATING_POINT_HANDLER  ();
-void ALIGHMENT_CHECK_HANDLER  ();
-void MACHINE_CHECK_HANDLER  ();
-void SIMD_FLOATING_POINT_HANDLER  (); 
+/* Exceptions */
+typedef enum {
+    DIVIDE_ERROR,
+    DEBUG,
+    NMI,
+    BREAKPOINT,
+    OVERFLOW,
+    BOUNDS_CHECK,
+    INVALID_OPCODE,
+    DEVICE_NOT_AVAILIAVLE,
+    DOUBLE_FAULT,
+    COPROCESSOR_OVERRUN,
+    INVALID_TSS,
+    SEGMENT_NOT_PRESENT,
+    STACK_SEGMENT_FAULT,
+    GENRAL_PROTECTION,
+    PAGE_FAULT,
+    INTEL_RESERVED,
+    FLOATING_POINT_ERROR,
+    ALIGHMENT_CHECK,
+    MACHINE_CHECK,
+    SIMD_FLOATING_POINT
+} exception_t;
 
-#endif 
+/* Exceptions handlers */
+
+void divide_error_handler();
+void debug_handler();
+void nmi_handler();
+void int3_handler();
+void overflow_handler();
+void bounds_handler();
+void invalid_op_handler();
+void device_not_available_handler();
+void double_fault_handler();
+void coprocessor_segment_overrun_handler();
+void invalid_TSS_handler();
+void segment_not_present_handler();
+void stack_segment_handler();
+void general_protection_handler();
+void page_fault_handler();
+void coprocessor_error_handler();
+void alignment_check_handler();
+void machine_check_handler();
+void simd_coprocessor_error_handler();
+#endif /* _EXCEPTION_H */

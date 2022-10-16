@@ -1,8 +1,5 @@
-
-/*Generic RTC interface*/
-
-#ifndef RTC_H_
-#define RTC_H_
+#ifndef _RTC_H
+#define _RTC_H
 
 
 #define RTC_CMD_port  0x70
@@ -12,32 +9,10 @@
 #define RTC_B_reg 0x8B
 #define RTC_C_reg 0x8C
 
-#define IRQ_8 8
-
-/**
- * RTC_init
- * description: initialize RTC and enable RTC interrupt
- * input: void
- * output: void
- */
+#define RTC_IRQ 8
 
 void RTC_init(void);
 
-/**
- * RTC_interrupt
- * description: Read data from register C and handle it
- * input: void
- * output: void
- */
-
 void RTC_handler(void);
 
-
-
-
-
-
-#endif RTC_H_
-
-
-
+#endif /* _RTC_H */

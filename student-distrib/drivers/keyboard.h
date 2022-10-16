@@ -24,10 +24,7 @@ static const uint8_t scancodes[KEYBOARD_SIZE][2] =
     {0, 0}, {0, 0}, {0, 0}, "  " /* space */
 };
 
-/* Initialize the keyboard and enable the interrput. */
 void keyboard_init(void);
-
-/* Interrupt handler for the keyboard device. */
 void keyboard_handler(void);
 
 #endif /* _KEYBOARD_H */
