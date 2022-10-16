@@ -18,6 +18,12 @@
 /* Check if the bit BIT in FLAGS is set. */
 #define CHECK_FLAG(flags, bit)   ((flags) & (1 << (bit)))
 
+void shell() {
+    clear();
+    puts("Hello illinix!\n");
+    while(1);
+}
+
 /* Check if MAGIC is valid and print the Multiboot information structure
    pointed by ADDR. */
 void entry(unsigned long magic, unsigned long addr) {
@@ -143,26 +149,24 @@ void entry(unsigned long magic, unsigned long addr) {
      * PIC, any other initialization stuff... */
     idt_init();                     /* Init the IDT */
     i8259_init();                   /* Init the PIC */
-    page_init();                /* Init page tables. */
-
-    printf("test passed.\n");
-    // keyboard_init();            /* Init the Keyboard */
+    // page_init();                    /* Init page tables. */
+    // keyboard_init();                /* Init the Keyboard */
     
     /* Enable interrupts */
     /* Do not enable the following until after you have set up your
      * IDT correctly otherwise QEMU will triple fault and simple close
      * without showing you any output */
-    /*printf("Enabling Interrupts\n");
-    sti();*/
+    // printf("Enabling Interrupts\n");
+    // sti();
 
     /* This is an test for share gitlab. */
-
-
 #ifdef RUN_TESTS
     /* Run tests */
     launch_tests();
 #endif
+
     /* Execute the first program ("shell") ... */
+    shell();    
 
     /* Spin (nicely, so we don't chew up cycles) */
     asm volatile (".1: hlt; jmp .1;");

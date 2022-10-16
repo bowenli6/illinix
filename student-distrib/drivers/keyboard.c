@@ -21,11 +21,12 @@ void keyboard_init(void) {
  * Interrupt handler for the keyboard device.
  */
 void keyboard_handler(void) {
-    cli();
+    unsigned long interrupt_flag;
+    cli_and_save(interrupt_flag);
     uint8_t scancode = inb(KEYBOARD_PORT);
     keyboard_print(scancode);
     send_eoi(KEYBOARD_IRQ);
-    sti();
+    restore_flags(interrupt_flag);
 }
 
 /**
