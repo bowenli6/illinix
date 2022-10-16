@@ -18,7 +18,7 @@ void int_to_usr(int idx) {
     printf("%s occured \n", interrupt_arr[idx]);
 }
 
-void KEY_BOARD_HANDLER () {
+void keyboard_handler_TEST () {
     int_to_usr(0);
 }
 
