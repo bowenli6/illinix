@@ -46,7 +46,7 @@ void page_init()
     {
         page_table[i].present = (i == ( VIDEO >> PDE_OFFSET_4KB ) ) ? 1 : 0;
         page_table[i].read_write = 1;
-        page_table[i].base_address = (i == ( VIDEO >> PDE_OFFSET_4KB ) ) ? VIDEO : 0;
+        page_table[i].base_address = (i == ( VIDEO >> PDE_OFFSET_4KB ) ) ? i : 0;
     }
 
     /* turn on paging registers */
