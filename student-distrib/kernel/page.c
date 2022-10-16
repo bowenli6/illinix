@@ -2,21 +2,37 @@
 #include "../x86_desc.h"
 #include "../include/page.h"
 
-/* Turn on page size extension; set directory address; enable paging */
+/**
+ * @brief Turn on paging related registers.
+ *
+ */
 void enable_paging()
 {
+    /* set CR3 to directory base address */
     asm volatile(
 	"movl %0, %%eax             ;"
 	"movl %%eax, %%cr3          ;"
-    "movl %%cr4, %%eax          ;"
-    "orl $0x10, %%eax           ;"
-    "movl %%eax, %%cr4          ;"
-	"movl %%cr0, %%eax          ;"
-	"orl $0x80000000, %%eax     ;"
-	"movl %%eax, %%cr0          ;"
 	:  : "r"(page_directory): "eax" );
+
+    /* Turn on page size extension */
+    asm volatile(
+    "movl %%cr4, %%eax          ;"
+    "orl %0, %%eax           ;"
+    "movl %%eax, %%cr4          ;"
+	:  : "r"(CR4_EXTENSION_FLAG): "eax" );
+
+    /* Turn on paging */
+    asm volatile(
+	"movl %%cr0, %%eax          ;"
+	"orl %0, %%eax     ;"
+	"movl %%eax, %%cr0          ;"
+	:  : "r"(CR0_PAGE_FLAG): "eax" );
 }
 
+/**
+ * @brief Initialize page directory and page table.
+ * 
+ */
 void page_init()
 {
     int i;
@@ -35,7 +51,7 @@ void page_init()
 
     /* initialize 8MB-4GB page directories */
     for(i = 2; i < ENTRY_NUM; i++){
-        page_directory[i].MB.present = 0;
+        page_directory[i].MB.present = 0;   /* do not exist */
         page_directory[i].MB.page_size = 1;
         page_directory[i].MB.base_address = i;
     }
@@ -43,6 +59,7 @@ void page_init()
     /* initialize page tables */
     for(i = 0; i < ENTRY_NUM; i++)
     {
+        /* only video memory is initialized as present */
         page_table[i].present = (i == ( VIDEO >> PDE_OFFSET_4KB ) ) ? 1 : 0;
         page_table[i].read_write = 1;
         page_table[i].base_address = (i == ( VIDEO >> PDE_OFFSET_4KB ) ) ? i : 0;

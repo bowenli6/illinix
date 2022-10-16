@@ -115,20 +115,20 @@ _idt:
 idt_bottom:
 
 # page directory
-.align 4096
+.align PAGE_SIZE        
 page_directory:
 _page_directory:
-    .rept 1024
+    .rept ENTRY_NUM
     .long 0
     .endr
 
 page_directory_bottom:
 
 # page table
-.align 4096
+.align PAGE_SIZE       
 page_table:
 _page_table:
-    .rept 1024
+    .rept ENTRY_NUM
     .long 0
     .endr
 
