@@ -68,6 +68,57 @@ void syscall_check() {
 	asm volatile("int $128");
 }
 
+/**
+ * @brief Observe if status of PDEs and PTEs 
+ * are correct.
+ * 
+ * @return int test result
+ */
+int page_status_test() {
+	TEST_HEADER;
+	clear();
+	int i, result = PASS;
+
+	/* page directory status test */
+	result = ( page_directory[0].KB.present == 1 ) & ( page_directory[1].MB.present == 1 );
+	for(i = 2; i < ENTRY_NUM; i++) result &= page_directory[i].MB.present == 0;
+
+	/* page table status test */
+	for(i = 0; i < ENTRY_NUM; i++) 
+		result &= (i == VIDEO_INDEX) ? page_table[i].present : !page_table[i].present;
+
+	return result;
+}
+
+/**
+ * @brief This function will dereference an available
+ * address and return PASS.
+ * 
+ * @return int test result
+ */
+int page_access_test() {
+	TEST_HEADER;
+	int result = PASS;
+	int* temp_pt;
+	int temp_v;
+	temp_pt = (int*) (VIDEO_INDEX << PTE_OFFSET);
+	temp_v = *temp_pt;
+	return result;
+}
+
+/**
+ * @brief This function will dereference an unavailable 
+ * address and generate a page fault exception.
+ * 
+ */
+void page_fault_test() {
+	TEST_HEADER;
+	int* temp_pt;
+	int temp_v;
+	temp_pt = (int*) ( (VIDEO_INDEX + 1) << PTE_OFFSET);
+	temp_v = *temp_pt;
+}
+
 /* Checkpoint 2 tests */
 /* Checkpoint 3 tests */
 /* Checkpoint 4 tests */
@@ -80,6 +131,10 @@ void launch_tests() {
 	TEST_OUTPUT("idt_test", idt_test());
 	// divide_error();
 	syscall_check();
+	TEST_OUTPUT("page_status_test", page_status_test());
+	TEST_OUTPUT("page_access_test", page_status_test());
+	printf("[TEST page_fault_test]: There should be a page fault. \n");
+	page_fault_test();
 	printf("---------------------------- Test Ends ----------------------------\n");
 
 }

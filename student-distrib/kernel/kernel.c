@@ -150,7 +150,7 @@ void entry(unsigned long magic, unsigned long addr) {
     trap_init();                    /* Initialize the exception handlers for IDT. */
     intr_init();                    /* Initialize the interrupt handlers for IDT. */
     i8259_init();                   /* Initialize the PIC */
-    // page_init();                    /* Initialize page tables. */
+    page_init();                    /* Initialize page tables. */
     keyboard_init();                /* Initialize the Keyboard */
     
     /* Enable interrupts */
