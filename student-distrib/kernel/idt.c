@@ -10,7 +10,7 @@ static void set_trap_gate(uint8_t n, void (*handler)());
 static void set_intr_gate(uint8_t n, void (*handler)());
 static void set_system_gate(uint8_t n, void (*handler)());
 static void set_system_intr_gate(uint8_t n, void (*handler)());
-static void set_task_gate(uint8_t n, uint8_t gdt);
+// static void set_task_gate(uint8_t n, uint8_t gdt);
 
 
 /*
@@ -90,6 +90,17 @@ void trap_init() {
 
 
 /**
+ * @brief Initialize interrupt handlers 
+ * from device drivers.
+ */
+void intr_init() {
+    set_intr_gate(KEYBOARD, &keyboard_handler);
+    set_intr_gate(RTC, &RTC_handler);
+}
+
+
+
+/**
  * @brief Insterts a trap gate in the nth IDT entry 
  * for an exception handler.
  * 
@@ -157,11 +168,11 @@ static void set_system_intr_gate(uint8_t n, void (*handler)()) {
  * @param gdt : The index in the GDT of the TSS 
  * containing the function to be activated.
  */
-static void set_task_gate(uint8_t n, uint8_t gdt) {
-    idt[n].seg_selector = gdt;
-    idt[n].dpl = 3;    
-    SET_IDT_ENTRY(idt[n], 0);
-}
+// static void set_task_gate(uint8_t n, uint8_t gdt) {
+//     idt[n].seg_selector = gdt;
+//     idt[n].dpl = 3;    
+//     SET_IDT_ENTRY(idt[n], 0);
+// }
 
 
 /**

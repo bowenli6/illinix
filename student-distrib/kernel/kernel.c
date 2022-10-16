@@ -21,7 +21,6 @@
 void shell() {
     clear();
     puts("Hello illinix!\n");
-    while(1);
 }
 
 /* Check if MAGIC is valid and print the Multiboot information structure
@@ -147,17 +146,19 @@ void entry(unsigned long magic, unsigned long addr) {
 
 /* Initialize devices, memory, filesystem, enable device interrupts on the
      * PIC, any other initialization stuff... */
-    idt_init();                     /* Init the IDT */
-    i8259_init();                   /* Init the PIC */
-    // page_init();                    /* Init page tables. */
-    // keyboard_init();                /* Init the Keyboard */
+    idt_init();                     /* Initialize the IDT. */
+    trap_init();                    /* Initialize the exception handlers for IDT. */
+    intr_init();                    /* Initialize the interrupt handlers for IDT. */
+    i8259_init();                   /* Initialize the PIC */
+    // page_init();                    /* Initialize page tables. */
+    keyboard_init();                /* Initialize the Keyboard */
     
     /* Enable interrupts */
     /* Do not enable the following until after you have set up your
      * IDT correctly otherwise QEMU will triple fault and simple close
      * without showing you any output */
-    // printf("Enabling Interrupts\n");
-    // sti();
+    printf("Enabling Interrupts\n");
+    sti();
 
     /* This is an test for share gitlab. */
 #ifdef RUN_TESTS

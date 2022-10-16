@@ -43,15 +43,30 @@ int idt_test() {
 /**
  * @brief Observe if the exception handler 
  * prints the error message.
+ * 
  */
 void divide_error() {
 	TEST_HEADER;
+	clear();
 	int one = 1;
 	int zero = 0;
 	int check = one / zero;
 	printf("I don't like warning, so I don't care what %d is\n", check);
 }
 
+
+/**
+ * @brief Observe if the syscall handler
+ * print the massage.
+ * 
+ */
+void syscall_check() {
+	TEST_HEADER;
+	clear();
+	asm volatile("int $128");
+	asm volatile("int $128");
+	asm volatile("int $128");
+}
 
 /* Checkpoint 2 tests */
 /* Checkpoint 3 tests */
@@ -63,7 +78,8 @@ void divide_error() {
 void launch_tests() {
 	printf("--------------------------- Test begins ---------------------------\n");
 	TEST_OUTPUT("idt_test", idt_test());
-	divide_error();
+	// divide_error();
+	syscall_check();
 	printf("---------------------------- Test Ends ----------------------------\n");
 
 }

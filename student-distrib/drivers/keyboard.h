@@ -25,7 +25,7 @@ static const uint8_t scancodes[KEYBOARD_SIZE][2] =
 };
 
 void keyboard_init(void);
-void keyboard_handler(void);
+// void keyboard_handler(void);
 
 #endif /* _KEYBOARD_H */
 

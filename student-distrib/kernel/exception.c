@@ -43,7 +43,10 @@ static void exp_to_usr(int idx) {
 /* Exception handlers */
 
 void divide_error_handler() {
+    cli();
     exp_to_usr(DIVIDE_ERROR);
+    sti();
+	asm volatile("iret");
 }
 
 void debug_handler() {

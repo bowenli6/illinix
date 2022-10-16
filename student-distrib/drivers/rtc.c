@@ -1,12 +1,12 @@
 #include "rtc.h"
 #include "../lib/lib.h"
 #include "../include/i8259.h"
+#include "../include/interrupt.h"
 
 /* Claimed as volatile to let it change base on interrupts. */
 volatile int global_interrupt_flag;
 
 /**
- * RTC_init
  * @brief Initialize RTC and enable RTC interrupt.
  * 
  */

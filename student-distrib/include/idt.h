@@ -9,6 +9,7 @@
 
 void idt_init();
 void trap_init();
+void intr_init();
 void ignore_int_handler();
 
 #endif

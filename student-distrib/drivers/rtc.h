@@ -13,6 +13,4 @@
 
 void RTC_init(void);
 
-void RTC_handler(void);
-
 #endif /* _RTC_H */

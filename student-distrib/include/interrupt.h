@@ -1,10 +1,10 @@
 #ifndef _INTERRUPT_H
 #define _INTERRUPT_H
 
-#define KEY_BOARD_IDX 0x21
-#define RTC_IDX     0x28
+#define KEYBOARD 0x21
+#define RTC      0x28
 
-void keyboard_handler_TEST();
-void RTC_HANDLER ();
+void keyboard_handler();
+void RTC_handler();
 
 #endif /*_INTERRUPT_H */
