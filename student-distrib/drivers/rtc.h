@@ -9,6 +9,12 @@
 #define RTC_B_reg 0x8B
 #define RTC_C_reg 0x8C
 
+
+#define RTC_MAX_freq 1024
+#define RTC_MIN_freq 2
+#define prev_mask 0xF0
+#define rate_mask 0x0F
+
 #define RTC_IRQ 8
 
 void RTC_init();
