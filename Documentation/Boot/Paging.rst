@@ -21,6 +21,7 @@ contains the video memory.
 Page Structure
 -------------------
 1. Page_directory[1024]{KB, MB}
+
 2. Page_table[1024]
 
 
@@ -28,9 +29,13 @@ Page Structure
 Page Initialize
 ---------------------
 Set the page_directory[0].present and page_directory[1].present to 1, and others to 0.
+
 Set the base address of page_directory[0] to page table address.
+
 Set the page_size and global flag of page_directory[1].
+
 Set the page table entry of video memory to present and others to not present.
+
 
 ---------------------
 Enable Paging
