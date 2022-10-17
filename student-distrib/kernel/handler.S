@@ -54,14 +54,17 @@ restore_all:
     popl    %ebx
     popl    %ecx
     popl    %edx
-    popl    %esi
+    popl    %esi                # restore the registers and flgas.
     popl    %edi
     popl    %ebp
     popl    %eax
     popl    %ds
     popl    %es
     addl    $4, %esp
-    iret
+    iret                        # return from the exceptions to the previous stats.
+
+
+# Exception handlers
 
 .globl divide_error_handler
 divide_error_handler:
@@ -235,4 +238,14 @@ rtc_handler:
     iret
 
 
+
+# System calls
+.globl syscall_handler
+syscall_handler:
+    pushfl  
+    pushal
+    call    do_syscall
+    popal
+    popfl
+    iret
 

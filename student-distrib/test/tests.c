@@ -47,7 +47,6 @@ int idt_test() {
  */
 void divide_error() {
 	TEST_HEADER;
-	clear();
 	int one = 1;
 	int zero = 0;
 	int check = one / zero;
@@ -62,7 +61,6 @@ void divide_error() {
  */
 void inline syscall_check() {
 	TEST_HEADER;
-	clear();
 	asm volatile("int $128");
 	asm volatile("int $128");
 	asm volatile("int $128");
@@ -76,7 +74,6 @@ void inline syscall_check() {
  */
 int page_status_test() {
 	TEST_HEADER;
-	clear();
 	int i, result = PASS;
 
 	/* page directory status test */
@@ -145,6 +142,7 @@ void page_fault_test() {
 /* Test suite entry point */
 void launch_tests() {
 	printf("--------------------------- Test begins ---------------------------\n");
+	clear();
 	TEST_OUTPUT("idt_test", idt_test());
 	// divide_error();
 	syscall_check();

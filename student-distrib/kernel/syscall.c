@@ -5,6 +5,6 @@
  * @brief A system call handler.
  * 
  */
-void syscall_handler() {
+void do_syscall() {
     printf("----------------| SYSCALL OCCURED |---------------- \n");
 }

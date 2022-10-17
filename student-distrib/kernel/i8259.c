@@ -11,7 +11,7 @@ uint16_t irq_mask = 0xffff;                 /* IRQs 0 ~ 15 */
 /**
  * @brief Initialize the 8259 PIC.
  */
-void i8259_init(void) {
+void i8259_init() {
 	outb(0xff, PIC_MASTER_IMR);	            /* mask all of 8259A-1 */
 	outb(0xff, PIC_SLAVE_IMR);	            /* mask all of 8259A-2 */
 
