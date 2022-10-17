@@ -43,8 +43,8 @@ static void exp_to_usr(int idx) {
 /* Exception handlers */
 
 void do_divide_error() {
-    // exp_to_usr(DIVIDE_ERROR);
-    printf("d");
+    exp_to_usr(DIVIDE_ERROR);
+    //printf("d");
 }
 
 void do_debug() {

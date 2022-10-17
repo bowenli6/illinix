@@ -115,11 +115,11 @@ int page_access_test() {
 }
 
 /**
- * @brief This function will dereference an unavailable 
- * address and generate a page fault exception.
+ * @brief This function will dereference a null 
+ * pointer and generate a page fault exception.
  * 
  */
-void page_fault_test() {
+void page_fault_null() {
 	TEST_HEADER;
 	int* temp_pt;
 	int temp_v;
@@ -127,6 +127,17 @@ void page_fault_test() {
 	printf("Dereferencing a null pointer:\n");
 	temp_pt = NULL;
 	temp_v = *temp_pt;
+}
+
+/**
+ * @brief This function will dereference an unavailable 
+ * address and generate a page fault exception.
+ * 
+ */
+void page_fault_random() {
+	TEST_HEADER;
+	int* temp_pt;
+	int temp_v;
 
 	printf("Dereferencing random unavailable address:\n");
 	temp_pt = (int*) ( (VIDEO_INDEX + 1) << PTE_OFFSET);
@@ -144,11 +155,20 @@ void launch_tests() {
 	printf("--------------------------- Test begins ---------------------------\n");
 	clear();
 	TEST_OUTPUT("idt_test", idt_test());
-	// divide_error();
+	//divide_error();
 	syscall_check();
+
+	/* page test 1 */
 	TEST_OUTPUT("page_status_test", page_status_test());
 	TEST_OUTPUT("page_access_test", page_status_test());
-	printf("[TEST page_fault_test]: There should be two page fault. \n");
-	// page_fault_test();
+
+	/* page test 2 */
+	// printf("[TEST page_fault_null]: There should be a page fault. \n");
+	// page_fault_null();
+
+	/* page test 3 */
+	// printf("[TEST page_fault_random]: There should be a page fault. \n");
+	// page_fault_random();
+
 	printf("---------------------------- Test Ends ----------------------------\n");
 }

@@ -45,10 +45,10 @@ error_code:
     # rather using the Standard C calling convention. The current version of 
     # exception handlers dose not receive arguments
     call    *%edi                   # Invokes the do_handler function.
-	jmp     ret_from_exception      # returns from the exception.
-
-
 ret_from_exception:
+    hlt
+    jmp     ret_from_exception      # returns from the exception.
+
 
 restore_all:
     popl    %ebx
@@ -68,66 +68,77 @@ restore_all:
 
 .globl divide_error_handler
 divide_error_handler:
+    cli
     pushl   $0                  # no error code now: pad the hardware error code on the stack.
     pushl   $do_divide_error    # push the do_handler function address. 
     jmp     error_code          # part of theses are only useful when syscall is working.
 
 .globl debug_handler
 debug_handler:
+    cli
     pushl   $0                  # no error code now: pad the hardware error code on the stack.
     pushl   $do_debug           # push the do_handler function address. 
     jmp     error_code          # part of theses are only useful when syscall is working.
 
 .globl nmi_handler
 nmi_handler:
+    cli
     pushl   $0                  # no error code now: pad the hardware error code on the stack.
     pushl   $do_nmi             # push the do_handler function address. 
     jmp     error_code          # part of theses are only useful when syscall is working.
 
 .globl int3_handler
 int3_handler:
+    cli
     pushl   $0                  # no error code now: pad the hardware error code on the stack.
     pushl   $do_int3            # push the do_handler function address. 
     jmp     error_code          # part of theses are only useful when syscall is working.
 
 .globl overflow_handler
 overflow_handler:
+    cli
     pushl   $0                  # no error code now: pad the hardware error code on the stack.
     pushl   $do_overflow        # push the do_handler function address. 
     jmp     error_code          # part of theses are only useful when syscall is working.
 
 .globl bounds_handler
 bounds_handler:
+    cli
     pushl   $0                  # no error code now: pad the hardware error code on the stack.
     pushl   $do_bounds          # push the do_handler function address. 
     jmp     error_code          # part of theses are only useful when syscall is working.
 
 .globl invalid_op_handler
 invalid_op_handler:
+    cli
     pushl   $0                  # no error code now: pad the hardware error code on the stack.
     pushl   $do_invalid_op      # push the do_handler function address. 
     jmp     error_code          # part of theses are only useful when syscall is working.
 
 .globl device_not_available_handler
 device_not_available_handler:
+    cli
     pushl   $0                      # no error code now: pad the hardware error code on the stack.
     pushl   $do_device_not_available# push the do_handler function address. 
     jmp     error_code              # part of theses are only useful when syscall is working.
 
 .globl double_fault_handler
 double_fault_handler:
+    cli
     pushl   $0                  # no error code now: pad the hardware error code on the stack.
     pushl   $do_double_fault    # push the do_handler function address. 
     jmp     error_code          # part of theses are only useful when syscall is working.
 
 .globl coprocessor_segment_overrun_handler
 coprocessor_segment_overrun_handler:
+    cli
     pushl   $0                              # no error code now: pad the hardware error code on the stack.
     pushl   $do_coprocessor_segment_overrun # push the do_handler function address. 
     jmp     error_code                      # part of theses are only useful when syscall is working.
 
 .globl invalid_TSS_handler
 invalid_TSS_handler:
+    cli
     pushl   $0                  # no error code now: pad the hardware error code on the stack.
     pushl   $do_invalid_TSS     # push the do_handler function address. 
     jmp     error_code          # part of theses are only useful when syscall is working.
@@ -135,6 +146,7 @@ invalid_TSS_handler:
 
 .globl segment_not_present_handler
 segment_not_present_handler:
+    cli
     pushl   $0                          # no error code now: pad the hardware error code on the stack.
     pushl   $do_segment_not_present     # push the do_handler function address. 
     jmp     error_code                  # part of theses are only useful when syscall is working.
@@ -142,6 +154,7 @@ segment_not_present_handler:
 
 .globl stack_segment_handler
 stack_segment_handler:
+    cli
     pushl   $0                  # no error code now: pad the hardware error code on the stack.
     pushl   $do_stack_segment   # push the do_handler function address. 
     jmp     error_code          # part of theses are only useful when syscall is working.
@@ -149,6 +162,7 @@ stack_segment_handler:
 
 .globl general_protection_handler
 general_protection_handler:
+    cli
     pushl   $0                          # no error code now: pad the hardware error code on the stack.
     pushl   $do_general_protection      # push the do_handler function address. 
     jmp     error_code                  # part of theses are only useful when syscall is working.
@@ -156,6 +170,7 @@ general_protection_handler:
 
 .globl page_fault_handler
 page_fault_handler:
+    cli
     pushl   $0                  # no error code now: pad the hardware error code on the stack.
     pushl   $do_page_fault      # push the do_handler function address. 
     jmp     error_code          # part of theses are only useful when syscall is working.
@@ -163,6 +178,7 @@ page_fault_handler:
 
 .globl coprocessor_error_handler
 coprocessor_error_handler:
+    cli
     pushl   $0                      # no error code now: pad the hardware error code on the stack.
     pushl   $do_coprocessor_error   # push the do_handler function address. 
     jmp     error_code              # part of theses are only useful when syscall is working.
@@ -170,18 +186,21 @@ coprocessor_error_handler:
 
 .globl alignment_check_handler
 alignment_check_handler:
+    cli
     pushl   $0                      # no error code now: pad the hardware error code on the stack.
     pushl   $do_alignment_check     # push the do_handler function address. 
     jmp     error_code              # part of theses are only useful when syscall is working.
 
 .globl machine_check_handler
 machine_check_handler:
+    cli
     pushl   $0                      # no error code now: pad the hardware error code on the stack.
     pushl   $do_machine_check       # push the do_handler function address. 
     jmp     error_code              # part of theses are only useful when syscall is working.
 
 .globl simd_coprocessor_error_handler
 simd_coprocessor_error_handler:
+    cli
     pushl   $0                              # no error code now: pad the hardware error code on the stack.
     pushl   $do_simd_coprocessor_error      # push the do_handler function address. 
     jmp     error_code                      # part of theses are only useful when syscall is working.
