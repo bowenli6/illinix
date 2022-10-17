@@ -1,6 +1,6 @@
 #include "keyboard.h"
-#include "../include/interrupt.h"
 #include "../include/i8259.h"
+#include "../include/interrupt.h"
 
 /* Local helper functions. */
 
@@ -14,25 +14,24 @@ void keyboard_init() {
     enable_irq(KEYBOARD_IRQ);
 }
 
+
 /**
- * keyboard_handler
- * 
- * Interrupt handler for the keyboard device.
+ * @brief Interrupt handler for the keyboard device.
  */
-void keyboard_handler() {
-    printf("keyboard interrupt detected!\n");
+void do_keyboard() {
     cli();
     uint8_t scancode = inb(KEYBOARD_PORT);
-    keyboard_print(scancode);
+    if (scancode < SCANCODES_SIZE)
+        keyboard_print(scancode);
     send_eoi(KEYBOARD_IRQ);
     sti();
 }
 
+
 /**
- * keyboard_print
- * @scancode: The keyboard scancode of the input character.
+ * @brief Print the character that specified by the given keyboard scancode.
  * 
- * Print the character that specified by the given keyboard scancode.
+ * @scancode: The keyboard scancode of the input character.
  */
 static void keyboard_print(uint8_t scancode) {
     uint8_t character = scancodes[scancode][0];

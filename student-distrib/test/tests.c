@@ -60,7 +60,7 @@ void divide_error() {
  * print the massage.
  * 
  */
-void syscall_check() {
+void inline syscall_check() {
 	TEST_HEADER;
 	clear();
 	asm volatile("int $128");
@@ -78,7 +78,7 @@ void syscall_check() {
 void launch_tests() {
 	printf("--------------------------- Test begins ---------------------------\n");
 	TEST_OUTPUT("idt_test", idt_test());
-	// divide_error();
+	divide_error();
 	syscall_check();
 	printf("---------------------------- Test Ends ----------------------------\n");
 

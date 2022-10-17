@@ -42,81 +42,79 @@ static void exp_to_usr(int idx) {
 
 /* Exception handlers */
 
-void divide_error_handler() {
-    cli();
-    exp_to_usr(DIVIDE_ERROR);
-    sti();
-	asm volatile("iret");
+void do_divide_error() {
+    // exp_to_usr(DIVIDE_ERROR);
+    printf("d");
 }
 
-void debug_handler() {
+void do_debug() {
     exp_to_usr(DEBUG);
 }
 
-void nmi_handler() {
+void do_nmi() {
     exp_to_usr(NMI);
 }
 
-void int3_handler() {
+void do_int3() {
     exp_to_usr(BREAKPOINT);
 }
 
-void overflow_handler() {
+void do_overflow() {
     exp_to_usr(OVERFLOW);
 }
 
-void bounds_handler() {
+void do_bounds() {
     exp_to_usr(BOUNDS_CHECK);
 }
 
-void invalid_op_handler() {
+void do_invalid_op() {
     exp_to_usr(INVALID_OPCODE);
 }
 
-void device_not_available_handler() {
+void do_device_not_available() {
     exp_to_usr(DEVICE_NOT_AVAILIAVLE);
 }
 
-void double_fault_handler() {
+void do_double_fault() {
     exp_to_usr(DOUBLE_FAULT);
 }
 
-void coprocessor_segment_overrun_handler() {
+void do_coprocessor_segment_overrun() {
     exp_to_usr(COPROCESSOR_OVERRUN);
 }
 
-void invalid_TSS_handler() {
+void do_invalid_TSS() {
     exp_to_usr(INVALID_TSS);
 }
 
-void segment_not_present_handler() {
+void do_segment_not_present() {
     exp_to_usr(SEGMENT_NOT_PRESENT);
 }
 
-void stack_segment_handler() {
+void do_stack_segment() {
     exp_to_usr(STACK_SEGMENT_FAULT);
 }
 
-void general_protection_handler() {
+void do_general_protection() {
     exp_to_usr(GENRAL_PROTECTION);
 }
 
-void page_fault_handler() {
+void do_page_fault() {
     exp_to_usr(PAGE_FAULT);
 }
 
-void coprocessor_error_handler() {
+void do_coprocessor_error() {
     exp_to_usr(FLOATING_POINT_ERROR);
 }
 
-void alignment_check_handler() {
+void do_alignment_check() {
     exp_to_usr(ALIGHMENT_CHECK);
 }
 
-void machine_check_handler() {
+void do_machine_check() {
     exp_to_usr(MACHINE_CHECK);
 }
 
-void simd_coprocessor_error_handler() {
+void do_simd_coprocessor_error() {
     exp_to_usr(SIMD_FLOATING_POINT);
 }

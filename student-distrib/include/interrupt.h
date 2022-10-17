@@ -4,7 +4,7 @@
 #define KEYBOARD 0x21
 #define RTC      0x28
 
+
 void keyboard_handler();
-void RTC_handler();
 
 #endif /*_INTERRUPT_H */

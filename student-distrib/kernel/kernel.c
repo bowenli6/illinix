@@ -9,6 +9,7 @@
 #include "../debug.h"
 #include "../test/tests.h"
 #include "../drivers/keyboard.h"
+#include "../drivers/rtc.h"
 #include "../include/page.h"
 #include "../include/idt.h"
 
@@ -145,14 +146,15 @@ void entry(unsigned long magic, unsigned long addr) {
     }
 
 /* Initialize devices, memory, filesystem, enable device interrupts on the
-     * PIC, any other initialization stuff... */
+    //  * PIC, any other initialization stuff... */
     idt_init();                     /* Initialize the IDT. */
     trap_init();                    /* Initialize the exception handlers for IDT. */
     intr_init();                    /* Initialize the interrupt handlers for IDT. */
-    i8259_init();                   /* Initialize the PIC */
-    // page_init();                    /* Initialize page tables. */
-    keyboard_init();                /* Initialize the Keyboard */
-    
+    i8259_init();                   /* Initialize the PIC. */
+    page_init();                    /* Initialize page tables. */
+    keyboard_init();                /* Initialize the Keyboard. */
+    // RTC_init();                     /* Initialize the RTC. */
+
     /* Enable interrupts */
     /* Do not enable the following until after you have set up your
      * IDT correctly otherwise QEMU will triple fault and simple close
@@ -163,7 +165,7 @@ void entry(unsigned long magic, unsigned long addr) {
     /* This is an test for share gitlab. */
 #ifdef RUN_TESTS
     /* Run tests */
-    launch_tests();
+    // launch_tests();
 #endif
 
     /* Execute the first program ("shell") ... */

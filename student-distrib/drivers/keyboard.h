@@ -7,6 +7,7 @@
 #define KEYBOARD_IRQ  1                 /* IRQ port 1 of PIC. */
 #define KEYBOARD_PORT 0x60              /* Keyboard port. */
 #define KEYBOARD_SIZE 58                /* The size of the scancodes buffer. */
+#define SCANCODES_SIZE 127              /* The total number of scannode. */
 
 /* Keyboard scancodes
  * The data from a keyboard comes mainly in the form of scancodes, 
@@ -24,8 +25,9 @@ static const uint8_t scancodes[KEYBOARD_SIZE][2] =
     {0, 0}, {0, 0}, {0, 0}, "  " /* space */
 };
 
-void keyboard_init(void);
-// void keyboard_handler(void);
+
+void keyboard_init();
+void do_keyboard();
 
 #endif /* _KEYBOARD_H */
 
