@@ -20,8 +20,8 @@ contains the video memory.
 -------------------
 Page Structure
 -------------------
- 1. Page_directory[1024]{KB, MB}
- 2. Page_table[1024]
+1. Page_directory[1024]{KB, MB}
+2. Page_table[1024]
 
 
 ---------------------
