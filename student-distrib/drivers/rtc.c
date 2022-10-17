@@ -13,11 +13,15 @@ void RTC_init() {
     /* Reference from https://wiki.osdev.org/RTC#Turning_on_IRQ_8 and Linux source code.
      * might neeed to turn off interrupts if multiprocessor involved
      */
+    cli();
+    
     outb(RTC_B_reg, RTC_CMD_port);	    /* Select register B, and disable NMI. */
     char prev = inb(RTC_DATA_port);	    /* Read the current value of register B */
     outb(RTC_B_reg, RTC_CMD_port);	    /* Set the index again (a read will reset the index to register D) */
     outb(prev | 0x40, RTC_DATA_port);   /* Write the previous value ORed with 0x40. This turns on bit 6 of register B */
     enable_irq(RTC_IRQ);
+    
+    sti();
 }
 
 /**
