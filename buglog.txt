@@ -32,8 +32,18 @@ Paging:
     Time used:  1h
     Solution:   change "VIDEO" to "(VIDEO >> PTE_OFFSET)"
     
+IDT:
+6.  Problem:    First time loading handler into the IDT table, we could not find the handler.
+    Reason:     1) I forgot that handler function could not take parameter
+                2) I forgot to take the address of the handler.
+                3) Also take time to form and wrap the function, and differentiate them into trap/interrupt/syscall
+    Time usedL  2h
+    Solution    1) Write indicivual function inorder to eliminate the parameter.
+                2) Take address of the handler
+
+
 RTC:
-6.  Problem:    After call test_interrupts, the video memory space is static! Instead of 
+7.  Problem:    After call test_interrupts, the video memory space is static! Instead of 
                 changing characters.
     Reason:     frequency not set correctly and therefore the characters cannot move.
     Time used:  a day
