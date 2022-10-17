@@ -12,6 +12,6 @@
 #define RTC_IRQ 8
 
 void RTC_init();
-void RTC_handler();
+void do_RTC();
 
 #endif /* _RTC_H */

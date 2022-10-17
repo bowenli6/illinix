@@ -146,12 +146,11 @@ void page_fault_test() {
 void launch_tests() {
 	printf("--------------------------- Test begins ---------------------------\n");
 	TEST_OUTPUT("idt_test", idt_test());
-	divide_error();
+	// divide_error();
 	syscall_check();
 	TEST_OUTPUT("page_status_test", page_status_test());
 	TEST_OUTPUT("page_access_test", page_status_test());
 	printf("[TEST page_fault_test]: There should be two page fault. \n");
-	page_fault_test();
+	// page_fault_test();
 	printf("---------------------------- Test Ends ----------------------------\n");
-
 }

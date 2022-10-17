@@ -1,7 +1,6 @@
 #include "rtc.h"
 #include "../lib/lib.h"
 #include "../include/i8259.h"
-#include "../include/interrupt.h"
 
 /* Claimed as volatile to let it change base on interrupts. */
 volatile int global_interrupt_flag;
@@ -10,7 +9,7 @@ volatile int global_interrupt_flag;
  * @brief Initialize RTC and enable RTC interrupt.
  * 
  */
-void RTC_init(void) {
+void RTC_init() {
     /* Reference from https://wiki.osdev.org/RTC#Turning_on_IRQ_8 and Linux source code.
      * might neeed to turn off interrupts if multiprocessor involved
      */
@@ -25,7 +24,7 @@ void RTC_init(void) {
  * @brief Read data from register C and handle it
  * 
  */
-void RTC_handler(void) {
+void do_RTC() {
     uint32_t interrupt_flag;
     global_interrupt_flag = 1;
     cli_and_save(interrupt_flag);       /* Disable interrupts and store flags into local variable. */

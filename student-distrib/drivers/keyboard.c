@@ -1,6 +1,5 @@
 #include "keyboard.h"
 #include "../include/i8259.h"
-#include "../include/interrupt.h"
 
 /* Local helper functions. */
 

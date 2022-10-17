@@ -6,5 +6,7 @@
 
 
 void keyboard_handler();
+void rtc_handler();
+
 
 #endif /*_INTERRUPT_H */
