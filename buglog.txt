@@ -32,6 +32,11 @@ Paging:
     Time used:  1h
     Solution:   change "VIDEO" to "(VIDEO >> PTE_OFFSET)"
     
+RTC:
+6. Problem:  after call test_interrupts, the video memory space is 		 static ! instead of changing characters
+    Reason: frequency not set correctly and therefore the 			        characters cannot move.
+    Time used:  a day
+    Solution:  adjust local function of set_RTC_freq to reject 			 invalid frequencies
 ----------------------------------------------------------------------------------------------------
 Checkpoint2:
 
