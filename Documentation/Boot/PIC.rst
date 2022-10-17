@@ -14,7 +14,7 @@ The Programmable Interrupt Controller (PIC) functions as an overall manager in
 an Interrupt-Driven system environment It accepts requests from the peripheral 
 equipment determines which of the incoming requests is of the highest importance 
 (priority) ascertains whether the incoming request has a higher priority value than 
-the level currently being serviced and issues an interrupt to the CPU based on this determination
+the level currently being serviced and issues an interrupt to the CPU based on this determination.
 
 
 --------------------
