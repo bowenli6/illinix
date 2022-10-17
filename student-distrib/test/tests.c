@@ -122,6 +122,11 @@ int page_access_test() {
 	temp_v = *temp_pt;
 	printf("4MB memory dereferenced successfully.\n");
 
+	/* dereference 8MB - 8 memory */
+	temp_pt = (int*) ( 2 * MB_4 - 8 );
+	temp_v = *temp_pt;
+	printf("8MB - 8 memory dereferenced successfully.\n");
+
 	return result;
 }
 
@@ -145,15 +150,31 @@ void page_fault_null() {
  * address and generate a page fault exception.
  * 
  */
-void page_fault_random() {
+void page_fault_video_table() {
 	TEST_HEADER;
 	int* temp_pt;
 	int temp_v;
 
-	printf("Dereferencing random unavailable address:\n");
+	printf("Dereferencing an unavailable address in page table:\n");
 	temp_pt = (int*) ( (VIDEO_INDEX + 1) << PTE_OFFSET);
 	temp_v = *temp_pt;
 }
+
+/**
+ * @brief This function will dereference an unavailable 
+ * address and generate a page fault exception.
+ * 
+ */
+void page_fault_out_range() {
+	TEST_HEADER;
+	int* temp_pt;
+	int temp_v;
+
+	printf("Dereferencing unavailable address 8MB:\n");
+	temp_pt = (int*) ( MB_4 * 2 );
+	temp_v = *temp_pt;
+}
+
 
 /* Checkpoint 2 tests */
 /* Checkpoint 3 tests */
@@ -176,15 +197,19 @@ void launch_tests() {
 
 	/* page test 1 */
 	TEST_OUTPUT("page_status_test", page_status_test());
-	TEST_OUTPUT("page_access_test", page_status_test());
+	TEST_OUTPUT("page_access_test", page_access_test());
 
 	/* page test 2 */
 	// printf("[TEST page_fault_null]: There should be a page fault. \n");
 	// page_fault_null();
 
 	/* page test 3 */
-	// printf("[TEST page_fault_random]: There should be a page fault. \n");
-	// page_fault_random();
+	// printf("[TEST page_fault_video_table]: There should be a page fault. \n");
+	// page_fault_video_table();
+
+	/* page test 4 */
+	// printf("[TEST page_fault_out_range]: There should be a page fault. \n");
+	// page_fault_out_range();
 
 	printf("---------------------------- Test Ends ----------------------------\n");
 }
