@@ -1,10 +1,39 @@
-Paging:
-1. The machine crashed in page_init()
-Reason: Used video memory as a array index directly
-Time used: 1h
-Solution: Only use the most significant 8 bits of VIDEO as the memory index
+----------------------------------------------------------------------------------------------------
+Checkpoint1:
 
-2. page_init() will get the machine stuck
-Reason: The video memory is not shifted when it is filled into the base address
-Time used: 1h
-Solution: change "VIDEO" to "(VIDEO >> PTE_OFFSET)"
+PIC:
+1.  Problem:    Slave Interrupt handler cannot be invoked.
+    Reason:     The IRQ2 never get enabled.  
+    Time used:  1h
+    Solution:   Enable IRQ2 in i8259_init() to connect the master PIC and the slave PIC.
+
+Keyboard:
+2.  Problem:    Two characters are printed when one key pressed.
+    Reason:     One key pressed two interrupts generated with two different scancodes.
+    Time used:  2h
+    Solution:   Check if the scancode received from PIC is within the number of scannodes(127)
+                Discard the interrupt when the number is equal to or greater.
+                
+3.  Problem:    Only the first key pressed works, the remaining ones do not.
+    Reason:     The interrupt handler never returns to the previous instruction address(EIP).
+    Time used:  4h
+    Solution:   Used a wrapper function written in assembly languages, to save all registers,
+                to call the actual handler function written in C by the keyboard driver, and
+                to use the iret instruction resumes to the previous state that were saved by
+                the CPU before invoking the interruption.
+Paging:
+4.  Problem:    The machine crashed in page_init()
+    Reason:     Used video memory as a array index directly
+    Time used:  1h
+    Solution:   Only use the most significant 8 bits of VIDEO as the memory index
+
+5.  Problem:    page_init() will get the machine stuck
+    Reason:     The video memory is not shifted when it is filled into the base address
+    Time used:  1h
+    Solution:   change "VIDEO" to "(VIDEO >> PTE_OFFSET)"
+    
+----------------------------------------------------------------------------------------------------
+Checkpoint2:
+
+
+
