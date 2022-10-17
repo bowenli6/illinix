@@ -1,0 +1,10 @@
+Paging:
+1. The machine crashed in page_init()
+Reason: Used video memory as a array index directly
+Time used: 1h
+Solution: Only use the most significant 8 bits of VIDEO as the memory index
+
+2. page_init() will get the machine stuck
+Reason: The video memory is not shifted when it is filled into the base address
+Time used: 1h
+Solution: change "VIDEO" to "(VIDEO >> PTE_OFFSET)"

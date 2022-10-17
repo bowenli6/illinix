@@ -150,11 +150,18 @@ void entry(unsigned long magic, unsigned long addr) {
     idt_init();                     /* Initialize the IDT. */
     trap_init();                    /* Initialize the exception handlers for IDT. */
     intr_init();                    /* Initialize the interrupt handlers for IDT. */
+<<<<<<< HEAD
     i8259_init();                   /* Initialize the PIC. */
     page_init();                    /* Initialize page tables. */
     keyboard_init();                /* Initialize the Keyboard. */
     // RTC_init();                     /* Initialize the RTC. */
 
+=======
+    i8259_init();                   /* Initialize the PIC */
+    page_init();                    /* Initialize page tables. */
+    keyboard_init();                /* Initialize the Keyboard */
+    
+>>>>>>> 95019cc20e92d2cd67189539d99338d704c67746
     /* Enable interrupts */
     /* Do not enable the following until after you have set up your
      * IDT correctly otherwise QEMU will triple fault and simple close
