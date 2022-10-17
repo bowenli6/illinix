@@ -36,14 +36,13 @@ void do_RTC() {
     global_interrupt_flag = 1;
     cli_and_save(interrupt_flag);       /* Disable interrupts and store flags into local variable. */
     test_interrupts();                  /* Execute when an RTC interrupt occurs. */
-    // might need adjusts
     set_RTC_freq(RTC_MIN_freq);
     send_eoi(RTC_IRQ);
     restore_flags(interrupt_flag);
-    
-    // outb(RTC_C_reg, RTC_CMD_port);     // read from register C and ensure all interrupts are properly generated
 
-    // inb(RTC_DATA_port);                // discard the value
+    outb(RTC_C_reg, RTC_CMD_port);     /* read from register C and ensure all interrupts are properly generated */
+
+    inb(RTC_DATA_port);                /* discard the value for now. */
 }
 
 

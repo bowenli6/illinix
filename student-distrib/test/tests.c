@@ -64,18 +64,13 @@ void inline general_protection() {
 }
 
 
-void inline test3() {
-	TEST_HEADER;
-	asm volatile("into");
-}
-
 
 /**
  * @brief Observe if the syscall handler
  * print 3 massages.
  * 
  */
-void inline syscall_check() {
+void inline syscall() {
 	TEST_HEADER;
 	asm volatile("int $128");
 	asm volatile("int $128");
@@ -171,22 +166,15 @@ void launch_tests() {
 	printf("--------------------------- Test begins ---------------------------\n");
 	clear();
 	TEST_OUTPUT("idt_test", idt_test());
-<<<<<<< HEAD
 
 	/* Exceptions */
 	// divide_error();
 	// general_protection();
 
 	/* System calls */
-	syscall_check();
-
-	/* Page table */
-=======
-	//divide_error();
-	syscall_check();
+	syscall();
 
 	/* page test 1 */
->>>>>>> cb29165f37d99ea8d10f0d993a85f8bfc3b23aba
 	TEST_OUTPUT("page_status_test", page_status_test());
 	TEST_OUTPUT("page_access_test", page_status_test());
 

@@ -155,7 +155,7 @@ void entry(unsigned long magic, unsigned long addr) {
     i8259_init();                   /* Initialize the PIC */
     page_init();                    /* Initialize page tables. */
     keyboard_init();                /* Initialize the Keyboard */
-    // RTC_init();                     /* Initialize the RTC. */
+    RTC_init();                     /* Initialize the RTC. */
     
     /* Enable interrupts */
     /* Do not enable the following until after you have set up your

@@ -95,7 +95,7 @@ void trap_init() {
  */
 void intr_init() {
     set_intr_gate(KEYBOARD, &keyboard_handler);
-    // set_intr_gate(RTC, &rtc_handler);
+    set_intr_gate(RTC, &rtc_handler);
 }
 
 
