@@ -62,6 +62,10 @@ The offset field of the gate descriptor points to the beginning of the exception
 --------------------
 Source Code
 --------------------
+student-distrib/x86_desc.h
+
+student-distrib/x86_desc.S
+
 student-distrib/include/exception.h
 
 student-distrib/include/interrupt.h
@@ -73,11 +77,4 @@ student-distrib/kernel/handler.S
 student-distrib/kernel/exception.c
 
 student-distrib/kernel/syscall.c
-
-
-
-
-
-
-
 
