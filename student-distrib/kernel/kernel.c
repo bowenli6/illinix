@@ -22,6 +22,8 @@
 void shell() {
     clear();
     puts("Hello illinix!\n");
+    puts("Keyboard Test:\n");
+
 }
 
 /* Check if MAGIC is valid and print the Multiboot information structure
@@ -153,23 +155,23 @@ void entry(unsigned long magic, unsigned long addr) {
     i8259_init();                   /* Initialize the PIC */
     page_init();                    /* Initialize page tables. */
     keyboard_init();                /* Initialize the Keyboard */
-    RTC_init();                     /* Initialize the RTC. */
+    // RTC_init();                     /* Initialize the RTC. */
     
     /* Enable interrupts */
     /* Do not enable the following until after you have set up your
      * IDT correctly otherwise QEMU will triple fault and simple close
      * without showing you any output */
-    // printf("Enabling Interrupts\n");
-    // sti();
+    printf("Enabling Interrupts\n");
+    sti();
 
     /* This is an test for share gitlab. */
 #ifdef RUN_TESTS
     /* Run tests */
-    launch_tests();
+    // launch_tests();
 #endif
 
     /* Execute the first program ("shell") ... */
-    // shell();    
+    shell();    
 
     /* Spin (nicely, so we don't chew up cycles) */
     asm volatile (".1: hlt; jmp .1;");

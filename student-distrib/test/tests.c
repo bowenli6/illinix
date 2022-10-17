@@ -41,7 +41,7 @@ int idt_test() {
 
 
 /**
- * @brief Observe if the exception handler 
+ * @brief Observe if the divide_error exception handler 
  * prints the error message.
  * 
  */
@@ -53,10 +53,26 @@ void divide_error() {
 	printf("I don't like warning, so I don't care what %d is\n", check);
 }
 
+/**
+ * @brief Observe if the general_protection exception handler
+ * prints the error message.
+ * 
+ */
+void inline general_protection() {
+	TEST_HEADER;
+	asm volatile("iret");
+}
+
+
+void inline test3() {
+	TEST_HEADER;
+	asm volatile("into");
+}
+
 
 /**
  * @brief Observe if the syscall handler
- * print the massage.
+ * print 3 massages.
  * 
  */
 void inline syscall_check() {
@@ -144,8 +160,15 @@ void launch_tests() {
 	printf("--------------------------- Test begins ---------------------------\n");
 	clear();
 	TEST_OUTPUT("idt_test", idt_test());
+
+	/* Exceptions */
 	// divide_error();
+	// general_protection();
+
+	/* System calls */
 	syscall_check();
+
+	/* Page table */
 	TEST_OUTPUT("page_status_test", page_status_test());
 	TEST_OUTPUT("page_access_test", page_status_test());
 	printf("[TEST page_fault_test]: There should be two page fault. \n");

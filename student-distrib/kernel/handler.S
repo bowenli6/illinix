@@ -44,11 +44,15 @@ error_code:
     # The invoked function receives its arguments from the eax and edx registers
     # rather using the Standard C calling convention. The current version of 
     # exception handlers dose not receive arguments
+
+    # disable intrrupts
+    cli
     call    *%edi                   # Invokes the do_handler function.
 	jmp     ret_from_exception      # returns from the exception.
 
 
 ret_from_exception:
+    jmp     ret_from_exception
 
 restore_all:
     popl    %ebx
@@ -61,6 +65,7 @@ restore_all:
     popl    %ds
     popl    %es
     addl    $4, %esp
+    sti                         # enable interrupts
     iret                        # return from the exceptions to the previous stats.
 
 
