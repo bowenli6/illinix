@@ -1,7 +1,8 @@
 #include <types.h>
-#include <lib/lib.h>
 #include <boot/idt.h>
 #include <boot/x86_desc.h>
+#include <lib.h>
+
 
 
 /* Local functions, see headers for descriptions. */

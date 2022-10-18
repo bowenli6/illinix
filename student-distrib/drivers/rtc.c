@@ -1,6 +1,7 @@
 #include <drivers/rtc.h>
-#include <lib/lib.h>
 #include <boot/i8259.h>
+#include <lib.h>
+
 
 /* Claimed as volatile to let it change base on interrupts. */
 volatile int global_interrupt_flag;

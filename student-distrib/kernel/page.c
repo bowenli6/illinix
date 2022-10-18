@@ -1,6 +1,6 @@
 #include <boot/x86_desc.h>
 #include <boot/page.h>
-#include <lib/lib.h>
+#include <lib.h>
 
 /**
  * @brief Turn on paging related registers.

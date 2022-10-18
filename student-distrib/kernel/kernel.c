@@ -9,10 +9,10 @@
 #include <boot/i8259.h>
 #include <drivers/keyboard.h>
 #include <drivers/rtc.h>
-#include <lib/lib.h>
-#include <test/tests.h>
 #include <debug.h>
+#include <lib.h>
 
+#include "../user/test/tests.h"
 
 #define RUN_TESTS
 

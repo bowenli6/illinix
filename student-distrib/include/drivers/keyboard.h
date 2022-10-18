@@ -1,7 +1,7 @@
 #ifndef _KEYBOARD_H
 #define _KEYBOARD_H
 
-#include <lib/lib.h>
+#include <types.h>
 
 /* Reference: https://www.win.tue.nl/~aeb/linux/kbd/scancodes-1.html */
 #define KEYBOARD_IRQ  1                 /* IRQ port 1 of PIC. */
