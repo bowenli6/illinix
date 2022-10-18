@@ -1,9 +1,9 @@
 #ifndef _IDT_H
 #define _IDT_H
 
-#include "exception.h"
-#include "interrupt.h"
-#include "syscall.h"
+#include <boot/exception.h>
+#include <boot/interrupt.h>
+#include <boot/syscall.h>
 
 #define IDT_SIZE                    256
 

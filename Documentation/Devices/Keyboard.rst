@@ -19,6 +19,6 @@ nvolved and show your keys to the screen as specified.
 --------------------
 Source code
 --------------------
-student-distrib/drivers/keyboard.h
+student-distrib/include/drivers/keyboard.h
 
 student-distrib/drivers/keyboard.c

@@ -1,5 +1,5 @@
-#include "../include/exception.h"
-#include "../lib/lib.h"
+#include <boot/exception.h>
+#include <lib/lib.h>
 
 
 /* According to IA32 page 6, we define the name for first 20 exceptions */

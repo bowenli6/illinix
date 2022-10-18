@@ -6,7 +6,7 @@
 #ifndef _I8259_H
 #define _I8259_H
 
-#include "types.h"
+#include <types.h>
 
 /* Ports that each PIC sits on */
 #define PIC_PORT_TOTAL    8
@@ -43,7 +43,7 @@ extern uint16_t irq_mask;
 void i8259_init(void);
 void enable_irq(uint32_t irq_num);
 void disable_irq(uint32_t irq_num);
-void send_eoi(uint32_t irq_num);
+extern void send_eoi(uint32_t irq_num);
 
 #endif /* _I8259_H */
 

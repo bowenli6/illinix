@@ -20,6 +20,6 @@ the level currently being serviced and issues an interrupt to the CPU based on t
 --------------------
 Source code
 --------------------
-student-distrib/include/i8259.h
+student-distrib/include/boot/i8259.h
 
 student-distrib/kernel/i8259.c

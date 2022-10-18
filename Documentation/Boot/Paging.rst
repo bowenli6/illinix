@@ -50,11 +50,11 @@ set CR4 bit 4 to 1, then set CR0 bit 31 to 1.
 --------------------
 Source Code
 --------------------
-student-distrib/include/page.h
+student-distrib/include/boot/page.h
 
 student-distrib/kernel/page.c
 
-student-distrib/x86_desc.h
+student-distrib/include/boot/x86_desc.h
 
 student-distrib/x86_desc.S
 

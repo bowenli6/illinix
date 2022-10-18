@@ -1,6 +1,6 @@
-#include "tests.h"
-#include "../x86_desc.h"
-#include "../lib/lib.h"
+#include <test/tests.h>
+#include <boot/x86_desc.h>
+#include <lib/lib.h>
 
 #define PASS 1
 #define FAIL 0

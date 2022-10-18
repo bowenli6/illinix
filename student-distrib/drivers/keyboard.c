@@ -1,5 +1,5 @@
-#include "keyboard.h"
-#include "../include/i8259.h"
+#include <drivers/keyboard.h>
+#include <boot/i8259.h>
 
 /* Local helper functions. */
 

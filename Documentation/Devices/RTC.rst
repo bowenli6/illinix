@@ -31,6 +31,6 @@ through a multiplexed byte-wide interface, which supports both Intel and Motorol
 --------------
 Source Code
 --------------
-student-distrib/drivers/rtc.h
+student-distrib/include/drivers/rtc.h
 
 student-distrib/drivers/rtc.c

@@ -1,7 +1,7 @@
-#include "../include/idt.h"
-#include "../include/types.h"
-#include "../lib/lib.h"
-#include "../x86_desc.h"
+#include <types.h>
+#include <lib/lib.h>
+#include <boot/idt.h>
+#include <boot/x86_desc.h>
 
 
 /* Local functions, see headers for descriptions. */

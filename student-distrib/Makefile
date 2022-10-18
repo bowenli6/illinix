@@ -3,6 +3,7 @@
 # Will compile all *.c and *.S files in the current directory.
 
 
+
 # Flags to use when compiling, preprocessing, assembling, and linking
 CFLAGS+=-Wall -fno-builtin -fno-stack-protector -nostdlib
 ASFLAGS+=
@@ -10,7 +11,7 @@ LDFLAGS+=-nostdlib -static
 CC=gcc
 
 #If you have any .h files in another directory, add -I<dir> to this line
-CPPFLAGS+=-nostdinc -g
+CPPFLAGS+=-nostdinc -g -Iinclude
 
 # This generates the list of source files
 SRC=$(wildcard *.S) $(wildcard *.c) $(wildcard */*.S) $(wildcard */*.c)

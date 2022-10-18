@@ -23,6 +23,6 @@ The CPL is defined as the protection level of the currently executing code segme
 -----------------
 Source Code
 -----------------
-student-distrib/x86_desc.h
+student-distrib/include/boot/x86_desc.h
 
 student-distrib/x86_desc.S

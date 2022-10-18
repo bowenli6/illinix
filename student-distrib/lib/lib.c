@@ -1,7 +1,7 @@
 /* lib.c - Some basic library functions (printf, strlen, etc.)
  * vim:ts=4 noexpandtab */
 
-#include "lib.h"
+#include <lib/lib.h>
 
 #define VIDEO       0xB8000
 #define NUM_COLS    80

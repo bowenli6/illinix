@@ -2,16 +2,17 @@
  * vim:ts=4 noexpandtab
  */
 
-#include "../multiboot.h"
-#include "../x86_desc.h"
-#include "../lib/lib.h"
-#include "../include/i8259.h"
-#include "../debug.h"
-#include "../test/tests.h"
-#include "../drivers/keyboard.h"
-#include "../drivers/rtc.h"
-#include "../include/page.h"
-#include "../include/idt.h"
+#include <boot/multiboot.h>
+#include <boot/x86_desc.h>
+#include <boot/page.h>
+#include <boot/idt.h>
+#include <boot/i8259.h>
+#include <drivers/keyboard.h>
+#include <drivers/rtc.h>
+#include <lib/lib.h>
+#include <test/tests.h>
+#include <debug.h>
+
 
 #define RUN_TESTS
 

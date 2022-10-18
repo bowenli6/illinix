@@ -2,8 +2,8 @@
  * vim:ts=4 noexpandtab
  */
 
-#include "../include/i8259.h"
-#include "../lib/lib.h"
+#include <boot/i8259.h>
+#include <lib/lib.h>
 
 /* Interrupt masks to determine which interrupts are enabled and disabled */
 uint16_t irq_mask = 0xffff;                 /* IRQs 0 ~ 15 */
