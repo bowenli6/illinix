@@ -1,5 +1,5 @@
 #include <boot/syscall.h>
-#include <lib.h>
+#include <io.h>
 
 /**
  * @brief A system call handler.

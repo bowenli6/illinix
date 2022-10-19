@@ -1,3 +1,1 @@
-#include <lib.h>
-
-#include "test/tests.h"
+#include "../test/tests.h"

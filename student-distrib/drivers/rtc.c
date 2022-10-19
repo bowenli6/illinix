@@ -1,6 +1,7 @@
 #include <drivers/rtc.h>
 #include <boot/i8259.h>
 #include <lib.h>
+#include <io.h>
 
 
 /* Claimed as volatile to let it change base on interrupts. */

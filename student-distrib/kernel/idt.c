@@ -2,6 +2,7 @@
 #include <boot/idt.h>
 #include <boot/x86_desc.h>
 #include <lib.h>
+#include <io.h>
 
 
 
