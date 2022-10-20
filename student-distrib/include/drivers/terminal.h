@@ -15,5 +15,9 @@ typedef struct {
 terminal_t terminal;
 
 void terminal_init();
+int terminal_open();
+int terminal_close();
+int terminal_read();
+int terminal_write();
 
 #endif /*_TERMAINL_H */
