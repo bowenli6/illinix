@@ -8,6 +8,7 @@
 #include <boot/idt.h>
 #include <boot/i8259.h>
 #include <drivers/keyboard.h>
+#include <drivers/terminal.h>
 #include <drivers/rtc.h>
 #include <debug.h>
 #include <lib.h>
@@ -157,8 +158,9 @@ void entry(unsigned long magic, unsigned long addr) {
     i8259_init();                   /* Initialize the PIC */
     page_init();                    /* Initialize page tables. */
     keyboard_init();                /* Initialize the Keyboard */
+    terminal_init();                /* Initialize the terminal. */
     // RTC_init();                     /* Initialize the RTC. */
-    
+
     /* Enable interrupts */
     /* Do not enable the following until after you have set up your
      * IDT correctly otherwise QEMU will triple fault and simple close

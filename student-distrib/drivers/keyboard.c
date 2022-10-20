@@ -1,6 +1,7 @@
 #include <drivers/keyboard.h>
 #include <boot/i8259.h>
 #include <lib.h>
+#include <io.h>
 
 
 /**

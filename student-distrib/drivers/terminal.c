@@ -27,6 +27,9 @@ void terminal_init() {
  * @param scancode : The scancode of the key.
  */
 void key_press(uint32_t scancode) {
+    puts("   ");
+    printf("%d", scancode);
+    puts("   ");
     switch (scancode) {
     case CAPSLOCK:
         terminal.capslock = !(terminal.capslock);  /* Reverse capslock. */
