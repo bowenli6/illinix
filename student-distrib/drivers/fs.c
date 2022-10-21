@@ -30,7 +30,7 @@ void fs_init(uint32_t start_addr) {
  * @return int32_t : -1 on failure (non-existent file or invalid index),
  *                    0 on success.
  */
-int32_t read_dentry_by_name(const uint8_t *fname, dentry_t *dentry) {
+int32_t read_dentry_by_name(const int8_t *fname, dentry_t *dentry) {
     if (!dentry) {
         puts("ERROR: dentry is undefined.\n");
         return -1;
@@ -40,7 +40,7 @@ int32_t read_dentry_by_name(const uint8_t *fname, dentry_t *dentry) {
 
         /* The current file name stored in the boot block. */
         int8_t *_fname = (int8_t *)(fs.boot->dirs[i].fname);
-        if (!strncmp((int8_t *)fname, _fname, NAMESIZE)) {
+        if (!strncmp(fname, _fname, NAMESIZE)) {
 
             /* Two file names are equal. */
             return read_dentry_by_index(i, dentry);
@@ -89,7 +89,6 @@ int32_t read_dentry_by_index(uint32_t index, dentry_t *dentry) {
  *                    number of bytes read on success.
  */
 int32_t read_data(uint32_t inode, uint32_t offset, uint8_t *buf, uint32_t length) {
-    int i;
     int phy_pos;                    /* The physical position of the file to read. */
     virtual_pos vir_pos;            /* The virtual position of the file to read*/
     int nread_needed;               /* Number of bytes need to read. */
@@ -138,7 +137,7 @@ int32_t read_data(uint32_t inode, uint32_t offset, uint8_t *buf, uint32_t length
 
     while (nread_needed > 0 && nb_left > 0) {
         nread_each = BLOCK_SIZE - vir_pos.idx; 
-        data_ptr = (int32_t*)vir_pos.datab.data[vir_pos.idx];
+        data_ptr = &(vir_pos.datab.data[vir_pos.idx]);
         if (nread_each > nread_needed) {
             /* Numebr of bytes need to read is less than the remaining data size within the block. */
             if (nread_needed < nb_left) {

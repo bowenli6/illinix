@@ -118,7 +118,7 @@ static void backspace() {
     }
 }
 
-int32_t terminal_open(const uint8_t *fname) {
+int32_t terminal_open(const int8_t *fname) {
     return 0;
 }
 

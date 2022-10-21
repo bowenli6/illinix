@@ -7,7 +7,7 @@ ece391_vfs_t vfs;   /* Stores the virtual file system. */
 
 /* Local functions used for opening a file. */
 
-static int32_t __open(int32_t fd, uint8_t *fname, file_op *op);
+static int32_t __open(int32_t fd, int8_t *fname, file_op *op);
 
 
 /**
@@ -30,7 +30,7 @@ int32_t vfs_init() {
  * @param fname : A file name.
  * @return int32_t : A file descriptor on success, -1 on failure.
  */
-int32_t file_open(const uint8_t *fname) {
+int32_t file_open(const int8_t *fname) {
     int32_t fd;    
     file_t file;
     dentry_t dentry; 
@@ -107,7 +107,7 @@ int32_t file_write(int32_t fd, const void *buf, int32_t nbytes) {
  * @param fname : A directory name.
  * @return int32_t : A file descriptor on success, -1 on failure.
  */
-int32_t directory_open(const uint8_t *fname) {
+int32_t directory_open(const int8_t *fname) {
     int32_t fd;
     file_t file;
     dentry_t dentry; 
@@ -173,7 +173,7 @@ int32_t directory_write(int32_t fd, const void *buf, int32_t nbytes) {
  * @param op : A file opeartion list.
  * @return int32_t : The file descriptor on success, -1 on failure.
  */
-static int32_t __open(int32_t fd, uint8_t *fname, file_op *op) {
+static int32_t __open(int32_t fd, int8_t *fname, file_op *op) {
     file_t file;
     dentry_t dentry; 
     memcpy((void*)(&dentry.fname), (void*)fname, NAMESIZE);

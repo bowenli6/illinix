@@ -11,16 +11,16 @@
 #include <drivers/rtc.h>
 
 int32_t vfs_init();
-int32_t file_open(const uint8_t *fname);
+int32_t file_open(const int8_t *fname);
 int32_t file_close(int32_t fd);
 int32_t file_read(int32_t fd, void *buf, int32_t nbytes);
 int32_t file_write(int32_t fd, const void *buf, int32_t nbytes);
-int32_t directory_open(const uint8_t *fname);
+int32_t directory_open(const int8_t *fname);
 int32_t directory_close(int32_t fd);
 int32_t directory_read(int32_t fd, void *buf, int32_t nbytes);
 int32_t directory_write(int32_t fd, const void *buf, int32_t nbytes);
 
-
+/* File operation used for regular files. */
 static file_op f_op = {
     .open = file_open,
     .close = file_close,
@@ -28,6 +28,7 @@ static file_op f_op = {
     .write = file_write
 };
 
+/* Directory operation used for '.'. */
 static file_op dir_op = {
     .open = directory_open,
     .close = directory_close,

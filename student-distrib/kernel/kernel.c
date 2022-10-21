@@ -162,8 +162,8 @@ void entry(unsigned long magic, unsigned long addr) {
     keyboard_init();                /* Initialize the Keyboard */
     terminal_init();                /* Initialize the terminal. */
     // RTC_init();                     /* Initialize the RTC. */
-    // fs_init(mbi->mods_addr);        /* Initialize the file system. */
-    // vfs_init();               /* Initialize the virtual file system. */
+    fs_init(mbi->mods_addr);        /* Initialize the file system. */
+    vfs_init();                     /* Initialize the virtual file system. */
 
     /* Enable interrupts */
     /* Do not enable the following until after you have set up your
