@@ -46,9 +46,16 @@ typedef struct {
 } data_block;
 
 typedef struct {
-    boot_block *boot;                 /* The first block of the file system. */
-    inode_t inodes[FILES_MAX];        /* 63 inodes (1st is the '.' directory). */
-    data_block *data_block_addr;      /* The address of the statring data block. */
+    int idx;                            /* The index we want to start at a given data block. */
+    int nblock;                         /* The nth block to read. (NOT data block index) */
+    uint32_t iblock;                    /* The index of the data_block. */
+    data_block datab;                   /* The data block used by the offset. */
+} virtual_pos;
+
+typedef struct {
+    boot_block *boot;                   /* The first block of the file system. */
+    inode_t *inodes;                    /* The address of the statring of the inodes block, up to 63 inodes (1st is the '.' directory). */
+    data_block *data_block_addr;        /* The address of the statring data block. */
 } fs_t;
 
 
