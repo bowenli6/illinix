@@ -7,17 +7,18 @@
 #define BLOCK_SIZE  4096        /* Each block is 4KB. */
 #define NAMESIZE    32          /* The file name of a file is up to 32 bytes. */
 
-
 typedef enum {
     RTC,                        /* Real-time clock. */
     DIRECTORY,                  /* Directory. */
-    REGULAR                     /* Regular file. */
-} file_t;
+    REGULAR,                    /* Regular file. */
+    TERMINAL                    /* Terminal. */
+} file_type_t;
 
+/* The metadate about a file. */
 /* sizeof(dentry_t) == 64 */
 typedef struct {
-    uint8_t fname[NAMESIZE];       /* File name. */
-    file_t type;                /* File type. */
+    uint8_t fname[NAMESIZE];    /* File name. */
+    file_type_t type;           /* File type. */
     uint32_t inode;             /* The index of inode, only meaningful for regular files. */     
     uint8_t reserved[24];       /* 24 bytes are reserved. */
 } dentry_t; 
@@ -57,8 +58,6 @@ typedef struct {
     inode_t *inodes;                    /* The address of the statring of the inodes block, up to 63 inodes (1st is the '.' directory). */
     data_block *data_block_addr;        /* The address of the statring data block. */
 } fs_t;
-
-
 
 void fs_init(uint32_t start_addr);
 

@@ -1,5 +1,6 @@
 #include <drivers/fs.h>
 #include <lib.h>
+#include <io.h>
 
 
 fs_t fs;        /* Stores the file system. */
@@ -10,7 +11,6 @@ fs_t fs;        /* Stores the file system. */
  * @param start_addr : The start address of the file system in the memory.
  */
 void fs_init(uint32_t start_addr) {
-    int i;
     void *addr = (void *)start_addr;
 
     fs.boot = (boot_block*)addr;                /* Load the boot block. */
@@ -22,7 +22,7 @@ void fs_init(uint32_t start_addr) {
 
 
 /**
- * @brief Fill in the @param dentry block with the file name, file
+ * @brief Fill in the dentry block with the file name, file
  * type, and inode number for the file.
  * 
  * @param fname : A filename.
@@ -51,7 +51,7 @@ int32_t read_dentry_by_name(const uint8_t *fname, dentry_t *dentry) {
 
 
 /**
- * @brief Fill in the @param dentry block with the file name, file
+ * @brief Fill in the dentry block with the file name, file
  * type, and inode number for the file.
  * 
  * @param index : The directory entry index.
@@ -78,13 +78,13 @@ int32_t read_dentry_by_index(uint32_t index, dentry_t *dentry) {
 
 
 /**
- * @brief Reading up to @param length bytes starting from position @param offset
- * in the file with inode number @param inode. Place the bytes read in @param buf.
+ * @brief Reading up to length bytes starting from position offset
+ * in the file with inode number inode. Place the bytes read in buf.
  * 
- * @param inode :
- * @param offset :
- * @param buf : 
- * @param length :
+ * @param inode : A inode number
+ * @param offset : The offset of the file in bytes to read.
+ * @param buf : A buffer array that copys the content from the file.
+ * @param length : The number of bytes to read from the file.
  * @return int32_t : -1 on failure (non-existent file or invalid inode number), 
  *                    number of bytes read on success.
  */
@@ -96,10 +96,10 @@ int32_t read_data(uint32_t inode, uint32_t offset, uint8_t *buf, uint32_t length
     int nread_each;                 /* Number of bytes read each time. */
     int nb_left;                    /* Number of bytes left in the data block. */
     inode_t file;                   /* The file inode. */
-    void *data_ptr;                 /* The actuall data address to read within a data block. */
+    int8_t *data_ptr;              /* The actuall data address to read within a data block. */
 
     if (inode >= fs.boot->n_inode) {
-        pust("ERROR: invalid inode, no such inode exists in the file system.\n");
+        puts("ERROR: invalid inode, no such inode exists in the file system.\n");
         return -1;
     }
 
@@ -138,21 +138,21 @@ int32_t read_data(uint32_t inode, uint32_t offset, uint8_t *buf, uint32_t length
 
     while (nread_needed > 0 && nb_left > 0) {
         nread_each = BLOCK_SIZE - vir_pos.idx; 
-        data_ptr = (void*)(vir_pos.datab.data[vir_pos.idx]);
+        data_ptr = (int32_t*)vir_pos.datab.data[vir_pos.idx];
         if (nread_each > nread_needed) {
             /* Numebr of bytes need to read is less than the remaining data size within the block. */
             if (nread_needed < nb_left) {
-                memcpy((void*)buf, data_ptr, nread_needed);
+                memcpy((void*)buf, (void*)data_ptr, nread_needed);
                 nread_needed = 0;
             } else {
-                memcpy((void*)buf, data_ptr, nb_left);
+                memcpy((void*)buf, (void*)data_ptr, nb_left);
                 nread_needed -= nb_left;
             }
             break;
         } else {
             /* We need more blocks to read. */
             if (nread_needed < nb_left) {
-                memcpy((void*)buf, data_ptr, nread_each);
+                memcpy((void*)buf, (void*)data_ptr, nread_each);
                 buf += nread_each;
                 nb_left -= nread_each;
                 nread_needed -= nread_each;
@@ -166,7 +166,7 @@ int32_t read_data(uint32_t inode, uint32_t offset, uint8_t *buf, uint32_t length
                 vir_pos.datab = fs.data_block_addr[vir_pos.iblock];
                 vir_pos.idx = 0;    /* Start from beginning of the new data block. */
             } else {
-                memcpy((void*)buf, data_ptr, nb_left);
+                memcpy((void*)buf, (void*)data_ptr, nb_left);
                 nread_needed -= nb_left;
                 break;
             }
@@ -174,32 +174,4 @@ int32_t read_data(uint32_t inode, uint32_t offset, uint8_t *buf, uint32_t length
     }
   
     return length - nread_needed;
-}
-
-
-/**
- * @brief open the file named @param fname.
- * 
- * @param fname : The file name.
- * @return int : 0 on success, -1 on failure.
- */
-int file_open(const uint8_t *fname) {
-    // return read_dentry_by_name(fname)
-    return 0;
-}
-
-
-int file_close() {
-    return 0;
-}
-
-int file_read() {
-    // read_data();
-    return 0;
-}
-
-
-int file_write() {
-    /* Not suppoted yet. */
-    return -1;
 }
