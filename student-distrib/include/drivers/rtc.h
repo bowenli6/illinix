@@ -17,6 +17,8 @@
 
 #define RTC_IRQ 8
 
+#include <types.h>
+
 /*
  * RTC_init()
  * Function: initalize the RTC and set the frequency to 1024

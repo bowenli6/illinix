@@ -1,6 +1,6 @@
-#include "app.h"
 #include <stdio.h>
 #include "string.h"
+#include <unistd.h>
 
 /* A inode stores general information about a specific file. */
 /* sizeof(inode_t) = 4096 bytes. */
@@ -11,9 +11,18 @@ typedef struct {
 } inode_t;
 
 int main(void) {
-    dentry_t fd;
-    boot_block block;
-   
-    printf("%d\n", (int) sizeof(inode_t));
+    char buf1[10];
+    char buf2[10];
+    while (1) {
+        ssize_t x = read(0, (void*)buf1, 3);
+        printf("%ld\n", x);
+        printf("%s\n", buf1);
+        memset((void*)buf1, 0, 10);   
+    }
+
+
+    // ssize_t y = read(0, (void*)buf2, 10);
+    // printf("%ld\n", y);
+    // printf("%s\n", buf2);
     return 0;
 }

@@ -16,7 +16,7 @@
 #include <lib.h>
 #include <io.h>
 
-#include "../user/test/tests.h"
+#include <tests/tests.h>
 
 #define RUN_TESTS
 
@@ -160,22 +160,21 @@ void entry(unsigned long magic, unsigned long addr) {
     i8259_init();                   /* Initialize the PIC */
     page_init();                    /* Initialize page tables. */
     keyboard_init();                /* Initialize the Keyboard */
-    terminal_init();                /* Initialize the terminal. */
     // RTC_init();                     /* Initialize the RTC. */
-    fs_init(mbi->mods_addr);        /* Initialize the file system. */
-    vfs_init();                     /* Initialize the virtual file system. */
+    // fs_init(mbi->mods_addr);        /* Initialize the file system. */
+    // vfs_init();                     /* Initialize the virtual file system. */
 
     /* Enable interrupts */
     /* Do not enable the following until after you have set up your
      * IDT correctly otherwise QEMU will triple fault and simple close
      * without showing you any output */
     // printf("Enabling Interrupts\n");
-    // sti();
+    sti();
 
     /* This is an test for share gitlab. */
 #ifdef RUN_TESTS
     /* Run tests */
-    // launch_tests();
+    launch_tests();
 #endif
 
     /* Execute the first program ("shell") ... */

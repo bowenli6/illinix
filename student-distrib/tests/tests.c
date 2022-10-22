@@ -1,8 +1,9 @@
 #include <boot/x86_desc.h>
 #include <lib.h>
+#include <io.h>
+#include <drivers/terminal.h>
 
-#include "tests.h"
-#include "app.h"
+#include <tests/tests.h>
 
 	
 #define PASS 1
@@ -179,15 +180,11 @@ void page_fault_out_range() {
 }
 
 
-/* Checkpoint 2 tests */
-/* Checkpoint 3 tests */
-/* Checkpoint 4 tests */
-/* Checkpoint 5 tests */
-
-
-/* Test suite entry point */
-void launch_tests() {
-	printf("--------------------------- Test begins ---------------------------\n");
+/**
+ * @brief The tests for checkpoint 1.
+ * 
+ */
+void test_checkpoint1() {
 	clear();
 	TEST_OUTPUT("idt_test", idt_test());
 
@@ -199,12 +196,12 @@ void launch_tests() {
 	syscall();
 
 	/* page test 1 */
-	TEST_OUTPUT("page_status_test", page_status_test());
-	TEST_OUTPUT("page_access_test", page_access_test());
+	// TEST_OUTPUT("page_status_test", page_status_test());
+	// TEST_OUTPUT("page_access_test", page_access_test());
 
 	/* page test 2 */
-	// printf("[TEST page_fault_null]: There should be a page fault. \n");
-	// page_fault_null();
+	printf("[TEST page_fault_null]: There should be a page fault. \n");
+	page_fault_null();
 
 	/* page test 3 */
 	// printf("[TEST page_fault_video_table]: There should be a page fault. \n");
@@ -214,5 +211,61 @@ void launch_tests() {
 	// printf("[TEST page_fault_out_range]: There should be a page fault. \n");
 	// page_fault_out_range();
 
+}
+
+
+/* Checkpoint 2 tests */
+
+/**
+ * @brief Test for terminal_read()
+ * 
+ */
+void test_terminal_read1() {
+	TEST_HEADER;
+	char buf[10];
+	int fd = terminal_open("stdin");
+	while (strncmp(buf, "quit", 4)) {
+		memset((void*)buf, 0, 10);
+		puts("Please type your data:\n");
+		printf("The number of bytes read: %d\n", terminal_read(0, (void*)buf, 4));
+		printf("The data read is: %s\n", buf);
+	}
+	terminal_close(fd);
+}
+
+void test_terminal_read2() {
+	char buf[10];
+	TEST_HEADER;
+	int fd = terminal_open("stdin");
+    memset((void*)buf, 0, 10);
+	puts("Please type your data:\n");
+	printf("The number of bytes read: %d\n", terminal_read(0, (void*)buf, 130));
+	printf("The data read is: %s\n", buf);
+	terminal_close(fd);
+}
+
+
+/**
+ * @brief The tests for checkpoint 2.
+ * 
+ */
+void test_checkpoint2() {
+	clear();
+	test_terminal_read1();
+	test_terminal_read2();
+}
+
+
+
+/* Checkpoint 3 tests */
+/* Checkpoint 4 tests */
+/* Checkpoint 5 tests */
+
+
+/* Test suite entry point */
+void launch_tests() {
+	printf("--------------------------- Test begins ---------------------------\n");
+	// test_checkpoint1();
+	test_checkpoint2();
 	printf("---------------------------- Test Ends ----------------------------\n");
 }

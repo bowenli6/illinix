@@ -1,23 +1,32 @@
 #include <drivers/terminal.h>
+#include <lib.h>
 #include <io.h>
+
+
+terminal_t terminal;    /* The terminal object. */
 
 
 /* Local functions, see headers for descriptions. */
 
-static void output(uint32_t scancode, uint8_t caps);
+static void terminal_init();
+static void in(uint32_t scancode, uint8_t caps);
 static void backspace();
+static void bufcpy(void *dest, const void *src, uint32_t nbytes, uint8_t bufhd);
 
 /**
  * @brief Initialize the terminal.
  * 
  */
-void terminal_init() {
+static void terminal_init() {
     terminal.capslock = 0;              /* CapsLock is not pressed. */
     terminal.shift = 0;                 /* Shift is not pressed. */
     terminal.ctrl = 0;                  /* Ctrl is not pressed. */
-    // memset((void*)terminal.buffer, 0, KEYBOARD_SIZE);
+    terminal.bufhd = 0;                 /* 0 characters read. */
+    terminal.buftl = 0;                 /* 0 characters read. */
+    terminal.size = 0;                  /* No character yet. */
+    terminal.exit = 0;                  /* \n is not read. */
+    memset((void*)terminal.buffer, 0, TERBUF_SIZE);
 }
-
 
 
 
@@ -27,9 +36,6 @@ void terminal_init() {
  * @param scancode : The scancode of the key.
  */
 void key_press(uint32_t scancode) {
-    puts("   ");
-    printf("%d", scancode);
-    puts("   ");
     switch (scancode) {
     case CAPSLOCK:
         terminal.capslock = !(terminal.capslock);  /* Reverse capslock. */
@@ -52,9 +58,9 @@ void key_press(uint32_t scancode) {
         return;
     default:
         if (terminal.shift)                     /* If Shift is hold, output in capital form. */
-            output(scancode, 1);
+            in(scancode, 1);
         else                                    /* Otherwise, output in capslock from. */
-            output(scancode, terminal.capslock);
+            in(scancode, terminal.capslock);
         break;
     }
 }
@@ -81,55 +87,187 @@ void key_release(uint32_t scancode) {
     }
 }
 
-
+/* [1] [2] [3] [4] [5]*/
+    
 /**
- * @brief Print the character that specified by the given keyboard scancode.
+ * @brief Store the character from stdin that specified by the given keyboard 
+ * scancode into the terminal buffer.
  * 
  * @scancode: The keyboard scancode of the input character.
- * @caps: set to 1 when the character should be printed in capital form.
+ * @caps: set to 1 when the character should be stored in capital form.
  */
-static void output(uint32_t scancode, uint8_t caps) {
+static void in(uint32_t scancode, uint8_t caps) {
     if (scancode >= KEYBOARD_SIZE) return;          /* Should not print. */
     uint8_t character = scancodes[scancode][caps];  /* Get character. */
-    if (character) putc(character);     
+    if (character) {
+        putc(character);
+        if (terminal.size + 1 == TERBUF_SIZE)   
+            terminal.bufhd = terminal.buftl;
+
+        terminal.buffer[terminal.buftl] = character;
+        terminal.buftl = (terminal.buftl + 1) % TERBUF_SIZE;
+
+        if (terminal.size != TERBUF_SIZE)   
+            terminal.size++;            
+        /* otherwise the size does not change. (always as same as TERBUF_SIZE) */
+    }
 }
+
+/**
+ * @brief Print the character to stdout that specified by the given keyboard 
+ * scancode.
+ * 
+ */
+// static void out() {
+//     // /* The method of outputting data will be changed when connect with VGA. */
+//     // char tmp[TERBUF_SIZE+1];
+//     // memcpy((void*)tmp, (void*)terminal.buffer, terminal.bufmax);
+//     // tmp[terminal.bufmax] = '\0';
+//     // printf("%s\n", tmp); /* output to the screen. */
+
+//     // /* Clear the buffer.*/
+//     // memset((void*)terminal.buffer, 0, TERBUF_SIZE);
+//     // terminal.bufmax = 0;
+// }
 
 /**
  * @brief Handle the terminal screen when backspace key is pressed. 
  * 
  */
 static void backspace() {
-
-    // TODO : There is a BUG when backspace is pressed!
-
-    /* No way to backspace. */
-    if (screen_x == 0 && screen_y == 0) {
+    if (!terminal.size) {  
+        /* No way to backspace. */
         return;
-    } else if (screen_x == 0 && screen_y != 0) {
-        screen_x = NUM_COLS - 1;            /* Go back to the previous position. */
-        --screen_y;
-        putc(' ');
-        screen_x = NUM_COLS - 1;            /* Go back to the previous position again */
-        --screen_y;                         /* because puc will increase them. */
-    } else {
-        --screen_x;                         /* Go back to the previous position. */
-        putc(' ');
-        --screen_x;                         /* Go back to the previous position again */
+    } else {    
+        /* Clear the most recent character. */
+        back();
+        terminal.size--;
+        if (terminal.buftl == 0)
+            terminal.buftl = TERBUF_SIZE - 1;
+        else
+            terminal.buftl--;
     }
 }
 
+
+/**
+ * @brief Initialize terminal state. 
+ * 
+ * @param fname : stdin or stdout
+ * @return int32_t : 0.
+ */
 int32_t terminal_open(const int8_t *fname) {
+    terminal_init();
     return 0;
 }
 
+
+/**
+ * @brief Clears any terminal specific variables. (do nothing for now.)
+ * 
+ * @param fd : 0 or 1.
+ * @return int32_t : 0.
+ */
 int32_t terminal_close(int32_t fd) {
     return 0;
 }
 
+
+/**
+ * @brief Read data from the stdin.
+ * 
+ * @param fd 
+ * @param buf 
+ * @param nbytes 
+ * @return int32_t 
+ */
 int32_t terminal_read(int32_t fd, void *buf, int32_t nbytes) {
+    uint32_t intr_flag;
+    int32_t nread;
+    uint8_t start = 0;
+
+    if (nbytes < 0) 
+        return -1;
+
+    if (nbytes == 0)
+        return 0;
+
+    if (nbytes > TERBUF_SIZE)
+        nbytes = TERBUF_SIZE;
+
+    /* Init to zero. (read is not stopped) */
+    terminal.exit = 0;
+
+    while (!terminal.exit) {
+
+        /* Waiting for intrrupt occurs... */
+
+        /* Critical section begins. */
+        cli_and_save(intr_flag);
+
+        for (nread = 0, start = terminal.bufhd; nread < terminal.size;nread++) {
+            if ((terminal.buffer[start] == '\n') || (terminal.buffer[start] == '\r')) {
+                nread++;
+                terminal.exit = 1;
+                break;
+            }
+            start = (start + 1) % TERBUF_SIZE;
+        }
+
+        /* Critical section ends. */
+        restore_flags(intr_flag);
+    }
+
+    /* new-line character has been detected! */
+    /* When the input is larger than the given nbytes. */
+    if (nread > nbytes) {
+        /* copy nbytes from terminal buffer into user buffer. */
+        bufcpy(buf, (void*)terminal.buffer, nbytes, terminal.bufhd);
+        nread = nbytes;
+
+    } else {
+        /* normal case: the nread <= nbytes. */
+        bufcpy(buf, (void*)terminal.buffer, nread,terminal.bufhd);
+    }
+
+     /* change the bufhd points to next part. */
+    terminal.bufhd = (terminal.bufhd + nread) % TERBUF_SIZE;
+    terminal.size -= nread;
+    return nread;
+}
+
+
+
+/**
+ * @brief Write data into stdout.
+ * 
+ * @param fd 
+ * @param buf 
+ * @param nbytes 
+ * @return int32_t 
+ */
+int32_t terminal_write(int32_t fd, const void *buf, int32_t nbytes) {
     return 0;
 }
 
-int32_t terminal_write(int32_t fd, const void *buf, int32_t nbytes) {
-    return 0;
+
+
+/**
+ * @brief Copy nbytes number of bytes from the terminal buffer into
+ * the given dest.
+ * 
+ * @param dest : Destination of copy
+ * @param src : Source of copy
+ * @param nbytes : Number of bytes to copy
+ * @param bufhd : Start index.
+ */
+static void bufcpy(void *dest, const void *src, uint32_t nbytes, uint8_t bufhd) {
+    int i;
+
+    i = bufhd;
+    while (nbytes--) {
+        *(char*)dest++ = *(char*)(src + i);
+        i = (i + 1) % TERBUF_SIZE;
+    }
+
 }

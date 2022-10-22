@@ -51,5 +51,10 @@ RTC:
 ----------------------------------------------------------------------------------------------------
 Checkpoint2:
 
+Terminal:
+1.  Problem:    Terminal_read never break out of loop.
+    Reason:     It only checks if the buffer has \n, not \r.
+    Time used:  1 h
+    Solution:   Add \r to the if statement.
 
 

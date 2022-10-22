@@ -5,6 +5,10 @@ int screen_x = 0;
 int screen_y = 0;
 static char* video_mem = (char *)VIDEO;
 
+
+static void overflow();
+
+
 /**
  * @brief Clears video memory 
  */
@@ -167,14 +171,22 @@ int32_t puts(int8_t* s) {
  */
 void putc(uint8_t c) {
     if(c == '\n' || c == '\r') {
-        screen_y = (screen_y + 1) % NUM_ROWS;
+        if (screen_y + 1 == NUM_ROWS) 
+            overflow();
+        else
+           screen_y++; 
         screen_x = 0;
     } else {
         *(uint8_t *)(video_mem + ((NUM_COLS * screen_y + screen_x) << 1)) = c;
         *(uint8_t *)(video_mem + ((NUM_COLS * screen_y + screen_x) << 1) + 1) = ATTRIB;
         screen_x++;
         screen_x %= NUM_COLS;
-        screen_y = (screen_y + (screen_x / NUM_COLS)) % NUM_ROWS;
+        if (screen_x == 0) {
+            if (screen_y + 1 != NUM_ROWS)
+                screen_y++;
+            else
+                overflow();
+        }
     }
 }
 
@@ -187,4 +199,39 @@ void test_interrupts(void) {
     for (i = 0; i < NUM_ROWS * NUM_COLS; i++) {
         video_mem[i << 1]++;
     }
+}
+
+/* A tmp function used to backspace one character. 
+ * Will be deleted when VGA is supported.
+ */
+void back() {
+    if (screen_x == 0 && screen_y == 0) 
+        return;
+    if (screen_x == 0) {
+        screen_x = NUM_COLS - 1;
+        --screen_y;
+        *(uint8_t *)(video_mem + ((NUM_COLS * screen_y + screen_x) << 1)) = ' ';
+        *(uint8_t *)(video_mem + ((NUM_COLS * screen_y + screen_x) << 1) + 1) = ATTRIB;
+    } else {
+        screen_x--;
+        *(uint8_t *)(video_mem + ((NUM_COLS * screen_y + screen_x) << 1)) = ' ';
+        *(uint8_t *)(video_mem + ((NUM_COLS * screen_y + screen_x) << 1) + 1) = ATTRIB;
+    }
+}
+
+/* A tmp function used to vertical scrolling. 
+ * Will be deleted when VGA is supported.
+ */
+static void overflow() {
+    int32_t i;
+    for (i = 0; i < NUM_COLS * (NUM_ROWS - 1); ++i) {
+        *(uint8_t *)(video_mem + (i << 1)) = *(uint8_t *)(video_mem + ((i + NUM_COLS) << 1));
+        *(uint8_t *)(video_mem + (i << 1) + 1) = ATTRIB;
+    }
+
+    for (i = NUM_COLS * (NUM_ROWS - 1); i < NUM_COLS * NUM_ROWS; ++i) {
+        *(uint8_t *)(video_mem + (i << 1)) = ' ';
+        *(uint8_t *)(video_mem + (i << 1) + 1) = ATTRIB;
+    }
+
 }

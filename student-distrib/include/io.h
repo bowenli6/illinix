@@ -8,15 +8,13 @@
 #define NUM_ROWS    25
 #define ATTRIB      0x7
 
-extern int screen_x;
-extern int screen_y;
 
 void clear(void);
 int32_t printf(int8_t *format, ...);
 void putc(uint8_t c);
 int32_t puts(int8_t *s);
 void test_interrupts(void);
-
+void back(void);
 
 
 #endif /* _IO_T */

@@ -3,18 +3,22 @@
 
 #include <drivers/keyboard.h>
 
+#define TERBUF_SIZE 3
 
 typedef struct {
     uint8_t capslock;                   /* 0 if capslock is not pressed, 1 otherwise. */
     uint8_t shift;                      /* 0 if Lshift and Rshift are not pressed, 1 otherwise. */
     uint8_t ctrl;                       /* 0 if Lctrl and Rctrl are not pressed, 1 otherwise. */
-    char buffer[KEYBOARD_SIZE];         /* Line buffer input. */
+    uint8_t bufhd;                      /* The top position of the buffer. */
+    uint8_t buftl;                      /* The bottom position of the buffer. */
+    uint8_t size;                       /* The current size of the buffer. */
+    uint8_t buffer[TERBUF_SIZE];        /* Line buffer input. */
+    uint8_t exit;                       /* A flag for stdin, 1 if \n is detected. */
 } terminal_t;
 
 
-terminal_t terminal;
+extern terminal_t terminal;
 
-void terminal_init();
 void key_press(uint32_t scancode);
 void key_release(uint32_t scancode);
 int32_t terminal_open(const int8_t *fname);
