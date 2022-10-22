@@ -1,5 +1,6 @@
 #include <vfs/file.h>
 #include <vfs/ece391_vfs.h>
+#include <io.h>
 
 /**
  * @brief Initialize the file object.

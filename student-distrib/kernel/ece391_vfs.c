@@ -1,9 +1,39 @@
 #include <vfs/ece391_vfs.h>
+#include <drivers/terminal.h>
+#include <drivers/rtc.h>
 #include <lib.h>
 #include <io.h>
 
 
 ece391_vfs_t vfs;   /* Stores the virtual file system. */
+
+/* File operation used for regular files. */
+static file_op f_op = {
+    .open = file_open,
+    .close = file_close,
+    .read = file_read,
+    .write = file_write
+};
+
+/* Directory operation used for '.'. */
+static file_op dir_op = {
+    .open = directory_open,
+    .close = directory_close,
+    .read = directory_read,
+    .write = directory_write
+};
+
+/* Terminal operation used for stdin and stdout. */
+static file_op terminal_op = {
+    .open = terminal_open,
+    .close = terminal_close,
+    .read = terminal_read,
+    .write = terminal_write
+};
+
+/* RTC operation. */
+// TODO
+
 
 /* Local functions used for opening a file. */
 

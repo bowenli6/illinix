@@ -1,6 +1,9 @@
 #include <types.h>
 #include <boot/idt.h>
 #include <boot/x86_desc.h>
+#include <boot/exception.h>
+#include <boot/interrupt.h>
+#include <boot/syscall.h>
 #include <lib.h>
 #include <io.h>
 
