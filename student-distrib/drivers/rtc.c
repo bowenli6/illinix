@@ -79,3 +79,62 @@ char log2_of(int32_t frequency) {
 }
 
 
+/**
+ * @brief Open RTC device
+*/
+int32_t RTC_open(const uint8_t* filename) {
+    RTC_init();
+    return 0;
+}
+
+/**
+ * @brief Close RTC device
+*/
+int32_t RTC_close(int32_t fd) {
+    return 0;
+}
+
+/**
+ * @brief Close RTC device
+*/
+int32_t RTC_read(int32_t fd, const void* buffer, int32_t nbytes) {
+    global_interrupt_flag = 0;
+    while(1) {
+        if (global_interrupt_flag == 1) {
+            break;
+        }
+    }
+    return 0;
+}
+
+/**
+ * @brief change RTC frequency
+*/
+int32_t RTC_write(int32_t fd, const void* buffer, int32_t nbytes){
+    if (buffer == NULL || nbytes != sizeof(int32_t)) {
+        return -1;
+    }
+    int32_t new_freq = *((int32_t*) buffer);
+    /* check if the new frequency is out of bound*/
+    if (new_freq > RTC_MAX_freq || new_freq < RTC_MIN_freq) {
+        return -1;                      
+    }
+    /* check if the new frequency is power of 2*/
+    if (new_freq % 2 != 0) {
+        return -1;
+    }
+
+	set_RTC_freq(new_freq);
+    return 0;
+}
+
+
+
+
+
+
+
+
+
+
+
