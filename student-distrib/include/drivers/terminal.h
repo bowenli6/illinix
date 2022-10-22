@@ -3,7 +3,7 @@
 
 #include <drivers/keyboard.h>
 
-#define TERBUF_SIZE 3
+#define TERBUF_SIZE 128
 
 typedef struct {
     uint8_t capslock;                   /* 0 if capslock is not pressed, 1 otherwise. */

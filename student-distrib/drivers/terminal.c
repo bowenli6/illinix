@@ -10,6 +10,7 @@ terminal_t terminal;    /* The terminal object. */
 
 static void terminal_init();
 static void in(uint32_t scancode, uint8_t caps);
+static void out(const void *buf, int32_t nbytes);
 static void backspace();
 static void bufcpy(void *dest, const void *src, uint32_t nbytes, uint8_t bufhd);
 
@@ -87,7 +88,6 @@ void key_release(uint32_t scancode) {
     }
 }
 
-/* [1] [2] [3] [4] [5]*/
     
 /**
  * @brief Store the character from stdin that specified by the given keyboard 
@@ -117,18 +117,16 @@ static void in(uint32_t scancode, uint8_t caps) {
  * @brief Print the character to stdout that specified by the given keyboard 
  * scancode.
  * 
+ * @param buf : The buffer to print to the screen.
+ * @param nbytes : The number of bytes need to print to the screen.
  */
-// static void out() {
-//     // /* The method of outputting data will be changed when connect with VGA. */
-//     // char tmp[TERBUF_SIZE+1];
-//     // memcpy((void*)tmp, (void*)terminal.buffer, terminal.bufmax);
-//     // tmp[terminal.bufmax] = '\0';
-//     // printf("%s\n", tmp); /* output to the screen. */
-
-//     // /* Clear the buffer.*/
-//     // memset((void*)terminal.buffer, 0, TERBUF_SIZE);
-//     // terminal.bufmax = 0;
-// }
+static void out(const void *buf, int32_t nbytes) {
+    /* The method of outputting data will be changed when connected with VGA. */
+    char tmp[nbytes+1];
+    memcpy((void*)tmp, buf, nbytes);
+    tmp[nbytes] = '\0';
+    printf("%s\n", tmp); /* output to the screen. */
+}
 
 /**
  * @brief Handle the terminal screen when backspace key is pressed. 
@@ -176,10 +174,11 @@ int32_t terminal_close(int32_t fd) {
 /**
  * @brief Read data from the stdin.
  * 
- * @param fd 
- * @param buf 
- * @param nbytes 
- * @return int32_t 
+ * @param fd : The file descriptor of the file we want to read.
+ * @param buf : A buffer array that copys the content from the file.
+ * @param nbytes The number of bytes to read from the file.
+ * @return int32_t -1 on failure (non-existent file or invalid inode number), 
+ *                    number of bytes read on success.
  */
 int32_t terminal_read(int32_t fd, void *buf, int32_t nbytes) {
     uint32_t intr_flag;
@@ -227,7 +226,7 @@ int32_t terminal_read(int32_t fd, void *buf, int32_t nbytes) {
 
     } else {
         /* normal case: the nread <= nbytes. */
-        bufcpy(buf, (void*)terminal.buffer, nread,terminal.bufhd);
+        bufcpy(buf, (void*)terminal.buffer, nread, terminal.bufhd);
     }
 
      /* change the bufhd points to next part. */
@@ -239,7 +238,7 @@ int32_t terminal_read(int32_t fd, void *buf, int32_t nbytes) {
 
 
 /**
- * @brief Write data into stdout.
+ * @brief Write data to stdout.
  * 
  * @param fd 
  * @param buf 
@@ -247,7 +246,21 @@ int32_t terminal_read(int32_t fd, void *buf, int32_t nbytes) {
  * @return int32_t 
  */
 int32_t terminal_write(int32_t fd, const void *buf, int32_t nbytes) {
-    return 0;
+    uint32_t intr_flag;
+    if (!buf) {
+        puts("buf has NULL address.\n");
+        return -1;
+    }
+    
+    /* Critical section begins. */
+    cli_and_save(intr_flag);
+
+    out(buf, nbytes);
+
+    /* Critical section ends. */
+    restore_flags(intr_flag);
+
+    return nbytes;
 }
 
 

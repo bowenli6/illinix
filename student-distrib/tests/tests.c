@@ -227,7 +227,7 @@ void test_terminal_read1() {
 	while (strncmp(buf, "quit", 4)) {
 		memset((void*)buf, 0, 10);
 		puts("Please type your data:\n");
-		printf("The number of bytes read: %d\n", terminal_read(0, (void*)buf, 4));
+		printf("The number of bytes read: %d\n", terminal_read(fd, (void*)buf, 4));
 		printf("The data read is: %s\n", buf);
 	}
 	terminal_close(fd);
@@ -239,11 +239,28 @@ void test_terminal_read2() {
 	int fd = terminal_open("stdin");
     memset((void*)buf, 0, 10);
 	puts("Please type your data:\n");
-	printf("The number of bytes read: %d\n", terminal_read(0, (void*)buf, 130));
+	printf("The number of bytes read: %d\n", terminal_read(fd, (void*)buf, 130));
 	printf("The data read is: %s\n", buf);
 	terminal_close(fd);
 }
 
+
+void test_terminal_write() {
+	TEST_HEADER;
+	char buf[10];
+	int nread, nwrite;
+	int in = terminal_open("stdin");
+	int out = terminal_open("out");
+	while (strncmp(buf, "quit", 4)) {
+		memset((void*)buf, 0, 10);
+		nread = terminal_read(in, (void*)buf, 5);
+		nwrite = terminal_write(out, (void*)buf, nread);
+		printf("The number of bytes read: %d\n", nread);
+		printf("The number of bytes write: %d\n", nwrite);
+	}
+	terminal_close(in);
+	terminal_close(out);
+}
 
 /**
  * @brief The tests for checkpoint 2.
@@ -252,7 +269,8 @@ void test_terminal_read2() {
 void test_checkpoint2() {
 	clear();
 	test_terminal_read1();
-	test_terminal_read2();
+	// test_terminal_read2();
+	test_terminal_write();
 }
 
 

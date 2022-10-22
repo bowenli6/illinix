@@ -13,12 +13,17 @@ typedef struct {
 int main(void) {
     char buf1[10];
     char buf2[10];
-    while (1) {
-        ssize_t x = read(0, (void*)buf1, 3);
-        printf("%ld\n", x);
-        printf("%s\n", buf1);
-        memset((void*)buf1, 0, 10);   
-    }
+    // while (1) {
+    //     ssize_t x = read(0, (void*)buf1, 3);
+    //     printf("%ld\n", x);
+    //     printf("%s\n", buf1);
+    //     memset((void*)buf1, 0, 10);   
+    // }
+
+    strcpy(buf1, "abc");
+    printf("%s\n", buf1);
+    ssize_t y = write(1, buf1, 6);
+    printf("\nsize=%ld\n", y);
 
 
     // ssize_t y = read(0, (void*)buf2, 10);

@@ -37,7 +37,7 @@ static file_op terminal_op = {
 
 /* Local functions used for opening a file. */
 
-static int32_t __open(int32_t fd, int8_t *fname, file_op *op);
+static int32_t __open(int32_t fd, const int8_t *fname, file_type_t type, file_op *op);
 
 
 /**
@@ -51,7 +51,7 @@ int32_t vfs_init() {
         vfs.fd[i]->f_count = 0;
         vfs.fd[i]->f_flags = UNUSED;
     }
-    return (__open(0, "stdin", &terminal_op)) + (__open(1, "stdout", &terminal_op));
+    return (__open(0, "stdin", TERMINAL, &terminal_op)) + (__open(1, "stdout", TERMINAL, &terminal_op));
 }
 
 /**
@@ -138,15 +138,7 @@ int32_t file_write(int32_t fd, const void *buf, int32_t nbytes) {
  * @return int32_t : A file descriptor on success, -1 on failure.
  */
 int32_t directory_open(const int8_t *fname) {
-    int32_t fd;
-    file_t file;
-    dentry_t dentry; 
-    memcpy((void*)(&dentry.fname), (void*)fname, NAMESIZE);
-    dentry.inode = 0;   /* Ignored here. */
-    dentry.type = DIRECTORY;
-    fd = file_init(2, &file, &dentry, &dir_op);
-    memcpy((void*)vfs.fd[fd], (void*)&file, sizeof(file_t));
-    return fd;
+    return __open(2, fname, DIRECTORY, &dir_op);
 }
 
 
@@ -198,20 +190,22 @@ int32_t directory_write(int32_t fd, const void *buf, int32_t nbytes) {
 /**
  * @brief Open a file.
  * 
- * @param fd : 0: stdin, 1: stdout
+ * @param fd : 0: stdin, 1: stdout, 2 for other files.
  * @param fname : A file name.
  * @param op : A file opeartion list.
+ * @param type : The file type.
  * @return int32_t : The file descriptor on success, -1 on failure.
  */
-static int32_t __open(int32_t fd, int8_t *fname, file_op *op) {
+static int32_t __open(int32_t fd, const int8_t *fname, file_type_t type, file_op *op) {
     file_t file;
     dentry_t dentry; 
     memcpy((void*)(&dentry.fname), (void*)fname, NAMESIZE);
     dentry.inode = 0;   /* ignored here. */
-    dentry.type = TERMINAL;
-    if (file_init(fd, &file, &dentry, &dir_op) != fd) {
+    dentry.type = type;
+    if ((fd = file_init(fd, &file, &dentry, op)) < 0) {
         printf("%s allocation error.\n", fname);
         return -1;
     }
-    return 0;
+    memcpy((void*)vfs.fd[fd], (void*)&file, sizeof(file_t));
+    return fd;
 }
