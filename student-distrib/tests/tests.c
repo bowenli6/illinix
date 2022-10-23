@@ -2,7 +2,7 @@
 #include <lib.h>
 #include <io.h>
 #include <drivers/terminal.h>
-
+#include <drivers/rtc.h>
 #include <tests/tests.h>
 
 	
@@ -262,6 +262,30 @@ void test_terminal_write() {
 	terminal_close(out);
 }
 
+
+/**
+ * @brief Test for RTC read and write
+ * 
+ */
+int test_RTC_ReadWrite(){
+	TEST_HEADER;
+	uint16_t freq;
+	// initalize the RTC
+	RTC_open(NULL);
+	// every time frequency = frequency * 2
+	for(freq = 2; freq <= 1024; freq += freq) {
+		for(int i = 0; i < freq; i++) {
+			RTC_read(NULL, NULL, 0);
+			printf("%d", freq);
+		}
+		rtc_write(NULL, (void*) &freq, sizeof(uint16_t));
+		printf("\n");
+	}
+	RTC_close(NULL);
+	return PASS;
+}
+
+
 /**
  * @brief The tests for checkpoint 2.
  * 
@@ -271,6 +295,7 @@ void test_checkpoint2() {
 	test_terminal_read1();
 	// test_terminal_read2();
 	test_terminal_write();
+	test_RTC_ReadWrite();
 }
 
 
