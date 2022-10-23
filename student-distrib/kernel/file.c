@@ -1,5 +1,6 @@
 #include <vfs/file.h>
 #include <vfs/ece391_vfs.h>
+#include <lib.h>
 #include <io.h>
 
 /**
@@ -15,13 +16,15 @@ int32_t file_init(int32_t fd, file_t *file, dentry_t *dentry, file_op *op) {
     int i;
 
     for (i = fd; i < OPEN_MAX; ++i) {
-        if (vfs.fd[fd]->f_flags == UNUSED) {
-            file->f_dentry = dentry;
-            file->f_op = op;
+        /* If there is an unused file object. */
+        if (vfs.fd[fd].f_flags == UNUSED) {
+            /* Copy data to the new file object. */
+            memcpy((void*)(&(file->f_dentry)), (void*)dentry, sizeof(dentry_t));
+            file->f_op = *op;
             file->f_count = 1;
             file->f_flags = INUSED;
             file->f_pos = 0;
-            return i;
+            return i;   /* Return the file descriptor. */
         }
     }
     puts("ERROR: The file descriptors limit has been reached.\n");

@@ -54,7 +54,43 @@ Checkpoint2:
 Terminal:
 1.  Problem:    Terminal_read never break out of loop.
     Reason:     It only checks if the buffer has \n, not \r.
-    Time used:  1 h
+    Time used:  1h
     Solution:   Add \r to the if statement.
 
+
+File System:
+2.  Problem:    Page fault when initializing the file system driver.
+    Reason:     Access a vitural address that should not be accessed.
+    Time used:  30 min 
+    Solution:   (1) When incrmenting the address of the starting location of 
+                    the file system, I should check the type of the current 
+                    pointer. If the type is inode_t *, I should only add 1 to
+                    it so it will be added to the next 4kb address.
+                (2) Initializing the file system driver before paging. 
+                    (paging will refuse me to access the memory)
+
+3.  Problem:    Directory Always show the same filename.
+    Reason:     Did not update file position after reading.
+    Time used:  30 min
+    Solution:   Update f_pos after reading.
+
+4.  Problem:    Read 0 bytes everytime calling file_read
+    Reason:     inode is not the same as dirs index.
+    Time used:  1 hour 
+    Solution:   Remove the code that check if the current type is not regular file.
+                Because in my implmentation, only reading regular files can enter this
+                function.
+
+5.  Problem:    Divide by zero exception occurs when reading regular files.
+    Reason:     Divide by zero when calcuate The index of the data we want to read.
+    Time used:  10 min
+    Solution:   Divide by BLOCK_SIZE instead of the index of block because the index 
+                could be zero.
+
+6.  Problem:    Reading regular files gives me ELF.. File content is not shown.
+    Reason:
+    Time used:
+    Solution:
+----------------------------------------------------------------------------------------------------
+Checkpoint3:
 

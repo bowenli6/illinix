@@ -21,9 +21,8 @@ typedef struct {
  * exists only in kernel memory during the period when
  * a process has the file open. */
 typedef struct {
-    uint8_t *f_name;        /* The file name. */
-    dentry_t *f_dentry;     /* The dentry for this file. */
-    file_op *f_op;          /* Pointer to the file operation table. */
+    dentry_t f_dentry;      /* The dentry for this file. */
+    file_op  f_op;          /* Pointer to the file operation table. */
     uint32_t f_count;       /* File object's reference count. */
     uint32_t f_flags;       /* Flags specified when opening the file. */
     uint32_t f_pos;         /* Current file offset (file pointer). */

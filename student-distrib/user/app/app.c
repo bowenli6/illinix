@@ -20,12 +20,14 @@ int main(void) {
     //     memset((void*)buf1, 0, 10);   
     // }
 
-    strcpy(buf1, "abc");
-    printf("%s\n", buf1);
-    ssize_t y = write(1, buf1, 6);
-    printf("\nsize=%ld\n", y);
+    // strcpy(buf1, "abc");
+    // printf("%s\n", buf1);
+    // ssize_t y = write(1, buf1, 6);
+    // printf("\nsize=%ld\n", y);
 
-
+    double p[3];
+    printf("%p\n", p);
+    printf("%p\n", p+1);
     // ssize_t y = read(0, (void*)buf2, 10);
     // printf("%ld\n", y);
     // printf("%s\n", buf2);

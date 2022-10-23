@@ -152,23 +152,30 @@ void entry(unsigned long magic, unsigned long addr) {
         ltr(KERNEL_TSS);
     }
 
-/* Initialize devices, memory, filesystem, enable device interrupts on the
-    //  * PIC, any other initialization stuff... */
+    /* Boot */
     idt_init();                     /* Initialize the IDT. */
     trap_init();                    /* Initialize the exception handlers for IDT. */
     intr_init();                    /* Initialize the interrupt handlers for IDT. */
     i8259_init();                   /* Initialize the PIC */
+
+
+    /* File System */
+    module_t *mod = (module_t *)mbi->mods_addr;
+    fs_init(mod->mod_start);        /* Initialize the file system driver. */ 
+    vfs_init();                     /* Initialize the virtual file system. */
+
+
+    /* Virtual Memory */
     page_init();                    /* Initialize page tables. */
-    keyboard_init();                /* Initialize the Keyboard */
-    // RTC_init();                     /* Initialize the RTC. */
-    // fs_init(mbi->mods_addr);        /* Initialize the file system. */
-    // vfs_init();                     /* Initialize the virtual file system. */
+
+
+    /* Devices */
+    keyboard_init();                /* Initialize the Keyboard driver. */
+    // RTC_init();                     /* Initialize the RTC driver. */
+
 
     /* Enable interrupts */
-    /* Do not enable the following until after you have set up your
-     * IDT correctly otherwise QEMU will triple fault and simple close
-     * without showing you any output */
-    // printf("Enabling Interrupts\n");
+    printf("Enabling Interrupts\n");
     sti();
 
     /* This is an test for share gitlab. */

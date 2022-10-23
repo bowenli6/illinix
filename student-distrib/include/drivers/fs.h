@@ -14,14 +14,16 @@ typedef enum {
     TERMINAL                    /* Terminal. */
 } file_type_t;
 
+
 /* The metadate about a file. */
 /* sizeof(dentry_t) == 64 */
 typedef struct {
-    int8_t fname[NAMESIZE];    /* File name. */
+    int8_t fname[NAMESIZE];     /* File name. */
     file_type_t type;           /* File type. */
     uint32_t inode;             /* The index of inode, only meaningful for regular files. */     
     uint8_t reserved[24];       /* 24 bytes are reserved. */
 } dentry_t; 
+
 
 /* The first block of the file system memory. */
 /* sizeof(boot_block) == 4096 */
@@ -42,9 +44,11 @@ typedef struct {
     /* 1023 because the total size of inode_t is 4096.*/
 } inode_t;
 
+
 typedef struct {
     int8_t data[BLOCK_SIZE];
 } data_block;
+
 
 typedef struct {
     int idx;                            /* The index we want to start at a given data block. */
@@ -53,14 +57,17 @@ typedef struct {
     data_block datab;                   /* The data block used by the offset. */
 } virtual_pos;
 
+
 typedef struct {
     boot_block *boot;                   /* The first block of the file system. */
     inode_t *inodes;                    /* The address of the statring of the inodes block, up to 63 inodes (1st is the '.' directory). */
     data_block *data_block_addr;        /* The address of the statring data block. */
 } fs_t;
 
-void fs_init(uint32_t start_addr);
 
+extern fs_t fs;
+
+void fs_init(uint32_t start_addr);
 int32_t read_dentry_by_name(const int8_t *fname, dentry_t *dentry);
 int32_t read_dentry_by_index(uint32_t index, dentry_t *dentry);
 int32_t read_data(uint32_t inode, uint32_t offset, uint8_t *buf, uint32_t length);

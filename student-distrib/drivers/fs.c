@@ -11,12 +11,10 @@ fs_t fs;        /* Stores the file system. */
  * @param start_addr : The start address of the file system in the memory.
  */
 void fs_init(uint32_t start_addr) {
-    void *addr = (void *)start_addr;
-
-    fs.boot = (boot_block*)addr;                /* Load the boot block. */
-    addr += BLOCK_SIZE;                         /* Get the address of the first inode block ('.'). */
+    boot_block *addr = (boot_block *)start_addr;
+    fs.boot = addr++;                           /* Load the boot block. */
     fs.inodes = (inode_t *)addr;                /* Load the inodes blocks. */
-    addr += fs.boot->n_inode * BLOCK_SIZE;      /* Get the address of the first data block. */
+    addr += fs.boot->n_inode;                   /* Get the address of the first data block. */
     fs.data_block_addr = (data_block *)addr;    /* Load the data blocks. */
 }
 
@@ -108,9 +106,6 @@ int32_t read_data(uint32_t inode, uint32_t offset, uint8_t *buf, uint32_t length
     }
     
     file = fs.inodes[inode];            /* Get the file inode. */
-
-    if (fs.boot->dirs[inode].type < 2)  /* RTC or DIRECTORY */
-        return 0;
         
     if (offset >= file.size) {
         puts("ERROR: offset is out of bounds. ");
@@ -133,7 +128,7 @@ int32_t read_data(uint32_t inode, uint32_t offset, uint8_t *buf, uint32_t length
     vir_pos.datab = fs.data_block_addr[vir_pos.iblock];
 
     /* The index of the data we want to read. */
-    vir_pos.idx = phy_pos % vir_pos.nblock;
+    vir_pos.idx = phy_pos % BLOCK_SIZE;
 
     while (nread_needed > 0 && nb_left > 0) {
         nread_each = BLOCK_SIZE - vir_pos.idx; 

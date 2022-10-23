@@ -1,11 +1,9 @@
 #include <vfs/ece391_vfs.h>
 #include <drivers/terminal.h>
 #include <drivers/rtc.h>
+#include <drivers/fs.h>
 #include <lib.h>
 #include <io.h>
-
-
-ece391_vfs_t vfs;   /* Stores the virtual file system. */
 
 /* File operation used for regular files. */
 static file_op f_op = {
@@ -39,6 +37,7 @@ static file_op terminal_op = {
 
 static int32_t __open(int32_t fd, const int8_t *fname, file_type_t type, file_op *op);
 
+ece391_vfs_t vfs;   /* Stores the virtual file system. */
 
 /**
  * @brief Initialize the virtual file system.
@@ -48,8 +47,8 @@ static int32_t __open(int32_t fd, const int8_t *fname, file_type_t type, file_op
 int32_t vfs_init() {
     int i;
     for (i = 0; i < OPEN_MAX; ++i) {
-        vfs.fd[i]->f_count = 0;
-        vfs.fd[i]->f_flags = UNUSED;
+        vfs.fd[i].f_count = 0;
+        vfs.fd[i].f_flags = UNUSED;
     }
     return (__open(0, "stdin", TERMINAL, &terminal_op)) + (__open(1, "stdout", TERMINAL, &terminal_op));
 }
@@ -71,7 +70,7 @@ int32_t file_open(const int8_t *fname) {
         fd = file_init(2, &file, &dentry, &f_op); 
 
         /* Copy the file object into the vfs fd. */
-        memcpy((void*)vfs.fd[fd], (void*)&file, sizeof(file_t));
+        memcpy((void*)&(vfs.fd[fd]), (void*)&file, sizeof(file_t));
     }
     return fd;
 }
@@ -84,14 +83,14 @@ int32_t file_open(const int8_t *fname) {
  * @return int32_t 0 on success, -1 on failure.
  */
 int32_t file_close(int32_t fd) {
-    if (vfs.fd[fd]->f_flags == UNUSED) {
-        puts("ERROR: File does not exist.\n");
+    if (vfs.fd[fd].f_flags == UNUSED) {
+        puts("ERROR: File has already been closed.\n");
         return -1;
     }
 
     /* Close the file. */
-    vfs.fd[fd]->f_count--; 
-    vfs.fd[fd]->f_flags = UNUSED;
+    vfs.fd[fd].f_count--; 
+    vfs.fd[fd].f_flags = UNUSED;
     return 0;
 }
 
@@ -107,14 +106,14 @@ int32_t file_close(int32_t fd) {
  */
 int32_t file_read(int32_t fd, void *buf, int32_t nbytes) {
     int32_t nread;
-    file_t *file = vfs.fd[fd];
+    file_t *file = &(vfs.fd[fd]);
     if (file->f_flags == UNUSED) {
         puts("ERROR: File does not exist.\n");
         return -1;
     }
 
     /* Read data from the file.*/
-    if ((nread = read_data(file->f_dentry->inode, file->f_pos, (uint8_t *)buf, nbytes)) != -1) {
+    if ((nread = read_data(file->f_dentry.inode, file->f_pos, (uint8_t *)buf, nbytes)) != -1) {
         file->f_pos += nread;       /* Update file pointer. */
     }
     return nread;
@@ -154,7 +153,7 @@ int32_t directory_close(int32_t fd) {
 
 
 /**
- * @brief Read files file name.
+ * @brief Read directory contents.
  * 
  * @param fd : The file descriptor of the file we want to read.
  * @param buf : A buffer array that copys the content from the file.
@@ -163,15 +162,18 @@ int32_t directory_close(int32_t fd) {
  */
 int32_t directory_read(int32_t fd, void *buf, int32_t nbytes) {
     int32_t nread;
-    if (vfs.fd[fd]->f_flags == UNUSED) {
+    if (vfs.fd[fd].f_flags == UNUSED) {
         puts("ERROR: File does not exist.\n");
         return -1;
     }
+
+    if (vfs.fd[fd].f_pos >= fs.boot->n_dir) 
+        return 0;
     if (nbytes > NAMESIZE)
         nread = NAMESIZE;
     else
         nread = nbytes;
-    memcpy(buf, (void*)vfs.fd[fd]->f_name, nread);
+    memcpy(buf, (void*)(fs.boot->dirs[vfs.fd[fd].f_pos++].fname), nread);
     return nread;
 }
 
@@ -188,9 +190,9 @@ int32_t directory_write(int32_t fd, const void *buf, int32_t nbytes) {
 
 
 /**
- * @brief Open a file.
+ * @brief Open a file for stdin, stdout, and directory.
  * 
- * @param fd : 0: stdin, 1: stdout, 2 for other files.
+ * @param fd : 0: stdin, 1: stdout, >= 2 for directory.
  * @param fname : A file name.
  * @param op : A file opeartion list.
  * @param type : The file type.
@@ -199,13 +201,14 @@ int32_t directory_write(int32_t fd, const void *buf, int32_t nbytes) {
 static int32_t __open(int32_t fd, const int8_t *fname, file_type_t type, file_op *op) {
     file_t file;
     dentry_t dentry; 
+    memset((void*)&dentry, 0, sizeof(dentry));
     memcpy((void*)(&dentry.fname), (void*)fname, NAMESIZE);
     dentry.inode = 0;   /* ignored here. */
     dentry.type = type;
     if ((fd = file_init(fd, &file, &dentry, op)) < 0) {
-        printf("%s allocation error.\n", fname);
+        printf("%s file object allocation error.\n", fname);
         return -1;
     }
-    memcpy((void*)vfs.fd[fd], (void*)&file, sizeof(file_t));
+    memcpy((void*)(&vfs.fd[fd]), (void*)&file, sizeof(file_t));
     return fd;
 }
