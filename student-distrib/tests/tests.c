@@ -2,9 +2,7 @@
 #include <lib.h>
 #include <io.h>
 #include <drivers/terminal.h>
-#include <vfs/ece391_vfs.h>
-#include <drivers/fs.h>
-
+#include <drivers/rtc.h>
 #include <tests/tests.h>
 
 	
@@ -218,19 +216,6 @@ void test_checkpoint1() {
 
 /* Checkpoint 2 tests */
 
-void pre_test() {
-	char buf[10];
-	puts("Are you ready for the next test? (Please type y) \n");
-	int in = terminal_open("stdin");
-	while (strncmp(buf, "y", 1)) {
-		memset((void*)buf, 0, 10);
-		terminal_read(in, (void*)buf, 10);
-	}
-	terminal_close(in);
-	clear();
-}
-
-
 /**
  * @brief Test for terminal_read()
  * 
@@ -239,56 +224,35 @@ void test_terminal_read1() {
 	TEST_HEADER;
 	char buf[10];
 	int fd = terminal_open("stdin");
-	puts("Welcome to our checkpoint 2 test! Hope you like it :)\n");
-	puts("For this test, the terminal will read up to 10 characters (including the new-line character!)\n");
-	puts("The purpose of this test is first to let you check the basic functionality of the terminal. \n");
-	puts("Please remember if you type more than 10 characters, the termimal will only give you the top 10, and save the remaining for the next read.\n");
-	puts("If you want to break from the test loop, simply type q.\n");
-	puts("Enjoy!\n");
-	while (strncmp(buf, "q", 1)) {
+	while (strncmp(buf, "quit", 4)) {
 		memset((void*)buf, 0, 10);
 		puts("Please type your data:\n");
-		printf("The number of bytes read: %d\n", terminal_read(fd, (void*)buf, 10));
+		printf("The number of bytes read: %d\n", terminal_read(fd, (void*)buf, 4));
 		printf("The data read is: %s\n", buf);
 	}
 	terminal_close(fd);
-	pre_test();
 }
 
 void test_terminal_read2() {
-	TEST_HEADER;
 	char buf[10];
+	TEST_HEADER;
 	int fd = terminal_open("stdin");
-	puts("You should change the buffer size to 5 for this test.\n");
-	puts("This test is for testing the max buffer size.\n");
-	puts("The size of our input line buffer is limited.");
-	puts("So if you type more than 5, the buffer can only save the lastest 5 characters.\n");
-	puts("And if also, if you want more than 5 characters read, sorry, it can only give you 5.\n");
-	puts("If you want to break from the test loop, simply type quit.\n");
-	puts("Enjoy!\n");
     memset((void*)buf, 0, 10);
 	puts("Please type your data:\n");
-	printf("The number of bytes read: %d\n", terminal_read(fd, (void*)buf, 10));
+	printf("The number of bytes read: %d\n", terminal_read(fd, (void*)buf, 130));
 	printf("The data read is: %s\n", buf);
 	terminal_close(fd);
-	pre_test();
 }
 
 
-void test_terminal_write1() {
+void test_terminal_write() {
 	TEST_HEADER;
 	char buf[10];
 	int nread, nwrite;
 	int in = terminal_open("stdin");
 	int out = terminal_open("out");
-	puts("This test is build for testing terminal writes.\n");
-	puts("The test wants you to type someting from the stdin, and it will use the terminal_write function to acho it back to the stdout.\n");
-	puts("The size it wants is 5 characters (including new-line character).\n");
-	puts("If you want to break from the test loop, simply type q.\n");
-	puts("Enjoy!\n");
-	while (strncmp(buf, "q", 1)) {
+	while (strncmp(buf, "quit", 4)) {
 		memset((void*)buf, 0, 10);
-		puts("Please type your data:\n");
 		nread = terminal_read(in, (void*)buf, 5);
 		nwrite = terminal_write(out, (void*)buf, nread);
 		printf("The number of bytes read: %d\n", nread);
@@ -296,128 +260,29 @@ void test_terminal_write1() {
 	}
 	terminal_close(in);
 	terminal_close(out);
-	pre_test();
 }
 
 
-void test_terminal_write2() {
+/**
+ * @brief Test for RTC read and write
+ * 
+ */
+int test_RTC_ReadWrite(){
 	TEST_HEADER;
-	char buf[10];
-	int out = terminal_open("out");
-	puts("For this test, you will test what happens if you tell it to write a number of bytes that doesn't match the buffer size.\n");
-	strcpy(buf, "hello");
-	puts("The first case: I will write hello to the screen with a given nbytes 10(which should be mismatched.)\n");
-	printf("The number of bytes write: %d\n", terminal_write(out, (void*)buf, 10));
-	puts("-----------------------------------------------------------\n");
-	puts("The next case: I will write hello to the screen with a given nbytes 3(which should be mismtached.)\n");
-	printf("The number of bytes write: %d\n", terminal_write(out, (void*)buf, 3));
-	terminal_close(out);
-	pre_test();
-}
-
-
-void test_directory_ls() {
-	TEST_HEADER;
-	int32_t fd, cnt;
-    uint8_t buf[33];
-	int in = terminal_open("stdin");
-	puts("The test is for testing directory open, read, and close.\n");
-	puts("It works like ls, which list all the files currently located in the directory.\n");
-	puts("Notice that the lastest file name is not printed normally because it exceeds the file name size limit.\n");
-	puts("And notice the new-line character will be printed to the next line because the terminal failed to reach that character last time.\n");
-    puts("Are you ready to see the result? If so, type yes. \n");
-	while (strncmp(buf, "y", 1)) {
-		memset((void*)buf, 0, 10);
-		terminal_read(in, (void*)buf, 10);
-	}
-	if (-1 == (fd = directory_open ((int8_t*)"."))) {
-        puts("directory open failed\n");
-    }
-	printf("fd is %d\n", fd);
-    while (0 != (cnt = directory_read (fd, buf, 32))) {
-        if (-1 == cnt) {
-	        puts ("directory entry read failed\n");
-	    }
-
-	    buf[cnt++] = '\n';
-	    terminal_write(1, buf, cnt);
-	}
-	directory_close(fd);
-	terminal_close(in);
-	pre_test();
-}
-
-
-void test_file_read() {
-	TEST_HEADER;
-	int i, exit;
-	char buf[10];
-	char filebuf[1000];
-	int fd, nread, size;
-	int in = terminal_open("stdin");
-	int out = terminal_open("stdout");
-	const char *filename[16] = {
-		"sigtest", "shell", "grep", "syserr", "rtc", 
-		"fish", "counter", "pingpong", "cat","frame0.txt", 
-		"verylargetextwithverylongname.txt", "ls", 
-		"testprint", "created.txt", "frame1.txt", "hello"
-	};
-	puts("This test will read every regular file from the file system.\n");
-	puts("For every file, you need to type read to get the next file printed to the screen.\n");
-	puts("Enjoy!\n");
-	for (i = 0; i < 16; ++i) {
-		puts("\nPlease type n to get the next file.\n");
-		while (strncmp(buf, "n", 1)) {
-			memset((void*)buf, 0, 10);
-			terminal_read(in, (void*)buf, 10);
+	uint16_t freq;
+	// initalize the RTC
+	RTC_open(NULL);
+	// every time frequency = frequency * 2
+	for(freq = 2; freq <= 1024; freq += freq) {
+		for(int i = 0; i < freq; i++) {
+			RTC_read(NULL, NULL, 0);
+			printf("%d", freq);
 		}
-		memset((void*)buf, 0, 10);
-		if ((fd = file_open(filename[i])) < 0) {
-			printf("Failed to open [%s]\n", filename[i]);
-			continue;
-		}
-		size = fs.inodes[fs.boot->dirs[i+1].inode].size;
-		printf("The file you have just open is: %s\n", filename[i]);
-		printf("The type of this file is(0: RTC, 1: Directory, 2: Regular file): %d\n", fs.boot->dirs[i+1].type);
-		printf("The correct size of this file is : %d\n", size);
-		exit = 1;
-		while (exit && (nread = file_read(fd, filebuf, 1000))) {
-			if (nread == -1) {
-				printf("Failed to read from [%s]\n", filename[i]);
-				exit = 0;
-				file_close(fd);
-				break;
-			}
-			printf("The number of bytes we read is : %d\n", nread);
-			size -= nread;
-			printf("The Remaining number of bytes in the file is : %d\n", size);
-			printf("The file position is now :%d\n", vfs.fd[fd].f_pos);
-			puts("Please type s to see the file: \n");
-			while (strncmp(buf, "s", 1)) {
-				memset((void*)buf, 0, 10);
-				terminal_read(in, (void*)buf, 10);
-			}
-			memset((void*)buf, 0, 10);
-			terminal_write(out, filebuf, nread);
-			puts("Do you want to see the remaining content of this file? (y or n) \n");
-			while (1) {
-				memset((void*)buf, 0, 10);
-				terminal_read(in, (void*)buf, 10);
-				if (!strncmp(buf, "n", 1)) {
-					exit = 0;
-					break;
-				} else {
-					break;
-				}
-			}
-			memset((void*)buf, 0, 10);
-			memset((void*)filebuf, 0, 1000);
-		}
-		file_close(fd);
+		rtc_write(NULL, (void*) &freq, sizeof(uint16_t));
+		printf("\n");
 	}
-	terminal_close(in);
-	terminal_close(out);
-	pre_test();
+	RTC_close(NULL);
+	return PASS;
 }
 
 
@@ -427,12 +292,10 @@ void test_file_read() {
  */
 void test_checkpoint2() {
 	clear();
-	// test_terminal_read1();
+	test_terminal_read1();
 	// test_terminal_read2();
-	// test_terminal_write1();
-	// test_terminal_write2();
-	// test_directory_ls();
-	test_file_read();
+	test_terminal_write();
+	test_RTC_ReadWrite();
 }
 
 
