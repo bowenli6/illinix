@@ -81,6 +81,7 @@ char log2_of(int32_t frequency) {
  * @brief Open RTC device
 */
 int32_t RTC_open(const int8_t* filename) {
+    /* initialize the RTC and set initial frequency to 2 as instructed */
     RTC_init();
     set_RTC_freq(2);
     return 0;
@@ -90,13 +91,15 @@ int32_t RTC_open(const int8_t* filename) {
  * @brief Close RTC device
 */
 int32_t RTC_close(int32_t fd) {
-    return 0;
+    /* do nothing */
+    return 0;                   
 }
 
 /**
  * @brief Close RTC device
 */
 int32_t RTC_read(int32_t fd, const void* buffer, int32_t nbytes) {
+    /* wait on interrupt generation */
     while(!global_interrupt_flag);
     global_interrupt_flag = 0;
     return 0;
@@ -106,6 +109,7 @@ int32_t RTC_read(int32_t fd, const void* buffer, int32_t nbytes) {
  * @brief change RTC frequency
 */
 int32_t RTC_write(int32_t fd, const void* buffer, int32_t nbytes){
+    /* Sanity check on new frequency */
     if (buffer == NULL || nbytes != sizeof(int32_t)) {
         return -1;
     }
