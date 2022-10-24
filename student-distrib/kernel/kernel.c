@@ -171,7 +171,7 @@ void entry(unsigned long magic, unsigned long addr) {
 
     /* Devices */
     keyboard_init();                /* Initialize the Keyboard driver. */
-    // RTC_init();                     /* Initialize the RTC driver. */
+    RTC_init();                     /* Initialize the RTC driver. */
 
 
     /* Enable interrupts */

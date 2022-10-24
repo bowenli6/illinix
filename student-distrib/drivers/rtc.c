@@ -35,10 +35,8 @@ void RTC_init() {
  */
 void do_RTC() {
     uint32_t interrupt_flag;
-    global_interrupt_flag = 1;
     cli_and_save(interrupt_flag);       /* Disable interrupts and store flags into local variable. */
-    test_interrupts();                  /* Execute when an RTC interrupt occurs. */
-    set_RTC_freq(RTC_MIN_freq);
+    global_interrupt_flag = 1;
     send_eoi(RTC_IRQ);
     restore_flags(interrupt_flag);
 
@@ -99,12 +97,8 @@ int32_t RTC_close(int32_t fd) {
  * @brief Close RTC device
 */
 int32_t RTC_read(int32_t fd, const void* buffer, int32_t nbytes) {
+    while(!global_interrupt_flag);
     global_interrupt_flag = 0;
-    while(1) {
-        if (global_interrupt_flag == 1) {
-            break;
-        }
-    }
     return 0;
 }
 
@@ -115,13 +109,13 @@ int32_t RTC_write(int32_t fd, const void* buffer, int32_t nbytes){
     if (buffer == NULL || nbytes != sizeof(int32_t)) {
         return -1;
     }
-    int32_t new_freq = *((int32_t*) buffer);
+    int32_t new_freq = *(int32_t*) buffer;
     /* check if the new frequency is out of bound*/
     if (new_freq > RTC_MAX_freq || new_freq < RTC_MIN_freq) {
         return -1;                      
     }
     /* check if the new frequency is power of 2*/
-    if (new_freq % 2 != 0) {
+    if (new_freq & 0x1) {
         return -1;
     }
 

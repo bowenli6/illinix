@@ -72,5 +72,6 @@ int32_t RTC_read(int32_t fd, const void* buffer, int32_t nbytes);
 int32_t RTC_write(int32_t fd, const void* buffer, int32_t nbytes);
 
 
+void set_RTC_freq(int32_t frequency);
 
 #endif /* _RTC_H */

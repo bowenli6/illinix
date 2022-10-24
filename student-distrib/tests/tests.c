@@ -452,20 +452,18 @@ int test_RTC_ReadWrite(){
 	TEST_HEADER;
 	int i;
 	int fd;
-	uint16_t freq;
+	int32_t freq;
 	// initalize the RTC
 	RTC_open(NULL);
-	if (FAIL == (fd = directory_open ((int8_t*)"RTC"))) {
-		return FAIL;
-	}
-	// every time frequency = frequency * 2
-	for(freq = 2; freq <= 1024; freq += freq) {
+	fd = RTC_open ("RTC");	
+	// every time frequency = frequency * 2	
+	for(freq = 2; freq <= 1024; freq *= 2) {
 		for(i = 0; i < freq; i++) {
 			RTC_read(fd, NULL, 0);
-			printf("%d", freq);
+			printf("%d", 1);
 		}
-		RTC_write(fd, (void*) &freq, sizeof(uint16_t));
-		printf("\n");
+		RTC_write(fd, (void*)(&freq), sizeof(int32_t));
+		clear();
 	}
 	RTC_close(NULL);
 	return PASS;
@@ -490,7 +488,7 @@ void test_checkpoint2() {
 	// test_terminal_write1();
 	// test_terminal_write2();
 	// test_directory_ls();
-	test_file_read();
+	// test_file_read();
 	test_RTC_ReadWrite();
 	// test_keyboard_adv();
 }
