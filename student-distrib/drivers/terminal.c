@@ -55,19 +55,25 @@ void key_press(uint32_t scancode) {
         terminal.ctrl = 1;
         return;
     case L:
-        if (terminal.ctrl)                      /* If ctrl is hold and CTRL-L is pressed. */
-            clear();                            /* Clear the screen.*/
+        if (terminal.ctrl) {                    /* If ctrl is hold and CTRL-L is pressed. */
+            clear(); 
+        } else {
+            if (terminal.shift) {                   
+                in(scancode, 1 - (terminal.capslock & isletter(scancode)));
+            } else {
+                /* Otherwise, output in capslock from. */
+                in(scancode, (terminal.capslock & isletter(scancode)));
+            }      
+        }
         return;
     default:
-        if (terminal.shift)                     /* If Shift is hold, output in capital form. */
+        if (terminal.shift) {                    /* If Shift is hold, output in capital form. */
             in(scancode, 1 - (terminal.capslock & isletter(scancode)));
-        else {
+        } else {
             /* Otherwise, output in capslock from. */
-            
+            in(scancode, (terminal.capslock & isletter(scancode)));
         }                             
-        
-            in(scancode, terminal.capslock);
-        break;
+        return;
     }
 }
 

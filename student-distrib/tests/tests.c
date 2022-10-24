@@ -372,6 +372,7 @@ void test_file_read() {
 	char fname[33];
 	char filebuf[1000];
 	int fd, nread, size;
+	dentry_t d;
 	int in = terminal_open("stdin");
 	int out = terminal_open("stdout");
 	// const char *filename[16] = {
@@ -384,22 +385,27 @@ void test_file_read() {
 	puts("For every file, you need to type read to get the next file printed to the screen.\n");
 	puts("Enjoy!\n");
 
-	puts("Type the file name you want to read, (exit to quit): \n");
-	while (strncmp(buf, "exit", 4)) {
+	while (1) {
+		puts("Type the file name you want to read, (exit to quit): \n");
 		memset((void*)buf, 0, 10);
 		memset((void*)fname, 0, 33);
+		nread = terminal_read(in, (void*)buf, 10);
+		if (!(strncmp(buf, "exit", 4))) 
+			break;
 		nread = terminal_read(in, (void*)fname, 32);
 		fname[nread-1] = '\0';
-		if ((fd = file_open(fname) < 0)) {
+		if ((fd = file_open(fname)) < 0) {
 			printf("Failed to open [%s]\n", fname);
 			continue;
 		}
-		size = fs.inodes[fs.boot->dirs[i+1].inode].size;
+
+		read_dentry_by_name(fname, &d);
+		size = fs.inodes[d.inode].size;
 		printf("The file you have just open is: %s\n", fname);
 		printf("The type of this file is(0: RTC, 1: Directory, 2: Regular file): %d\n", fs.boot->dirs[i+1].type);
 		printf("The correct size of this file is : %d\n", size);
 		exit = 1;
-		while (exit && (nread = file_read(fd, filebuf, 1000))) {
+		while (size && exit && (nread = file_read(fd, filebuf, 1000))) {
 			if (nread == -1) {
 				printf("Failed to read from [%s]\n", fname);
 				exit = 0;
@@ -438,29 +444,35 @@ void test_file_read() {
 	pre_test();
 }
 
+/**
+ * @brief Test for RTC read and write
+ * 
+ */
+int test_RTC_ReadWrite(){
+	TEST_HEADER;
+	int i;
+	uint16_t freq;
+	// initalize the RTC
+	RTC_open(NULL);
+	// every time frequency = frequency * 2
+	for(freq = 2; freq <= 1024; freq += freq) {
+		for(i = 0; i < freq; i++) {
+			RTC_read(NULL, NULL, 0);
+			printf("%d", freq);
+		}
+		RTC_write(NULL, (void*) &freq, sizeof(uint16_t));
+		printf("\n");
+	}
+	RTC_close(NULL);
+	return PASS;
+}
 
-// /**
-//  * @brief Test for RTC read and write
-//  * 
-//  */
-// int test_RTC_ReadWrite(){
-// 	TEST_HEADER;
-// 	int i;
-// 	uint16_t freq;
-// 	// initalize the RTC
-// 	RTC_open(NULL);
-// 	// every time frequency = frequency * 2
-// 	for(freq = 2; freq <= 1024; freq += freq) {
-// 		for(i = 0; i < freq; i++) {
-// 			RTC_read(NULL, NULL, 0);
-// 			printf("%d", freq);
-// 		}
-// 		RTC_write(NULL, (void*) &freq, sizeof(uint16_t));
-// 		printf("\n");
-// 	}
-// 	RTC_close(NULL);
-// 	return PASS;
-// }
+
+
+void test_keyboard_adv() {
+	puts("Test keyboard:\n");
+	while(1);
+}
 
 
 /**
@@ -473,9 +485,10 @@ void test_checkpoint2() {
 	// test_terminal_read2();
 	// test_terminal_write1();
 	// test_terminal_write2();
-	// test_RTC_ReadWrite();
 	// test_directory_ls();
 	test_file_read();
+	test_RTC_ReadWrite();
+	// test_keyboard_adv();
 }
 
 
