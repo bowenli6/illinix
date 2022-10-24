@@ -87,10 +87,10 @@ File System:
     Solution:   Divide by BLOCK_SIZE instead of the index of block because the index 
                 could be zero.
 
-6.  Problem:    Reading regular files gives me ELF.. File content is not shown.
-    Reason:
-    Time used:
-    Solution:
+6.  Problem:    system boot failed.
+    Reason:     did not open the terminal before using it.
+    Time used:  1 hour
+    Solution:   Since we don't have the standard syscall now, I must init terminal by myself.
 ----------------------------------------------------------------------------------------------------
 Checkpoint3:
 

@@ -125,7 +125,7 @@ static void out(const void *buf, int32_t nbytes) {
     char tmp[nbytes+1];
     memcpy((void*)tmp, buf, nbytes);
     tmp[nbytes] = '\0';
-    printf("%s\n", tmp); /* output to the screen. */
+    printf("%s", tmp); /* output to the screen. */
 }
 
 /**

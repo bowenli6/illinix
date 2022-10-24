@@ -169,3 +169,17 @@ int32_t read_data(uint32_t inode, uint32_t offset, uint8_t *buf, uint32_t length
   
     return length - nread_needed;
 }
+
+/**
+ * @brief Get the file size.
+ * 
+ * @param index The index of the dentry.
+ * @return uint32_t : file size.
+ */
+uint32_t get_size(uint32_t index) {
+    dentry_t dentry;
+    read_dentry_by_index(index, &dentry);
+    if (dentry.type < 2) 
+        return 0;
+    return fs.inodes[dentry.inode].size;
+}
