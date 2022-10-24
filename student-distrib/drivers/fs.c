@@ -93,7 +93,7 @@ int32_t read_data(uint32_t inode, uint32_t offset, uint8_t *buf, uint32_t length
     int nread_each;                 /* Number of bytes read each time. */
     int nb_left;                    /* Number of bytes left in the data block. */
     inode_t file;                   /* The file inode. */
-    int8_t *data_ptr;              /* The actuall data address to read within a data block. */
+    int8_t *data_ptr;               /* The actuall data address to read within a data block. */
 
     if (inode >= fs.boot->n_inode) {
         puts("ERROR: invalid inode, no such inode exists in the file system.\n");

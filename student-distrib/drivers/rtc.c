@@ -82,7 +82,7 @@ char log2_of(int32_t frequency) {
 /**
  * @brief Open RTC device
 */
-int32_t RTC_open(const uint8_t* filename) {
+int32_t RTC_open(const int8_t* filename) {
     RTC_init();
     return 0;
 }

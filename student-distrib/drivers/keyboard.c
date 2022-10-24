@@ -23,6 +23,7 @@ const char scancodes[KEYBOARD_SIZE][2] =
 
 
 
+
 /**
  * @brief Initialize the keyboard and enable the interrput.
  */

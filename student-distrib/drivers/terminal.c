@@ -13,6 +13,7 @@ static void in(uint32_t scancode, uint8_t caps);
 static void out(const void *buf, int32_t nbytes);
 static void backspace();
 static void bufcpy(void *dest, const void *src, uint32_t nbytes, uint8_t bufhd);
+static int isletter(uint32_t scancode);
 
 /**
  * @brief Initialize the terminal.
@@ -59,8 +60,12 @@ void key_press(uint32_t scancode) {
         return;
     default:
         if (terminal.shift)                     /* If Shift is hold, output in capital form. */
-            in(scancode, 1);
-        else                                    /* Otherwise, output in capslock from. */
+            in(scancode, 1 - (terminal.capslock & isletter(scancode)));
+        else {
+            /* Otherwise, output in capslock from. */
+            
+        }                             
+        
             in(scancode, terminal.capslock);
         break;
     }
@@ -204,7 +209,7 @@ int32_t terminal_read(int32_t fd, void *buf, int32_t nbytes) {
         /* Critical section begins. */
         cli_and_save(intr_flag);
 
-        for (nread = 0, start = terminal.bufhd; nread < terminal.size;nread++) {
+        for (nread = 0, start = terminal.bufhd; nread < terminal.size; nread++) {
             if ((terminal.buffer[start] == '\n') || (terminal.buffer[start] == '\r')) {
                 nread++;
                 terminal.exit = 1;
@@ -229,7 +234,7 @@ int32_t terminal_read(int32_t fd, void *buf, int32_t nbytes) {
         bufcpy(buf, (void*)terminal.buffer, nread, terminal.bufhd);
     }
 
-     /* change the bufhd points to next part. */
+    /* change the bufhd points to next part. */
     terminal.bufhd = (terminal.bufhd + nread) % TERBUF_SIZE;
     terminal.size -= nread;
     return nread;
@@ -283,4 +288,10 @@ static void bufcpy(void *dest, const void *src, uint32_t nbytes, uint8_t bufhd) 
         i = (i + 1) % TERBUF_SIZE;
     }
 
+}
+
+
+static int isletter(uint32_t scancode) {
+    return ((scancode >= 0x10 && scancode <= 0x19) || (scancode >= 0x1e && scancode <= 0x26)
+        || (scancode >= 0x2c && scancode <= 0x32));
 }

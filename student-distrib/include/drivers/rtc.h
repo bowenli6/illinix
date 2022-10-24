@@ -41,7 +41,7 @@ void do_RTC();
  * Input: const uint8_t* filename
  * Output: 0 on success, -1 otherwise
 */
-int32_t RTC_open(const uint8_t* filename);
+int32_t RTC_open(const int8_t* filename);
 
 /*
  * RTC_close(const uint8_t* filename)

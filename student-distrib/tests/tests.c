@@ -372,14 +372,14 @@ void test_file_read() {
 	char fname[33];
 	char filebuf[1000];
 	int fd, nread, size;
-	int in = 0;
-	int out = 1;
-	const char *filename[16] = {
-		"sigtest", "shell", "grep", "syserr", "rtc", 
-		"fish", "counter", "pingpong", "cat","frame0.txt", 
-		"verylargetextwithverylongname.txt", "ls", 
-		"testprint", "created.txt", "frame1.txt", "hello"
-	};
+	int in = terminal_open("stdin");
+	int out = terminal_open("stdout");
+	// const char *filename[16] = {
+	// 	"sigtest", "shell", "grep", "syserr", "rtc", 
+	// 	"fish", "counter", "pingpong", "cat","frame0.txt", 
+	// 	"verylargetextwithverylongname.txt", "ls", 
+	// 	"testprint", "created.txt", "frame1.txt", "hello"
+	// };
 	puts("This test will read every regular file from the file system.\n");
 	puts("For every file, you need to type read to get the next file printed to the screen.\n");
 	puts("Enjoy!\n");
@@ -389,7 +389,7 @@ void test_file_read() {
 		memset((void*)buf, 0, 10);
 		memset((void*)fname, 0, 33);
 		nread = terminal_read(in, (void*)fname, 32);
-		fname[nread] = '\0';
+		fname[nread-1] = '\0';
 		if ((fd = file_open(fname) < 0)) {
 			printf("Failed to open [%s]\n", fname);
 			continue;
@@ -432,9 +432,9 @@ void test_file_read() {
 			memset((void*)filebuf, 0, 1000);
 		}
 		file_close(fd);
-		terminal_close(in);
-		terminal_close(out);
 	}
+	terminal_close(in);
+	terminal_close(out);
 	pre_test();
 }
 
@@ -474,7 +474,7 @@ void test_checkpoint2() {
 	// test_terminal_write1();
 	// test_terminal_write2();
 	// test_RTC_ReadWrite();
-	test_directory_ls();
+	// test_directory_ls();
 	test_file_read();
 }
 
