@@ -365,6 +365,12 @@ void test_directory_ls() {
 	pre_test();
 }
 
+// const char *filename[16] = {
+	// 	"sigtest", "shell", "grep", "syserr", "rtc", 
+	// 	"fish", "counter", "pingpong", "cat","frame0.txt", 
+	// 	"verylargetextwithverylongname.txt", "ls", 
+	// 	"testprint", "created.txt", "frame1.txt", "hello"
+	// };
 void test_file_read() {
 	TEST_HEADER;
 	int i, exit;
@@ -375,12 +381,6 @@ void test_file_read() {
 	dentry_t d;
 	int in = terminal_open("stdin");
 	int out = terminal_open("stdout");
-	// const char *filename[16] = {
-	// 	"sigtest", "shell", "grep", "syserr", "rtc", 
-	// 	"fish", "counter", "pingpong", "cat","frame0.txt", 
-	// 	"verylargetextwithverylongname.txt", "ls", 
-	// 	"testprint", "created.txt", "frame1.txt", "hello"
-	// };
 	puts("This test will read every regular file from the file system.\n");
 	puts("For every file, you need to type read to get the next file printed to the screen.\n");
 	puts("Enjoy!\n");

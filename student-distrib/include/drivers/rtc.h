@@ -21,7 +21,7 @@
 
 /*
  * RTC_init()
- * Function: initalize the RTC and set the frequency to 1024
+ * @brief initalize the RTC and set the frequency to 1024
  * Input: None
  * Output: None
 */
