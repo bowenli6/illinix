@@ -2,22 +2,23 @@
 #include "string.h"
 #include <unistd.h>
 
-/* A inode stores general information about a specific file. */
-/* sizeof(inode_t) = 4096 bytes. */
-typedef struct {
-    unsigned int size;              /* Number of bytes in the file. */
-    unsigned int data_block[1023];  /* The data blocks used in the file. */
-    /* 1023 because the total size of inode_t is 4096.*/
-} inode_t;
+
+int abs(int a) {
+    return a? a : -a;
+}
 
 int main(void) {
     char buf1[10];
     char buf2[10];
-    while (1) {
-        ssize_t x = read(0, (void*)buf1, 5);
-        write(1, (void*)buf1, 10);
-        memset((void*)buf1, 0, 10);   
-    }
+    // while (1) {
+    //     ssize_t x = read(0, (void*)buf1, 5);
+    //     write(1, (void*)buf1, 10);
+    //     memset((void*)buf1, 0, 10);   
+    // }
+
+    printf("%d\n", abs(12));
+    printf("%d\n", abs(-12));
+
 
     // strcpy(buf1, "abc");
     // printf("%s\n", buf1);

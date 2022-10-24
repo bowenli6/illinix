@@ -112,8 +112,6 @@ int32_t read_data(uint32_t inode, uint32_t offset, uint8_t *buf, uint32_t length
         return -1;
     }
 
-    nread_needed = length;
-    nb_left = file.size;
 
     /* The index of bytes start to read. */
     phy_pos = offset; 
@@ -130,40 +128,38 @@ int32_t read_data(uint32_t inode, uint32_t offset, uint8_t *buf, uint32_t length
     /* The index of the data we want to read. */
     vir_pos.idx = phy_pos % BLOCK_SIZE;
 
-    while (nread_needed > 0 && nb_left > 0) {
+    /* The number of bytes left in this file. */
+    nb_left = file.size - (vir_pos.nblock * BLOCK_SIZE) - vir_pos.idx;
+
+    if (length >= nb_left) {
+        nread_needed = nb_left;
+        length = nb_left;
+    } else {
+        nread_needed = length;
+    }
+
+    while (nread_needed) {
         nread_each = BLOCK_SIZE - vir_pos.idx; 
         data_ptr = &(vir_pos.datab.data[vir_pos.idx]);
-        if (nread_each > nread_needed) {
+        if (nread_each >= nread_needed) {
             /* Numebr of bytes need to read is less than the remaining data size within the block. */
-            if (nread_needed < nb_left) {
-                memcpy((void*)buf, (void*)data_ptr, nread_needed);
-                nread_needed = 0;
-            } else {
-                memcpy((void*)buf, (void*)data_ptr, nb_left);
-                nread_needed -= nb_left;
-            }
+            memcpy((void*)buf, (void*)data_ptr, nread_needed);
+            nread_needed = 0;
             break;
         } else {
             /* We need more blocks to read. */
-            if (nread_needed < nb_left) {
-                memcpy((void*)buf, (void*)data_ptr, nread_each);
-                buf += nread_each;
-                nb_left -= nread_each;
-                nread_needed -= nread_each;
-
-                /* Update vir_pos to the next data block used by the file inode. */
-                vir_pos.iblock = file.data_block[++vir_pos.nblock];
-                if (vir_pos.iblock >= fs.boot->n_datab) {
-                    puts("ERROR: invalid data block found.\n");
-                    return -1;
-                }
-                vir_pos.datab = fs.data_block_addr[vir_pos.iblock];
-                vir_pos.idx = 0;    /* Start from beginning of the new data block. */
-            } else {
-                memcpy((void*)buf, (void*)data_ptr, nb_left);
-                nread_needed -= nb_left;
-                break;
+            memcpy((void*)buf, (void*)data_ptr, nread_each);
+            buf += nread_each;
+            nb_left -= nread_each;
+            nread_needed -= nread_each;
+            /* Update vir_pos to the next data block used by the file inode. */
+            vir_pos.iblock = file.data_block[++vir_pos.nblock];
+            if (vir_pos.iblock >= fs.boot->n_datab) {
+                puts("ERROR: invalid data block found.\n");
+                return -1;
             }
+            vir_pos.datab = fs.data_block_addr[vir_pos.iblock];
+            vir_pos.idx = 0;    /* Start from beginning of the new data block. */
         }
     }
   

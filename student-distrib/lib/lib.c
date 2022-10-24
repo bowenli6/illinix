@@ -287,4 +287,6 @@ int8_t* strncpy(int8_t* dest, const int8_t* src, uint32_t n) {
     return dest;
 }
 
-
+int abs(int32_t a) {
+    return (a >= 0)? a : -a;
+}

@@ -8,8 +8,8 @@
 volatile int global_interrupt_flag;
 
 /* local helper functions*/
-void set_RTC_freq(int32_t frequency);
-char log2_of(int32_t frequency);
+static void set_RTC_freq(int32_t frequency);
+static char log2_of(int32_t frequency);
 
 
 /**
@@ -45,41 +45,12 @@ void do_RTC() {
     inb(RTC_DATA_port);                /* discard the value for now. */
 }
 
-
 /**
- * @brief local helper function that set the RTC frequency to the given value
-*/
-void set_RTC_freq(int32_t frequency) {
-    // frequency =  32768 >> (rate-1)
-    char rate = 15 - log2_of(frequency) + 1;
-    rate &= rate_mask;
-
-    if (rate < 3) {     // the minimum rate is 3
-        return;
-    }
-    uint32_t interrupt_flag;
-    cli_and_save(interrupt_flag);       /* Disable interrupts and store flags into local variable. */
-    outb(RTC_A_reg, RTC_CMD_port);
-	char prev = inb(RTC_DATA_port);
-	outb(RTC_A_reg, RTC_CMD_port);
-	outb((prev & prev_mask) | rate, RTC_DATA_port);
-    restore_flags(interrupt_flag);
-}
-
-
-char log2_of(int32_t frequency) {
-    char count = 0;
-    while(frequency != 1){
-        frequency = frequency >> 1;
-        count++;
-    }
-    return count;
-}
-
-
-/**
- * @brief Open RTC device
-*/
+ * @brief Open the RTC.
+ * 
+ * @param filename : A filename.
+ * @return int32_t : 0 on success, -1 otherwise.
+ */
 int32_t RTC_open(const int8_t* filename) {
     /* initialize the RTC and set initial frequency to 2 as instructed */
     RTC_init();
@@ -89,6 +60,9 @@ int32_t RTC_open(const int8_t* filename) {
 
 /**
  * @brief Close RTC device
+ * 
+ * @param fd : The file descriptor
+ * @return int32_t : 0 on success, -1 otherwise.
 */
 int32_t RTC_close(int32_t fd) {
     /* do nothing */
@@ -96,7 +70,14 @@ int32_t RTC_close(int32_t fd) {
 }
 
 /**
- * @brief Close RTC device
+ * @brief Wait for interrupt on RTC
+ * 
+ * @param fd : The file descriptor.
+ * @param buffer : address of the target frequency.
+ * @param nbytes : number of bytes.
+ * 
+ * @return int32_t : 0 on success, -1 otherwise.
+ * 
 */
 int32_t RTC_read(int32_t fd, const void* buffer, int32_t nbytes) {
     /* wait on interrupt generation */
@@ -105,8 +86,16 @@ int32_t RTC_read(int32_t fd, const void* buffer, int32_t nbytes) {
     return 0;
 }
 
+
 /**
- * @brief change RTC frequency
+ * @brief Set the RTC frequency based on buffer
+ * 
+ * @param fd : The file descriptor.
+ * @param buffer : address of the target frequency.
+ * @param nbytes : number of bytes.
+ * 
+ * @return int32_t : 0 on success, -1 otherwise.
+ * 
 */
 int32_t RTC_write(int32_t fd, const void* buffer, int32_t nbytes){
     /* Sanity check on new frequency */
@@ -128,6 +117,36 @@ int32_t RTC_write(int32_t fd, const void* buffer, int32_t nbytes){
 }
 
 
+
+/**
+ * @brief Local helper function that set the RTC frequency to the given value.
+*/
+static void set_RTC_freq(int32_t frequency) {
+    // frequency =  32768 >> (rate-1)
+    char rate = 15 - log2_of(frequency) + 1;
+    rate &= rate_mask;
+
+    if (rate < 3) {     // the minimum rate is 3
+        return;
+    }
+    uint32_t interrupt_flag;
+    cli_and_save(interrupt_flag);       /* Disable interrupts and store flags into local variable. */
+    outb(RTC_A_reg, RTC_CMD_port);
+	char prev = inb(RTC_DATA_port);
+	outb(RTC_A_reg, RTC_CMD_port);
+	outb((prev & prev_mask) | rate, RTC_DATA_port);
+    restore_flags(interrupt_flag);
+}
+
+
+static char log2_of(int32_t frequency) {
+    char count = 0;
+    while(frequency != 1){
+        frequency = frequency >> 1;
+        count++;
+    }
+    return count;
+}
 
 
 

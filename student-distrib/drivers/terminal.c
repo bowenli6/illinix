@@ -133,10 +133,10 @@ static void in(uint32_t scancode, uint8_t caps) {
  */
 static void out(const void *buf, int32_t nbytes) {
     /* The method of outputting data will be changed when connected with VGA. */
-    char tmp[nbytes+1];
-    memcpy((void*)tmp, buf, nbytes);
-    tmp[nbytes] = '\0';
-    printf("%s", tmp); /* output to the screen. */
+    int i;
+    
+    for (i = 0; i < nbytes; ++i)
+        putc(((char*)buf)[i]);   /* output to the screen. */
 }
 
 /**
@@ -146,6 +146,7 @@ static void out(const void *buf, int32_t nbytes) {
 static void backspace() {
     if (!terminal.size) {  
         /* No way to backspace. */
+        back();
         return;
     } else {    
         /* Clear the most recent character. */
@@ -296,7 +297,12 @@ static void bufcpy(void *dest, const void *src, uint32_t nbytes, uint8_t bufhd) 
 
 }
 
-
+/**
+ * @brief Check if the scancode represent a letter.
+ * 
+ * @param scancode : A scancode
+ * @return int : 1 if true, 0 otherwise.
+ */
 static int isletter(uint32_t scancode) {
     return ((scancode >= 0x10 && scancode <= 0x19) || (scancode >= 0x1e && scancode <= 0x26)
         || (scancode >= 0x2c && scancode <= 0x32));

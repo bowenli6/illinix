@@ -236,6 +236,7 @@ void pre_test() {
 void test_terminal_read1() {
 	TEST_HEADER;
 	char buf[10];
+	int nread;
 	int fd = terminal_open("stdin");
 	puts("Welcome to our checkpoint 2 test! Hope you like it :)\n");
 	puts("For this test, the terminal will read up to 10 characters (including the new-line character!)\n");
@@ -243,10 +244,13 @@ void test_terminal_read1() {
 	puts("Please remember if you type more than 10 characters, the termimal will only give you the top 10, and save the remaining for the next read.\n");
 	puts("If you want to break from the test loop, simply type q.\n");
 	puts("Enjoy!\n");
-	while (strncmp(buf, "q", 1)) {
+	while (1) {
 		memset((void*)buf, 0, 10);
 		puts("Please type your data:\n");
-		printf("The number of bytes read: %d\n", terminal_read(fd, (void*)buf, 10));
+		nread = terminal_read(fd, (void*)buf, 10);
+		if (!strncmp(buf, "q", 1))
+			break;
+		printf("The number of bytes read: %d\n", nread);
 		printf("The data read is: %s\n", buf);
 	}
 	terminal_close(fd);
@@ -284,10 +288,12 @@ void test_terminal_write1() {
 	puts("The size it wants is 5 characters (including new-line character).\n");
 	puts("If you want to break from the test loop, simply type q.\n");
 	puts("Enjoy!\n");
-	while (strncmp(buf, "q", 1)) {
+	while (1) {
 		memset((void*)buf, 0, 10);
 		puts("Please type your data:\n");
 		nread = terminal_read(in, (void*)buf, 5);
+		if (!strncmp(buf, "q", 1))
+			break;
 		nwrite = terminal_write(out, (void*)buf, nread);
 		printf("The number of bytes read: %d\n", nread);
 		printf("The number of bytes write: %d\n", nwrite);
@@ -323,6 +329,8 @@ void test_directory_ls() {
 	int32_t fd, cnt;
     char buf[33];
 	int i;
+	int len;
+	dentry_t d;
 	int in = terminal_open("stdin");
 	int out = terminal_open("stdout");
 	const char *filename[17] = {
@@ -333,8 +341,7 @@ void test_directory_ls() {
 	};
 	puts("The test is for testing directory open, read, and close.\n");
 	puts("It works like ls, which list all the files currently located in the directory.\n");
-	puts("Notice that the lastest file name is not printed normally because it exceeds the file name size limit.\n");
-	puts("And notice the new-line character will be printed to the next line because the terminal failed to reach that character last time.\n");
+	puts("Notice that the largest file name is not printed normally because it exceeds the file name size limit.\n");
     puts("Are you ready to see the result? If so, type y. \n");
 	while (strncmp(buf, "y", 1)) {
 		memset((void*)buf, 0, 10);
@@ -345,7 +352,9 @@ void test_directory_ls() {
         puts("directory open failed\n");
     }
 	puts("File names");
-	print_newline(45);
+	print_newline(30);
+	puts("File type");
+	print_newline(15);
 	puts("File size\n");
 
 	i = 0;
@@ -354,8 +363,12 @@ void test_directory_ls() {
 	        puts ("directory entry read failed\n");
 			break;
 	    }
-		terminal_write(out, buf, strlen(filename[i]));
-		print_newline(55 - strlen(filename[i]));
+		len = (int32_t)strlen(filename[i]);
+		terminal_write(out, buf, len);
+		read_dentry_by_name(filename[i], &d);
+		print_newline(abs(len - 40));
+		printf("%d", d.type);
+		print_newline(8 + 15);
 		printf("%d\n", (int)get_size(i++));
 		memset((void*)buf, 0, 33);
 	}
@@ -376,7 +389,7 @@ void test_file_read() {
 	int i, exit;
 	char buf[10];
 	char fname[33];
-	char filebuf[1000];
+	char filebuf[10000];
 	int fd, nread, size;
 	dentry_t d;
 	int in = terminal_open("stdin");
@@ -387,12 +400,10 @@ void test_file_read() {
 
 	while (1) {
 		puts("Type the file name you want to read, (exit to quit): \n");
-		memset((void*)buf, 0, 10);
 		memset((void*)fname, 0, 33);
-		nread = terminal_read(in, (void*)buf, 10);
-		if (!(strncmp(buf, "exit", 4))) 
-			break;
 		nread = terminal_read(in, (void*)fname, 32);
+		if (!strncmp(fname, "exit", 4))
+			break;
 		fname[nread-1] = '\0';
 		if ((fd = file_open(fname)) < 0) {
 			printf("Failed to open [%s]\n", fname);
@@ -402,16 +413,17 @@ void test_file_read() {
 		read_dentry_by_name(fname, &d);
 		size = fs.inodes[d.inode].size;
 		printf("The file you have just open is: %s\n", fname);
-		printf("The type of this file is(0: RTC, 1: Directory, 2: Regular file): %d\n", fs.boot->dirs[i+1].type);
+		printf("The type of this file is(0: RTC, 1: Directory, 2: Regular file): %d\n", d.type);
 		printf("The correct size of this file is : %d\n", size);
 		exit = 1;
-		while (size && exit && (nread = file_read(fd, filebuf, 1000))) {
+		while (size && exit && (nread = file_read(fd, filebuf, 7000))) {
 			if (nread == -1) {
 				printf("Failed to read from [%s]\n", fname);
 				exit = 0;
 				file_close(fd);
 				break;
 			}
+			clear();
 			printf("The number of bytes we read is : %d\n", nread);
 			size -= nread;
 			printf("The Remaining number of bytes in the file is : %d\n", size);
@@ -454,7 +466,6 @@ int test_RTC_ReadWrite(){
 	int fd;
 	int32_t freq;
 	// initalize the RTC
-	RTC_open(NULL);
 	fd = RTC_open ("RTC");	
 	// every time frequency = frequency * 2	
 	for(freq = RTC_MIN_freq; freq <= RTC_MAX_freq; freq *= 2) {
@@ -490,8 +501,8 @@ void test_checkpoint2() {
 	// test_terminal_write1();
 	// test_terminal_write2();
 	// test_directory_ls();
-	// test_file_read();
-	test_RTC_ReadWrite();
+	test_file_read();
+	// test_RTC_ReadWrite();
 	// test_keyboard_adv();
 }
 
@@ -504,8 +515,8 @@ void test_checkpoint2() {
 
 /* Test suite entry point */
 void launch_tests() {
-	printf("--------------------------- Test begins ---------------------------\n");
+	printf("--------------------------------- Test begins ---------------------------------\n");
 	// test_checkpoint1();
 	test_checkpoint2();
-	printf("---------------------------- Test Ends ----------------------------\n");
+	printf("---------------------------------- Test Ends ----------------------------------\n");
 }
