@@ -30,7 +30,12 @@ static file_op terminal_op = {
 };
 
 /* RTC operation. */
-// TODO
+static file_op rtc_op = {
+    .open = RTC_open,
+    .close = RTC_close,
+    .read = RTC_read,
+    .write = RTC_write
+};
 
 
 /* Local functions used for opening a file. */
