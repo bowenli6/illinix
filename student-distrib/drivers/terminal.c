@@ -112,8 +112,8 @@ static void in(uint32_t scancode, uint8_t caps) {
     uint8_t character = scancodes[scancode][caps];  /* Get character. */
     if (character) {
         putc(character);
-        if (terminal.size + 1 == TERBUF_SIZE)   
-            terminal.bufhd = terminal.buftl;
+        if (terminal.size  == TERBUF_SIZE)   
+            terminal.bufhd = (terminal.bufhd + 1) % TERBUF_SIZE;
 
         terminal.buffer[terminal.buftl] = character;
         terminal.buftl = (terminal.buftl + 1) % TERBUF_SIZE;

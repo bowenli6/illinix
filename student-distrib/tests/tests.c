@@ -386,7 +386,7 @@ void test_directory_ls() {
 	// };
 void test_file_read() {
 	TEST_HEADER;
-	int i, exit;
+	int exit;
 	char buf[10];
 	char fname[33];
 	char filebuf[10000];
@@ -496,14 +496,14 @@ void test_keyboard_adv() {
  */
 void test_checkpoint2() {
 	clear();
-	// test_terminal_read1();
-	// test_terminal_read2();
-	// test_terminal_write1();
-	// test_terminal_write2();
-	// test_directory_ls();
+	test_terminal_read1();
+	test_terminal_read2();
+	test_terminal_write1();
+	test_terminal_write2();
+	test_directory_ls();
 	test_file_read();
-	// test_RTC_ReadWrite();
-	// test_keyboard_adv();
+	test_RTC_ReadWrite();
+	test_keyboard_adv();
 }
 
 
