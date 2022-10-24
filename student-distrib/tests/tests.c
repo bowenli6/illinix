@@ -439,28 +439,31 @@ void test_file_read() {
 }
 
 
-// /**
-//  * @brief Test for RTC read and write
-//  * 
-//  */
-// int test_RTC_ReadWrite(){
-// 	TEST_HEADER;
-// 	int i;
-// 	uint16_t freq;
-// 	// initalize the RTC
-// 	RTC_open(NULL);
-// 	// every time frequency = frequency * 2
-// 	for(freq = 2; freq <= 1024; freq += freq) {
-// 		for(i = 0; i < freq; i++) {
-// 			RTC_read(NULL, NULL, 0);
-// 			printf("%d", freq);
-// 		}
-// 		RTC_write(NULL, (void*) &freq, sizeof(uint16_t));
-// 		printf("\n");
-// 	}
-// 	RTC_close(NULL);
-// 	return PASS;
-// }
+/**
+ * @brief Test for RTC read and write
+ * 
+ */
+int test_RTC_ReadWrite(){
+	TEST_HEADER;
+	int i;
+	int fd;
+	uint16_t freq;
+	// initalize the RTC
+	RTC_open(NULL);
+	if(FAIL == (fd = file_open((int8_t*)"RTC"))) return FAIL;
+
+	// every time frequency = frequency * 2
+	for(freq = 2; freq <= 1024; freq += freq) {
+		for(i = 0; i < freq; i++) {
+			RTC_read(fd, NULL, 0);
+			printf("%d", freq);
+		}
+		RTC_write(fd, (void*) &freq, sizeof(uint32_t));
+		printf("\n");
+	}
+	RTC_close(NULL);
+	return PASS;
+}
 
 
 /**

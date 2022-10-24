@@ -84,6 +84,7 @@ char log2_of(int32_t frequency) {
 */
 int32_t RTC_open(const uint8_t* filename) {
     RTC_init();
+    set_RTC_freq(2);
     return 0;
 }
 
