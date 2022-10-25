@@ -14,6 +14,8 @@
 #define CAPSLOCK        0x3a                /* CapsLock key. */
 #define CTRL            0x1d                /* Ctrl key. */
 #define ENTER           0x1c                /* Enter key. */
+#define TAB             0x0f                /* Tab key */
+#define TAB_SPACE       4                   /* Tab spaces */
 #define L               0x26                /* L key. */
 #define D               0x20                /* D key. */
 #define Z               0x2c                /* C key. */          

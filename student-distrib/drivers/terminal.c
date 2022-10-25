@@ -11,6 +11,7 @@ terminal_t terminal;    /* The terminal object. */
 static void terminal_init();
 static void in(uint32_t scancode, uint8_t caps);
 static void out(const void *buf, int32_t nbytes);
+static void out_tab();
 static void backspace();
 static void bufcpy(void *dest, const void *src, uint32_t nbytes, uint8_t bufhd);
 static int isletter(uint32_t scancode);
@@ -54,6 +55,8 @@ void key_press(uint32_t scancode) {
     case CTRL:
         terminal.ctrl = 1;
         return;
+    case TAB:
+        out_tab(TAB_SPACE);
     case L:
         if (terminal.ctrl) {                    /* If ctrl is hold and CTRL-L is pressed. */
             clear(); 
@@ -138,6 +141,18 @@ static void out(const void *buf, int32_t nbytes) {
     for (i = 0; i < nbytes; ++i)
         putc(((char*)buf)[i]);   /* output to the screen. */
 }
+
+
+/**
+ * @brief Print n space when a tab is pressed.
+ * 
+ */
+static void out_tab(uint32_t n) {
+    int i;
+    for (i = 0; i < n-(NUM_COLS % n); ++i) 
+        putc(' ');
+}
+
 
 /**
  * @brief Handle the terminal screen when backspace key is pressed. 

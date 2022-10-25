@@ -409,14 +409,13 @@ void test_file_read() {
 			printf("Failed to open [%s]\n", fname);
 			continue;
 		}
-
 		read_dentry_by_name(fname, &d);
 		size = fs.inodes[d.inode].size;
 		printf("The file you have just open is: %s\n", fname);
 		printf("The type of this file is(0: RTC, 1: Directory, 2: Regular file): %d\n", d.type);
 		printf("The correct size of this file is : %d\n", size);
 		exit = 1;
-		while (size && exit && (nread = file_read(fd, filebuf, 7000))) {
+		while (size && exit && (nread = file_read(fd, filebuf, 1000))) {
 			if (nread == -1) {
 				printf("Failed to read from [%s]\n", fname);
 				exit = 0;
@@ -496,13 +495,13 @@ void test_keyboard_adv() {
  */
 void test_checkpoint2() {
 	clear();
-	test_terminal_read1();
-	test_terminal_read2();
-	test_terminal_write1();
-	test_terminal_write2();
-	test_directory_ls();
-	test_file_read();
-	test_RTC_ReadWrite();
+	// test_terminal_read1();
+	// test_terminal_read2();
+	// test_terminal_write1();
+	// test_terminal_write2();
+	// test_directory_ls();
+	// test_file_read();
+	// test_RTC_ReadWrite();
 	test_keyboard_adv();
 }
 
