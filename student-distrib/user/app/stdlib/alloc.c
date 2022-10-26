@@ -42,9 +42,14 @@ void *malloc(size_t size) {
  *                 Failure : NULL.
  */
 void *calloc(size_t count, size_t size) {
-    /* TODO: Check overflow */
-    void *ptr = malloc(count * size);
-    memset(ptr, 0, count * size);
+    void *ptr;
+    size_t nbytes = count * size;
+    if (count != 0 && nbytes / count != size) {
+        fprintf(stderr, "Multiplication of count and size result in integer overflow.\n");
+        return NULL;
+    }
+    ptr = malloc(nbytes);
+    memset(ptr, 0, nbytes);
 }
 
 
@@ -97,8 +102,8 @@ void free(void *ptr) {
  */
 void *bulk_alloc(size_t size) {
     void *map;
-    if (map = mmap(NULL, size, PROT_READ | PROT_WRITE, 
-                   MAP_PRIVATE | MAP_ANONYMOUS, -1, 0) == MAP_FAILED)
+    if (MAP_FAILED == (map = mmap(NULL, size, PROT_READ | PROT_WRITE, 
+                             MAP_PRIVATE | MAP_ANONYMOUS, -1, 0)))
         return NULL;
     else
         return map;
