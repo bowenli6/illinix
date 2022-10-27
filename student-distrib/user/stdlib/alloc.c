@@ -1,10 +1,27 @@
+/**
+ * @file alloc.c
+ * @author Bowen Li (bowenli6@illinois.edu)
+ * @brief Dynamic memory allocator
+ * @version 0.1
+ * @date 2022-10-26
+ * 
+ * @copyright Copyright (c) 2022
+ * 
+ */
+
 #include <stdio.h>
 #include <string.h>
 #include <sys/mman.h>
 
 #include "alloc.h"
 
-/* Local helper functions. */
+/* Private global variables */
+static char *heap;      /* Points to first byte of heap. */
+static char *brk;       /* Points to last byte of heap plus 1. */
+static char *max_addr;  /* Max legal heap address plus 1. */
+
+
+/* Private helper functions. */
 
 static inline __attribute__((unused)) int block_index(size_t x);
 
@@ -86,7 +103,7 @@ void *realloc(void *ptr, size_t size) {
  * @param ptr : The address of the allocated memory to be freed.
  */
 void free(void *ptr) {
-
+    if (!ptr) return;
 }
 
 
@@ -151,3 +168,25 @@ static inline __attribute__((unused)) int block_index(size_t x) {
         return 32 - __builtin_clz((unsigned int)x + 7);
     }
 }   
+
+
+/**********************************************************
+ *                                                            
+ *  Header                                               
+ *      
+ *                                             
+ **********************************************************
+*/
+typedef union block {
+    int metadata;
+    int data;
+} block_t; 
+
+int main(void) {
+    block_t b;
+    b.metadata = 12;
+    b.data = 22;
+    fprintf(stdout, "%d\n", (int)sizeof(block_t));
+    fprintf(stdout, "%d\n", b.metadata);
+    fprintf(stdout, "%d\n", b.data);
+}
