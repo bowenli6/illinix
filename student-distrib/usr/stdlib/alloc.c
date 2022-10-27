@@ -16,14 +16,28 @@
 #include "alloc.h"
 
 /* Private global variables */
-static char *heap;      /* Points to first byte of heap. */
-static char *brk;       /* Points to last byte of heap plus 1. */
-static char *max_addr;  /* Max legal heap address plus 1. */
+
+/* It stores eight linked lists of block_t. Each linked list 
+ * repersents one data size, from 2^5 (index 0) to 2^12 (index 7).
+ * Any blocks hold more than CHUNK_SIZE will not be stored in this
+ * list. 
+ */
+block_t **free_list;
+
+static unsigned init_flag = 0;      /* zero if the free_list need to be initialized*/
 
 
 /* Private helper functions. */
 
+static void *Sbrk(size_t size);
+static void init_free_list(void);
+static void *__alloc(int index);
+static void pack(block_t *block, size_t size, unsigned used);
+static void fs_add(block_t *block, int index);
+static block_t *fs_remove(int index);
 static inline __attribute__((unused)) int block_index(size_t x);
+
+
 
 /**
  * @brief Allocates size bytes and returns a pointer to the
@@ -37,6 +51,17 @@ static inline __attribute__((unused)) int block_index(size_t x);
  *                 Failure : NULL.
  */
 void *malloc(size_t size) {
+    if (size <= 0) return NULL;
+
+    /* Initialize free list when flag is zero. */
+    if (!init_flag) {
+        init_flag = 1;
+        fprintf(stderr, "size = %d\n", (int) size);
+        init_free_list();
+    }   
+
+    
+
     return NULL;
 }
 
@@ -67,6 +92,7 @@ void *calloc(size_t count, size_t size) {
     }
     ptr = malloc(nbytes);
     memset(ptr, 0, nbytes);
+    return ptr;
 }
 
 
@@ -119,11 +145,10 @@ void free(void *ptr) {
  */
 void *bulk_alloc(size_t size) {
     void *map;
-    if (MAP_FAILED == (map = mmap(NULL, size, PROT_READ | PROT_WRITE, 
-                             MAP_PRIVATE | MAP_ANONYMOUS, -1, 0)))
+    if ((map = mmap(NULL, size, PROT_READ | PROT_WRITE, 
+                    MAP_PRIVATE | MAP_ANONYMOUS, -1, 0)) == MAP_FAILED)
         return NULL;
-    else
-        return map;
+    return map;
     
 }
 
@@ -145,6 +170,86 @@ void bulk_free(void *ptr, size_t size) {
 }
 
 
+static void *Sbrk(size_t size) {
+    void *ptr;
+    if ((ptr = sbrk(CHUNK_SIZE)) == (void *)-1) {
+        fprintf(stderr, "Failed to allocate memory from the heap.\n");
+        return NULL;
+    }
+    return ptr;
+}
+
+
+/**
+ * @brief Initialize the free list.
+ * 
+ */
+static void init_free_list(void) {
+    int i;          
+    int index;              /* Index of the remaining data we need for free list. */
+    int size;               /* Size of the user block. */
+    void *ptr;              /* Points to new allocated memory address. */
+    block_t **bp;           /* Block pointer used for free_list. */
+
+    
+    ptr = Sbrk(CHUNK_SIZE);
+    bp = (block_t **)ptr;
+    free_list = bp;
+    memset((void *)free_list, 0, FSSIZE);
+    bp += FSSIZE;
+    size = CHUNK_SIZE - FSSIZE * sizeof(block_t *);
+    index = block_index(size - DSIZE);
+    pack((BLOCK(bp)), size, FREED);       
+    fs_add((BLOCK(bp)), index);  
+}
+
+
+static void *__alloc(int index) {
+    void *ptr;              /* Points to new allocated memory address. */    
+    int size;               /* Size of the user block. */
+    int index_remain;       /* Index of the remaining data we need for free list. */
+    int size_remain;        /* Size of the remaining block. */
+    block_t *block;         /* Block struct used for packing. */
+
+    ptr = Sbrk(CHUNK_SIZE);
+
+    /* Pack user block's header and footer. */
+    block = BLOCK(ptr);
+    size = 1 << index;
+
+    pack(block, size, USED);
+    fs_add(block, index);           /* Add block into free_list. */
+
+    /* Pack remaining block's header and footer. */
+    block = BLOCK(ptr + size);
+    index_remain = block_index(CHUNK_SIZE - size - DSIZE);
+    size_remain = 1 << index_remain;
+    pack(block, size_remain, FREED);
+    fs_add(block, index_remain);     /* Add block into free_list. */
+
+    return ptr + WSIZE;
+}
+
+
+static void pack(block_t *block, size_t size, unsigned used) {
+    fprintf(stderr, "%p\n", block);
+    fprintf(stderr, "%d\n", (int)size);
+
+    PUT(block->header, PACK(size, used));
+    PUT(block->footer, PACK(size, used));
+}
+
+
+
+static void fs_add(block_t *block, int index) {
+
+}
+
+static block_t *fs_remove(int index) {
+    return NULL;
+}
+
+
 /**
  * @brief This function computes the log base 2 of the allocation block 
  * size for a given allocation. To find the allocation block size from 
@@ -162,31 +267,16 @@ void bulk_free(void *ptr, size_t size) {
  * 
  */
 static inline __attribute__((unused)) int block_index(size_t x) {
-    if (x <= 8) {
+    if (x <= 16) {
         return 5;
     } else {
-        return 32 - __builtin_clz((unsigned int)x + 7);
+        return 32 - __builtin_clz((unsigned int)x + 15);
     }
 }   
 
 
-/**********************************************************
- *                                                            
- *  Header                                               
- *      
- *                                             
- **********************************************************
-*/
-typedef union block {
-    int metadata;
-    int data;
-} block_t; 
-
 int main(void) {
-    block_t b;
-    b.metadata = 12;
-    b.data = 22;
-    fprintf(stdout, "%d\n", (int)sizeof(block_t));
-    fprintf(stdout, "%d\n", b.metadata);
-    fprintf(stdout, "%d\n", b.data);
+    fprintf(stderr, "%d\n", block_index(17));
 }
+
+
