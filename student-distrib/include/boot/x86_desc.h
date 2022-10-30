@@ -219,8 +219,13 @@ do {                                    \
     );                                  \
 } while (0)
 
+typedef uint32_t pde_t;
+typedef uint32_t pte_t;
 
+pde_t page_directory[ENTRY_NUM] __attribute__((aligned (PAGE_SIZE)));
+pte_t page_table[ENTRY_NUM] __attribute__((aligned (PAGE_SIZE)));
 
+/*
 typedef union pde_4KB_t {
     uint32_t val;
     struct {
@@ -282,6 +287,9 @@ typedef union pd_t {
 
 pd_t page_directory[ENTRY_NUM] __attribute__((aligned (PAGE_SIZE)));
 pte_t page_table[ENTRY_NUM] __attribute__((aligned (PAGE_SIZE)));
+
+*/
+
 
 
 #endif /* ASM */

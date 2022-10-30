@@ -3,13 +3,17 @@
 
 dmem_t dmem;
 
+/**
+ * @brief initialize dynamic memory
+ *
+ */
 void page_alloc_init()
 {
     int i = 0;
     mem_block* p;
     dmem.free_list = NULL;
     dmem.alloc_list = NULL;
-    for(i = RESERVED_PAGES + 1; i < MAX_PAGES; i++){
+    for(i = RESERVED_PAGES * PAGE_SIZE ; i < MAX_PAGES * PAGE_SIZE; i++){
         p = (mem_block*) (i * PAGE_SIZE);
         memset((char*)p, 0, PAGE_SIZE);
         p->next = dmem.free_list;
@@ -18,6 +22,11 @@ void page_alloc_init()
     return;
 }
 
+/**
+ * @brief allocate a 4KB memory
+ * @return pointer to the allocated memory
+ * 
+ */
 void* page_alloc()
 {
     mem_block* p;
@@ -29,6 +38,10 @@ void* page_alloc()
     return p;
 }
 
+/**
+ * @brief free a 4KB memory
+ * 
+ */
 void page_free(void* pt)
 {
     mem_block* p = (mem_block*) pt, *temp, *last;

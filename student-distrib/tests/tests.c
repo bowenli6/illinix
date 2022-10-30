@@ -88,23 +88,22 @@ void inline syscall() {
  * 
  * @return int test result
  */
-int page_status_test() {
+/*int page_status_test() {
 	TEST_HEADER;
 	int i, result = PASS;
 
-	/* page directory status test */
 	result = ( page_directory[0].KB.present == 1 ) & ( page_directory[1].MB.present == 1 );
 	for(i = 2; i < ENTRY_NUM; i++) 
 		result &= page_directory[i].MB.present == 0;
 	if(result == PASS) printf("Page directory entries status test passed.\n");
 
-	/* page table status test */
+
 	for(i = 0; i < ENTRY_NUM; i++) 
 		result &= (i == VIDEO_INDEX) ? page_table[i].present : !page_table[i].present;
 	if(result == PASS) printf("Page table entries status test passed.\n");
 	return result;
 }
-
+*/
 /**
  * @brief This function will dereference an available
  * address and return PASS.
