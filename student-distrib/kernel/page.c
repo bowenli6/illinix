@@ -1,11 +1,14 @@
 #include <boot/x86_desc.h>
 #include <boot/page.h>
 #include <lib.h>
+#include <kmalloc.h>
 
 /**
  * @brief Turn on paging related registers.
  *
  */
+
+
 void enable_paging()
 {
     /* set CR3 to directory base address */
@@ -69,5 +72,52 @@ void page_init()
     enable_paging();
 
     return;
+}
+
+pte_t* walk(uint32_t va, int alloc)
+{
+    pde_4KB_t* pde = &page_directory[va >> 22].KB;
+    if(!pde->available ) {
+        if(!alloc) 
+            return 0;
+        else {
+            if(pde->base_address = ( ( (uint32_t)page_alloc() ) >> 12 ) == 0) 
+                return 0;
+            pde->available = 1;
+        }
+    }
+
+    pagetable_t pagetable = pde->base_address << 12;
+
+    return &pagetable[ va >> 12 ];
+}
+
+int _mmap(uint32_t va, uint32_t pa, int size, int rw, int us)
+{
+    pte_t* pte;
+    int i, walk_addr, length;
+
+    walk_addr = va & 0xFFFFF000;
+    length = ( size / PAGE_SIZE ) + 1;
+
+    for( i = 0; i < length; i++ ){
+
+        if(pte = walk(walk_addr , 1) == 0) 
+            return -1;
+        if(pte->available) panic("remmap!"); 
+
+        pte->base_address = ( pa >> 12 ) + i;
+        pte->available = 1;
+        pte->read_write = rw;
+        pte->user_supervisor = us;
+        walk_addr += PAGE_SIZE;
+    }
+    
+    return 0;
+}
+
+void kmmap(uint32_t va, uint32_t pa, int size, int rw, int us)
+{
+    if(_mmap(va, pa, size, rw, us) != 0) panic("kernel mmap error");
 }
 

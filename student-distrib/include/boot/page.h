@@ -9,5 +9,12 @@
 
 void page_init();
 void enable_paging();
+pte_t* walk(uint32_t va, int alloc);
+int _mmap(uint32_t va, uint32_t pa, int size, int rw, int us);
+void kmmap(uint32_t va, uint32_t pa, int size, int rw, int us);
+void ummap(uint32_t va, uint32_t pa, int size, int rw, int us);
+
+
+typedef uint32_t* pagetable_t;
 
 #endif /* _PAGE_H */
