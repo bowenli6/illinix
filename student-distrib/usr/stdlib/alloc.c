@@ -33,8 +33,8 @@ static void *Sbrk(size_t size);
 static void init_free_list(void);
 static void *__alloc(int index);
 static void pack(block_t *block, size_t size, unsigned used);
-static void fs_add(block_t *block, int index);
-static block_t *fs_remove(int index);
+static void fl_add(block_t *block, int index);
+static block_t *fl_remove(int index);
 static inline __attribute__((unused)) int block_index(size_t x);
 
 
@@ -200,7 +200,7 @@ static void init_free_list(void) {
     size = CHUNK_SIZE - FSSIZE * sizeof(block_t *);
     index = block_index(size - DSIZE);
     pack((BLOCK(bp)), size, FREED);       
-    fs_add((BLOCK(bp)), index);  
+    fl_add((BLOCK(bp)), index);  
 }
 
 
@@ -218,14 +218,14 @@ static void *__alloc(int index) {
     size = 1 << index;
 
     pack(block, size, USED);
-    fs_add(block, index);           /* Add block into free_list. */
+    fl_add(block, index);           /* Add block into free_list. */
 
     /* Pack remaining block's header and footer. */
     block = BLOCK(ptr + size);
     index_remain = block_index(CHUNK_SIZE - size - DSIZE);
     size_remain = 1 << index_remain;
     pack(block, size_remain, FREED);
-    fs_add(block, index_remain);     /* Add block into free_list. */
+    fl_add(block, index_remain);     /* Add block into free_list. */
 
     return ptr + WSIZE;
 }
@@ -240,12 +240,11 @@ static void pack(block_t *block, size_t size, unsigned used) {
 }
 
 
-
-static void fs_add(block_t *block, int index) {
+static void fl_add(block_t *block, int index) {
 
 }
 
-static block_t *fs_remove(int index) {
+static block_t *fl_remove(int index) {
     return NULL;
 }
 
