@@ -5,7 +5,7 @@
 
 extern int errno;                           /* place where the error numebr go */
 
-#define NERROR              70              /* number of errors */
+#define NERROR              40              /* number of errors */
 #define EGENERIC            99              /* generic error */
 #define EPERM                1              /* operation not permitted */            
 #define ENOENT               2              /* no such file or directory */
