@@ -1,13 +1,63 @@
+#include <errno.h>
+#include <boot/x86_desc.h>
+
+#define nr_syscalls ((syscall_table_size) / 4)
 
 .data
 
 # Constants for accessing the fields of the stack
+EAX      = 0x18
 ES       = 0x20
 ORIG_EAX = 0x24
 EIP      = 0x30
 INTR     = 0x24
 
+syscall_table:
+	.long sys_halt
+	.long sys_execute
+	.long sys_read
+	.long sys_write
+	.long sys_open
+    .long sys_close
+
+
+NCALL = (.-sys_call_table)
+
 .text
+
+# Save alll the CPU registers that may be used by the exception handler on the stack.
+#define SAVE_ALL \
+	cld; \
+	pushl %es; \
+	pushl %ds; \
+	pushl %eax; \
+	pushl %ebp; \
+	pushl %edi; \
+	pushl %esi; \
+	pushl %edx; \
+	pushl %ecx; \
+	pushl %ebx; \
+	movl $USER_DS, %edx; \
+	movl %edx, %ds; \
+	movl %edx, %es;
+
+
+#define RESTORE_INT_REGS \
+	popl %ebx;	\
+	popl %ecx;	\
+	popl %edx;	\
+	popl %esi;	\
+	popl %edi;	\
+	popl %ebp;	\
+	popl %eax
+
+
+#define RESTORE_ALL	\
+    popl %ds;	    \
+	popl %es;	    \
+	addl $4, %esp;	\
+    sti             \
+	iret;		    
 
 error_code:
     # Save the registers that might be used by the do_handler.
@@ -194,7 +244,6 @@ simd_coprocessor_error_handler:
 
 
 
-
 # Interrupt handlers
 
 interrupt_handler: 
@@ -247,10 +296,17 @@ rtc_handler:
 # System calls
 .globl syscall_handler
 syscall_handler:
-    pushfl  
-    pushal
-    call    do_syscall
-    popal
-    popfl
-    iret
-
+    pushl %eax                              # save the system call number.
+    SAVE_ALL
+    cmpl  $NCALL, %eax                      # validity check performed on the system call number.
+    jb    nobadsys
+    movl  $(-ENOSYS), EAX(%esp)             # set the error number.
+    jmp   resume_userspace                  # jump back to user mode.
+nobadsys:
+    call  *syscall_table(, %eax, 4)         # perform the system call.
+    movl  %eax, EAX(%esp)		            # store the return value
+syscall_exit:
+	RESTORE_ALL                             # return from the syscall
+resume_userspace:
+    # Check for recheduling request, not implmented yet.
+    jmp   syscall_exit
