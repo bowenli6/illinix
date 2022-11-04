@@ -21,7 +21,7 @@ syscall_table:
     .long sys_close
 
 
-NCALL = (.-sys_call_table)
+NCALL = 6
 
 .text
 
@@ -53,6 +53,7 @@ NCALL = (.-sys_call_table)
 
 
 #define RESTORE_ALL	\
+    RESTORE_INT_REGS
     popl %ds;	    \
 	popl %es;	    \
 	addl $4, %esp;	\
