@@ -34,8 +34,7 @@ typedef struct {
 
 typedef struct {
     uint32_t count;         /* Number of processes sharing this table */
-    uint32_t max_fileobj;   /* Current maximun number of file objects */
-    uint32_t max_fd;        /* Current maximun number of file descriptors */
+    uint32_t max_fd;        /* Current maximun number of file objects */
     file_t fd[OPEN_MAX];    /* Pointers to array of file object pointers */
     file_t fd_init;         /* Initial array of the file object pointers */
 } files;

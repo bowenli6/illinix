@@ -3,6 +3,9 @@
 #include <pro/process.h>
 
 
+static int32_t validate_fd(int32_t fd);
+
+
 /**
  * @brief A system call service routine for opening a file.
  * The calling convation of this function is to use the 
@@ -12,7 +15,14 @@
  * @return int32_t : positive or 0 denote success, negative values denote an error condition.
  */
 asmlinkage int32_t sys_open(const uint8_t *filename) {
-   return 0;
+   int32_t errno;
+   file_op f_op;
+
+   /* validate file descriptor */
+   if ((errno = validate_fname(filename)) < 0)
+      return errno;
+   
+   return file_open(filename);
 }
 
 
@@ -25,7 +35,16 @@ asmlinkage int32_t sys_open(const uint8_t *filename) {
  * @return int32_t : positive or 0 denote success, negative values denote an error condition.
  */
 asmlinkage int32_t sys_close(int32_t fd) {
-   return file_close(fd);
+   int32_t errno;
+   file_op f_op;
+
+   /* validate file descriptor */
+   if ((errno = validate_fd(fd)) < 0)
+      return errno;
+   
+   /* invoke close routine */
+   f_op = curr_process->pro_files.fd[fd].f_op;
+   return f_op.close(fd);
 }
 
 
@@ -40,7 +59,24 @@ asmlinkage int32_t sys_close(int32_t fd) {
  * @return int32_t : positive or 0 denote success, negative values denote an error condition.
  */
 asmlinkage int32_t sys_read(int32_t fd, void *buf, uint32_t nbytes) {
-   return 0;
+   int32_t errno;
+   file_op f_op;
+
+   /* validate file descriptor */
+   if ((errno = validate_fd(fd)) < 0)
+      return errno;
+
+   /* Might be unsuitable for reading: return -EINVAL in the future */
+
+   /* validate buf */
+   if (!buf) return -EINVAL;
+
+   /* validate nbytes */
+   if (nbytes < 0) return -EINVAL;
+
+   /* invoke read routine */
+   f_op = curr_process->pro_files.fd[fd].f_op;
+   return f_op.read(fd, buf, nbytes);
 }
 
 
@@ -55,5 +91,46 @@ asmlinkage int32_t sys_read(int32_t fd, void *buf, uint32_t nbytes) {
  * @return int32_t : positive or 0 denote success, negative values denote an error condition.
  */
 asmlinkage int32_t sys_write(int32_t fd, const void *buf, uint32_t nbytes) {
+   int32_t errno;
+   file_op f_op;
+
+   /* validate file descriptor */
+   if ((errno = validate_fd(fd)) < 0)
+      return errno;
+
+   /* Might be unsuitable for reading: return -EINVAL in the future */
+
+   /* validate buf */
+   if (!buf) return -EINVAL;
+
+   /* validate nbytes */
+   if (nbytes < 0) return -EINVAL;
+
+   /* invoke write routine */
+   f_op = curr_process->pro_files.fd[fd].f_op;
+   return f_op.write(fd, buf, nbytes);
+}
+
+
+/**
+ * @brief Validate a file descriptor
+ * 
+ * @param fd : a file descriptor
+ * @return int32_t : 0 denote success, negative values denote an error condition.
+ */
+static int32_t validate_fd(int32_t fd) {
+   if (fd < 0 || fd >= curr_process->pro_files.max_fd) return -EBADF;
+   if (!curr_process->pro_files.fd[fd].f_count) return -EBADF;
    return 0;
+}
+
+
+/**
+ * @brief Validate a file name
+ * 
+ * @param fd : a file name
+ * @return int32_t : 0 denote success, negative values denote an error condition.
+ */
+static int32_t validate_fname(const uint8_t *filename) {
+   return 0; //TODO
 }
