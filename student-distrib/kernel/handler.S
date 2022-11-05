@@ -13,11 +13,15 @@ USER_DS  = 0x002B
 
 syscall_table:
 	.long sys_halt
-	.long sys_exe
+	.long sys_execute
 	.long sys_read
 	.long sys_write
 	.long sys_open
     .long sys_close
+    .long sys_getargs
+    .long sys_vidmap
+    .long sys_set_handler
+    .long sys_sigreturn
 
 .text
 
