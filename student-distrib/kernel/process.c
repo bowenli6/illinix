@@ -1,9 +1,8 @@
 #include <pro/process.h>
 
-
 /* this map will indicate which task is active now */
-uint8_t     task_map[TASK_COUNT] = {0, 0};
-
+process_t     task_map[TASK_COUNT] = {NULL, NULL};
+process_t*    curr_process;
 // tss is the current tss we are using
     
 
