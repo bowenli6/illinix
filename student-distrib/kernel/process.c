@@ -1,7 +1,7 @@
 #include <pro/process.h>
 
 /* this map will indicate which task is active now */
-process_t     task_map[TASK_COUNT] = {NULL, NULL};
+process_t     task_map[TASK_COUNT];
 process_t*    curr_process;
 // tss is the current tss we are using
     
@@ -24,9 +24,8 @@ process_t*    curr_process;
  * @return 0  if the program executes a halt system call
  * @return -1 if the command cannot be executed
  */
-void parse_arg_to_process(uint8_t* command, uint8_t* stored_pro, uint8_t* stored_file) {
+int32_t parse_arg_to_process(uint8_t* command, uint8_t* stored_pro, uint8_t* stored_file) {
     if (command == NULL) {
-        printf("The command itself is null, we can get no information. \n");
         return -EINVAL;                          /* return -1 if the command can not be executed */
     }
 

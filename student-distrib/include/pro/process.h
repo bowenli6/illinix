@@ -24,10 +24,10 @@
 
 typedef uint32_t gid_t;
 
-typedef struct {
-    uint32_t            pid;                    /* process id number */
-    uint8_t             *arg;                   /* store the arguments */
-    process_t*      parent_addr;                /* parent process addr */
+typedef struct process {
+    uint32_t        pid;                    /* process id number */
+    uint8_t         *arg;                   /* store the arguments */
+    struct process* parent_addr;                /* parent process addr */
 
     uint32_t        kernel_ESP;
     uint16_t        kernel_SS;
@@ -43,7 +43,7 @@ typedef struct {
 extern process_t     task_map[TASK_COUNT];
 extern process_t*    curr_process;
 
-extern void parse_arg_to_process(uint8_t* command, uint8_t* stored_pro, uint8_t* stored_file);
+extern int32_t parse_arg_to_process(uint8_t* command, uint8_t* stored_pro, uint8_t* stored_file);
 
 
 extern void process_context_switch(process_t* curr_pro);

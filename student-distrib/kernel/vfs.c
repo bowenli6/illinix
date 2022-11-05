@@ -1,9 +1,9 @@
 #include <boot/syscall.h>
-#include <ece391_vfs.h>
+#include <vfs/ece391_vfs.h>
 #include <pro/process.h>
 
 static int32_t validate_fd(int32_t fd);
-static int32_t validate_fname(const uint8_t *filename);
+static int32_t validate_fname(const int8_t *filename);
 
 /**
  * @brief A system call service routine for opening a file.
@@ -13,9 +13,8 @@ static int32_t validate_fname(const uint8_t *filename);
  * @param filename : A file name
  * @return int32_t : positive or 0 denote success, negative values denote an error condition.
  */
-asmlinkage int32_t sys_open(const uint8_t *filename) {
+asmlinkage int32_t sys_open(const int8_t *filename) {
    int32_t errno;
-   file_op f_op;
 
    /* validate file descriptor */
    if ((errno = validate_fname(filename)) < 0)
@@ -130,6 +129,6 @@ static int32_t validate_fd(int32_t fd) {
  * @param fd : a file name
  * @return int32_t : 0 denote success, negative values denote an error condition.
  */
-static int32_t validate_fname(const uint8_t *filename) {
+static int32_t validate_fname(const int8_t *filename) {
    return 0; //TODO
 }

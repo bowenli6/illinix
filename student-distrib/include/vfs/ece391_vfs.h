@@ -36,7 +36,7 @@ typedef struct {
 } files;
 
 
-extern ece391_vfs_t vfs;
+extern files vfs;
 
 
 

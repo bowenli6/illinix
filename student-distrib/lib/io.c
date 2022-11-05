@@ -1,6 +1,6 @@
 #include <io.h>
-#include <drivers/terminal.h>
 #include <lib.h>
+#include <boot/syscall.h>
 
 int screen_x = 0;
 int screen_y = 0;
@@ -10,8 +10,9 @@ static char* video_mem = (char *)VIDEO;
 static void overflow();
 
 
-int32_t fputs(int32_t fd, const uint8_t* s) {
-    return sys_write (fd, s, ece391_strlen(s));
+int32_t fputs(int32_t fd, const int8_t* s) {
+    uint32_t size = strlen(s);
+    return sys_write (fd, s, size);
 }
 
 /**
