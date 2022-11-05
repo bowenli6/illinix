@@ -17,10 +17,6 @@ int32_t directory_close(int32_t fd);
 int32_t directory_read(int32_t fd, void *buf, int32_t nbytes);
 int32_t directory_write(int32_t fd, const void *buf, int32_t nbytes);
 
-typedef struct {
-    file_t fd[OPEN_MAX];           /* Files that are currently opened. */
-} ece391_vfs_t;
-
 
 /* Interactions between a process and a filesystem */
 typedef struct {

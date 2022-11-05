@@ -2,9 +2,8 @@
 #include <ece391_vfs.h>
 #include <pro/process.h>
 
-
 static int32_t validate_fd(int32_t fd);
-
+static int32_t validate_fname(const uint8_t *filename);
 
 /**
  * @brief A system call service routine for opening a file.

@@ -1,4 +1,5 @@
 #include <io.h>
+#include <drivers/terminal.h>
 #include <lib.h>
 
 int screen_x = 0;
@@ -8,6 +9,10 @@ static char* video_mem = (char *)VIDEO;
 
 static void overflow();
 
+
+int32_t fputs(int32_t fd, const uint8_t* s) {
+    return sys_write (fd, s, ece391_strlen(s));
+}
 
 /**
  * @brief Clears video memory 
@@ -190,6 +195,7 @@ void putc(uint8_t c) {
     }
 }
 
+
 /* void test_interrupts(void)
  * Inputs: void
  * Return Value: void
@@ -233,5 +239,5 @@ static void overflow() {
         *(uint8_t *)(video_mem + (i << 1)) = ' ';
         *(uint8_t *)(video_mem + (i << 1) + 1) = ATTRIB;
     }
-
 }
+

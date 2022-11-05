@@ -5,6 +5,7 @@
 #include <drivers/rtc.h>
 #include <tests/tests.h>
 #include <vfs/ece391_vfs.h>
+#include <boot/syscall.h>
 
 	
 #define PASS 1
@@ -508,6 +509,50 @@ void test_checkpoint2() {
 
 
 /* Checkpoint 3 tests */
+
+void shell() {
+	int32_t cnt, rval;
+	const int32_t BUFSIZE = 1024;
+    uint8_t buf[BUFSIZE];
+	int errno;
+
+    if ((errno = fputs(stdout, (uint8_t*)"Starting illinix Shell\n")) < 0) {
+		fputs(stdout, "Error occurs\n");
+	}
+
+    while (1) {
+        fdputs (stdout, (uint8_t*)"illinix> ");
+		if (-1 == (cnt = sys_read (0, buf, BUFSIZE-1))) {
+			fdputs (1, (uint8_t*)"read from keyboard failed\n");
+			return 3;
+		}
+		if (cnt > 0 && '\n' == buf[cnt - 1])
+			cnt--;
+		buf[cnt] = '\0';
+		if (0 == strncmp (buf, (uint8_t*)"exit", 4))
+			return 0;
+		if ('\0' == buf[0])
+			continue;
+		rval = sys_execute (buf);
+		if (-1 == rval)
+			fputs (1, (uint8_t*)"no such command\n");
+		else if (256 == rval)
+			fputs (1, (uint8_t*)"program terminated by exception\n");
+		else if (0 != rval)
+			fputs (1, (uint8_t*)"program terminated abnormally\n");
+	}
+}
+
+int testprint () {
+    fputs (1, (uint8_t*)"Hello, if this ran, the program was correct. Yay!\n");
+    return 0;
+}
+
+
+void test_checkpoint3() {
+	testprint();
+}
+
 /* Checkpoint 4 tests */
 /* Checkpoint 5 tests */
 
@@ -516,6 +561,7 @@ void test_checkpoint2() {
 void launch_tests() {
 	printf("--------------------------------- Test begins ---------------------------------\n");
 	// test_checkpoint1();
-	test_checkpoint2();
+	// test_checkpoint2();
+	test_checkpoint3();
 	printf("---------------------------------- Test Ends ----------------------------------\n");
 }

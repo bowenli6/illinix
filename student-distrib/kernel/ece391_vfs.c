@@ -43,7 +43,7 @@ static file_op rtc_op = {
 
 static int32_t __open(int32_t fd, const int8_t *fname, file_type_t type, file_op *op);
 
-ece391_vfs_t vfs;   /* Stores the virtual file system. */
+files vfs;   /* Stores the virtual file system. */
 
 /**
  * @brief Initialize the virtual file system.
