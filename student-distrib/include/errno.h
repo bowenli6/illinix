@@ -3,7 +3,7 @@
 
 /* POSIX Standard System error code. */
 
-extern int errno;                           /* place where the error numebr go */
+// int errno;                                  /* place where the error numebr go */
 
 #define NERROR              40              /* number of errors */
 #define EGENERIC            99              /* generic error */

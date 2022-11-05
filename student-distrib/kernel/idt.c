@@ -11,6 +11,7 @@
 
 /* Local functions, see headers for descriptions. */
 
+static void ignore_int_handler();
 static void set_trap_gate(uint8_t n, void (*handler)());
 static void set_intr_gate(uint8_t n, void (*handler)());
 static void set_system_gate(uint8_t n, void (*handler)());
@@ -184,7 +185,7 @@ static void set_system_intr_gate(uint8_t n, void (*handler)()) {
  * @brief A unknown interrupt handler.
  * 
  */
-void ignore_int_handler() {
+static void ignore_int_handler() {
     uint32_t interrupt_flag;
     cli_and_save(interrupt_flag);
     printf("Unknown interrupt.\n");

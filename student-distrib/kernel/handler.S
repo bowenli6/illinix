@@ -1,7 +1,4 @@
 #include <errno.h>
-#include <boot/x86_desc.h>
-
-#define nr_syscalls ((syscall_table_size) / 4)
 
 .data
 
@@ -11,17 +8,16 @@ ES       = 0x20
 ORIG_EAX = 0x24
 EIP      = 0x30
 INTR     = 0x24
+NCALL    = 6
+USER_DS  = 0x002B
 
 syscall_table:
 	.long sys_halt
-	.long sys_execute
+	.long sys_exe
 	.long sys_read
 	.long sys_write
 	.long sys_open
     .long sys_close
-
-
-NCALL = 6
 
 .text
 
@@ -57,7 +53,6 @@ NCALL = 6
     popl %ds;	    \
 	popl %es;	    \
 	addl $4, %esp;	\
-    sti             \
 	iret;		    
 
 error_code:
@@ -309,5 +304,5 @@ nobadsys:
 syscall_exit:
 	RESTORE_ALL                             # return from the syscall
 resume_userspace:
-    # Check for recheduling request, not implmented yet.
+    # TODO: Check for recheduling request, not implmented yet.
     jmp   syscall_exit
