@@ -3,7 +3,6 @@
 
 #include <types.h>
 
-
 #define SYSCALL 0x80
 #define asmlinkage __attribute__((regparm(0)))
 
