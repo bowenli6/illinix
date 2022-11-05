@@ -21,10 +21,7 @@ typedef struct {
     file_t fd[OPEN_MAX];           /* Files that are currently opened. */
 } ece391_vfs_t;
 
-<<<<<<< HEAD
-=======
 
->>>>>>> cfdc2f8944d13f7c543bb50c8ae63ccb523ddb8f
 /* Interactions between a process and a filesystem */
 typedef struct {
     uint32_t count;     /* Number of processes sharing this table */
@@ -44,10 +41,6 @@ typedef struct {
 } files;
 
 
-<<<<<<< HEAD
-=======
-
->>>>>>> cfdc2f8944d13f7c543bb50c8ae63ccb523ddb8f
 extern ece391_vfs_t vfs;
 
 
