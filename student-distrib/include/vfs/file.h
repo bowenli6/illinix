@@ -7,7 +7,6 @@
 
 #define INUSED      1                      /* A file is inused. */
 #define UNUSED      0                      /* A file is unused. */
-#define MAXCOUNT    ((1 << 31) - 1)        /* Maximum number of bytes that can be read or written with a single operation. */
 
 typedef struct {
     int32_t (*open)(const int8_t *);
