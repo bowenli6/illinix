@@ -21,6 +21,27 @@ typedef struct {
     file_t fd[OPEN_MAX];           /* Files that are currently opened. */
 } ece391_vfs_t;
 
+
+/* Interactions between a process and a filesystem */
+typedef struct {
+    uint32_t count;     /* Number of processes sharing this table */
+    uint32_t umask;     /* Bit mask used when opening the file to set the file permissions */
+    dentry_t *root;     /* Dentry of the root directory */
+    dentry_t *pwd;      /* Dentry of the current working directory */
+} vfs_t;
+
+
+
+typedef struct {
+    uint32_t count;         /* Number of processes sharing this table */
+    uint32_t max_fileobj;   /* Current maximun number of file objects */
+    uint32_t max_fd;        /* Current maximun number of file descriptors */
+    file_t fd[OPEN_MAX];    /* Pointers to array of file object pointers */
+    file_t fd_init;         /* Initial array of the file object pointers */
+} files;
+
+
+
 extern ece391_vfs_t vfs;
 
 
