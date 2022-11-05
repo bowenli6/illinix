@@ -2,6 +2,7 @@
 #include <drivers/terminal.h>
 #include <drivers/rtc.h>
 #include <drivers/fs.h>
+#include <boot/syscall.h>
 #include <lib.h>
 #include <io.h>
 

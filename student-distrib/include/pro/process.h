@@ -22,9 +22,6 @@
 #define PROGRAM_IMG_BEGIN       0x08000000      /*  */
 
 
-extern process_t     task_map[TASK_COUNT];
-extern process_t*    curr_process;
-
 typedef uint32_t gid_t;
 
 typedef struct {
@@ -37,11 +34,14 @@ typedef struct {
 
     uint32_t*        PCB_Pyh_addr;              /* pyhisical address of pcb */
 
-    vfs_t*          pro_vfs;
-    files*          pro_files;                  
+    vfs_t           pro_vfs;
+    files           pro_files;                  
 
 } process_t;
 
+
+extern process_t     task_map[TASK_COUNT];
+extern process_t*    curr_process;
 
 extern void parse_arg_to_process(uint8_t* command, uint8_t* stored_pro, uint8_t* stored_file);
 
