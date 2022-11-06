@@ -10,7 +10,7 @@
 
 //static int pde_alloc_index = 2;
 //pd_descriptor_t pdd[ENTRY_NUM];
-
+pte_t* _walk(pagedir_t pd, uint32_t va, int alloc);
 
 void enable_paging()
 {
@@ -33,6 +33,14 @@ void enable_paging()
 	"orl %0, %%eax     ;"
 	"movl %%eax, %%cr0          ;"
 	:  : "r"(CR0_PAGE_FLAG): "eax" );
+}
+
+void flush_tlb()
+{
+    asm volatile(
+    "movl %%cr3, %%eax      ;"
+    "movl %%eax, %%cr3      ;"
+    : : : "eax" );
 }
 
 /**

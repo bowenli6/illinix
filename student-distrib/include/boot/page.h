@@ -32,12 +32,11 @@
 typedef uint32_t* pagetable_t;
 typedef uint32_t* pagedir_t;
 
-typedef uint32_t pte_t;
 
 void page_init();
 void enable_paging();
+void flush_tlb();
 
-pte_t* _walk(pagedir_t pd, uint32_t va, int alloc);
 int _mmap(pagedir_t pd, uint32_t va, uint32_t pa, int size, int flags);
 
 void kmmap(uint32_t va, uint32_t pa, int size, int flags);
