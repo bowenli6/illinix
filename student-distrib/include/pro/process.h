@@ -30,8 +30,7 @@
 /* user-level, virtual addr */
 #define VIR_MEM_BEGIN           0x08000000      /* The mem begins at 128MB */
 #define PROGRAM_IMG_BEGIN       0x08048000      /* The program img begin */
-#define EIP_OFFSET              24              /* The EIP you need to jump to is the entry point from bytes 24-27 of
-                                                    the executable that you have just loaded*/
+#define EIP_OFFSET              24              /* The EIP you need to jump to is the entry point from bytes 24-27 */
 
 typedef uint32_t pid_t;
 typedef uint32_t gid_t;
@@ -45,9 +44,6 @@ typedef struct process {
     uint16_t                tss_SS0;    
     uint32_t                tss_ESP;
     uint16_t                tss_SS;
-
-    uint32_t                usr_phy_addr;           /* pyhisical address of user mode stak; 8-12; 12-16 */
-    uint32_t                kernel_phy_addr;        /* pyhisical address of PCB; 8-12; 12-16 */
 
     vfs_t                   pro_vfs;
     files                   pro_files;                  

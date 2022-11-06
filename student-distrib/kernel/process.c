@@ -1,5 +1,7 @@
 #include <pro/process.h>
 #include <boot/syscall.h>
+#include <boot/x86_desc.h>
+#include <drivers/fs.h>
 #include <access.h>
 #include <errno.h>  
 
@@ -22,19 +24,18 @@ asmlinkage int32_t sys_halt(uint8_t status) {
 }
 
 asmlinkage int32_t sys_execute(const uint8_t *cmd) {
-    int32_t errno;
-    int32_t fd;
+    int32_t errno, EIP_reg;
     int8_t fname[NAMESIZE];
+
 
     if ((errno = parse_arg_to_process(cmd, NULL, fname)) < 0) 
         return errno;
 
     /* open the program file */
-    if ((fd = file_open(fname)) < 0) 
-        return fd;   
+    if ((EIP_reg = pro_loader(fname)) < 0) 
+        return EIP_reg;   
 
     /* check file */
-
     if ((errno = process_create()) < 0)
         return errno;
     
@@ -123,23 +124,20 @@ void usr_to_kernel() {
  * 
  * @return none
  */
-void kernel_to_usr() {
+void kernel_to_usr(int32_t EIP_reg) {
     
-    uint32_t* address_for_eip;
-    uint32_t EIP_reg, EFLAGS_reg, ESP_reg;
-    uint16_t CS_reg, DS_reg;
+    uint32_t EFLAGS_reg, ESP_reg;
+    uint16_t CS_reg, DS_reg, SS_reg;
 
-    address_for_eip = (uint32_t*) (PROGRAM_IMG_BEGIN + EIP_OFFSET);
-
-    EIP_reg = *(address_for_eip);
+    // EIP_reg
     CS_reg = GDT_USR_CS | USR_LEVEL;
     DS_reg = GDT_USR_DS | USR_LEVEL;
     EFLAGS_reg = tss.eflags;
     ESP_reg = USR_STACK_SZ + VIR_MEM_BEGIN;                 /* which starts from 132MB */
 
     /* store the ss0 and esp0 to the tss */
-    tss.ss0 = curr_process.tss_SS0;
-    tss.esp0 = curr_process.tss_ESP0;
+    tss.ss0 = current()->tss_SS0;
+    tss.esp0 = current()->tss_ESP0;
 
 
     // asm volatile("              \n\
@@ -159,13 +157,33 @@ static int32_t process_create() {
     if (++curr_pid < 0) {
         return -EINVAL;
     }
+    if (curr_pid >= 2) {    /* Reach the maxium value of processes */
+        return -EINVAL;
+    }
 
-    task_map[curr_pid] = alloc_kstack(curr_pid);
-
+    (uint32_t) alloc_kstack(curr_pid);
+    
+    /* setup current pid */
     task_map[curr_pid]->process.pid = curr_pid;
+
+    /* setup the kernel stack info */
+    task_map[curr_pid]->process.tss_ESP0 = (uint32_t) alloc_kstack(curr_pid);
+    task_map[curr_pid]->process.tss_SS0 = task_map[curr_pid]->process.tss_ESP0;
+    
+
+    /* set the parent pointer */
+    if (curr_pid == 0) {
+        task_map[curr_pid]->process.parent_addr = NULL;
+    } else {
+        task_map[curr_pid]->process.parent_addr = (process_t*)(&task_map[0]->process);
+    }
+
+    /* setup user level stack info */
 
     return curr_pid;
 }
+
+
 process_t *current() {
     return &task_map[curr_pid]->process;
 }
