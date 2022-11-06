@@ -1,7 +1,6 @@
 #include <pro/process.h>
-#include <boot/x86_desc.h>
-#include <boot/page.h>
 #include <boot/syscall.h>
+#include <access.h>
 #include <errno.h>  
 
 /* this map will indicate which task is active now */
@@ -10,11 +9,7 @@ int32_t curr_pid;
 // tss is the current tss we are using
 
 
-static void user_mem_map(pid_t pid);
 static int32_t parse_arg_to_process(uint8_t* command, uint8_t* stored_pro, uint8_t* stored_file);
-
-
-static void *alloc_kstack(int pid);
 
 void process_init() {
     curr_pid = -1;
@@ -170,33 +165,6 @@ static int32_t process_create() {
 
     return curr_pid;
 }
-
-/**
- * @brief map user virtual memory to process pid's physical memory
- * 
- * @param pid process id
- */
-static void 
-user_mem_map(pid_t pid)
-{
-    page_directory[VIR_MEM_BEGIN >> PDE_OFFSET_4MB] |= PTE_PRESENT | PTE_RW
-         | PTE_US | PDE_MB | INDEX_TO_DIR(pid + 2);
-    flush_tlb();
-}
-
-/**
- * @brief alloc a 8KB memory in kernel for process pid
- * 
- * @param pid process id
- * @return void* pointer to the process kernel stack
- */
-static void*
-alloc_kstack(int pid)
-{
-    uint32_t pt = PAGE_SIZE_4MB * (KERNEL_INDEX + 1) - PAGE_SIZE * 2 * (pid + 1);
-    return (void*)pt;
-}
-
 process_t *current() {
     return &task_map[curr_pid]->process;
 }

@@ -1,4 +1,6 @@
 #include <drivers/fs.h>
+#include <pro/process.h>
+#include <access.h>
 #include <lib.h>
 #include <io.h>
 
@@ -178,4 +180,22 @@ uint32_t get_size(uint32_t index) {
     if (dentry.type < 2) 
         return 0;
     return fs.inodes[dentry.inode].size;
+}
+
+int32_t pro_loader(uint32_t inode) {
+    int32_t errno;
+    inode_t file;
+    uint8_t header[40];
+
+    /* check if the file is a user-level executable file */
+    
+    /* get the file inode */
+    file = fs.inodes[inode];            /* Get the file inode. */
+
+
+    /* map user virtual memory to process pid's physical memory */
+    user_mem_map(current()->pid);
+
+    
+    return read_data(inode, 0, PROGRAM_IMG_BEGIN, file.size);
 }

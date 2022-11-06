@@ -21,6 +21,8 @@ do {                                    \
 
 int32_t copy_from_user(void *to, const void *from, uint32_t n);
 int32_t copy_to_user(void *to, const void *from, uint32_t n);
+void user_mem_map(pid_t pid);
+void *alloc_kstack(int pid);
 
 
 #endif /* _ACCESS_H_ */
