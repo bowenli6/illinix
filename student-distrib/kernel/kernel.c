@@ -167,7 +167,6 @@ void entry(unsigned long magic, unsigned long addr) {
 
     /* Virtual Memory */
     page_init();                    /* Initialize page tables. */
-    user_mem_map(1);
 
     /* Devices */
     keyboard_init();                /* Initialize the Keyboard driver. */
@@ -181,7 +180,7 @@ void entry(unsigned long magic, unsigned long addr) {
     /* This is an test for share gitlab. */
 #ifdef RUN_TESTS
     /* Run tests */
-    launch_tests();
+    //launch_tests();
 #endif
 
     /* Execute the first program ("shell") ... */

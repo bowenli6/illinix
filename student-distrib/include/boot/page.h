@@ -8,6 +8,7 @@
 #define CR0_PAGE_FLAG       0x80000000
 #define MAX_PAGES 16
 #define RESERVED_PAGES 3
+#define KERNEL_INDEX 1
 
 #define PTE_PRESENT 0x1
 #define PTE_RW 0x2
