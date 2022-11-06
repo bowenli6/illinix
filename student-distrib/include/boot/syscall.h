@@ -5,10 +5,8 @@
 
 #define SYSCALL 0x80
 #define asmlinkage __attribute__((regparm(0)))
-#define MAXADDR ((1 << 31) - 1)
 
 void syscall_handler();
-int32_t validate_addr(void *addr);
 
 /* Required by ECE391. */
 asmlinkage int32_t sys_halt(uint8_t status);
