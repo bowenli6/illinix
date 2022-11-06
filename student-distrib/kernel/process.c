@@ -15,13 +15,33 @@ process_t    curr_process;
  * @return -1 if the command cannot be executed
  */
 int32_t parse_arg_to_process(uint8_t* command, uint8_t* stored_pro, uint8_t* stored_file) {
+    uint8_t i = 0, j = 0;
+
     if (command == NULL) {
         printf("The command itself is null, we can get no information. \n");
         return -1;                          /* return -1 if the command can not be executed */
     }
 
     /* parse the command into file name and the rest of the command */
+    
+    while (command[i] != '\0') {
 
+        if (command[i] == ' ') {
+            stored_file[i] = '\0';
+            i += 1;
+            break;
+        }
+
+        stored_file[i] = command[i];
+        i += 1;
+    }
+
+    while (command[i] != '\0') {
+        stored_pro[j] = command[i];
+        i += 1;
+        j += 1;
+    }
+    stored_pro[j] = '\0';
 
     return 0;
 }
@@ -33,7 +53,7 @@ int32_t parse_arg_to_process(uint8_t* command, uint8_t* stored_pro, uint8_t* sto
  * @return none
  */
 void usr_to_kernel() {
-
+    return;
 }
 
 
@@ -68,8 +88,6 @@ void kernel_to_usr() {
     //         : "d"(port)
     //         : "memory"
     // );
-
-
 
 }
 
