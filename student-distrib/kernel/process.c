@@ -161,15 +161,14 @@ static int32_t process_create() {
         return -EINVAL;
     }
 
-    (uint32_t) alloc_kstack(curr_pid);
+    task_map[curr_pid] = (process_union *)alloc_kstack(curr_pid);
     
     /* setup current pid */
     task_map[curr_pid]->process.pid = curr_pid;
 
     /* setup the kernel stack info */
-    task_map[curr_pid]->process.tss_ESP0 = (uint32_t) alloc_kstack(curr_pid);
+    task_map[curr_pid]->process.tss_ESP0 = (uint32_t) task_map[curr_pid] + KERNEL_STACK_SZ;
     task_map[curr_pid]->process.tss_SS0 = task_map[curr_pid]->process.tss_ESP0;
-    
 
     /* set the parent pointer */
     if (curr_pid == 0) {
