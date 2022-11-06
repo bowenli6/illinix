@@ -23,6 +23,7 @@
 #define NUM_VEC     256
 
 #define PAGE_SIZE 4096
+#define PAGE_SIZE_4MB 0x400000
 #define ENTRY_NUM 1024
 
 
@@ -219,68 +220,10 @@ do {                                    \
     );                                  \
 } while (0)
 
+typedef uint32_t pde_t;
+typedef uint32_t pte_t;
 
-
-typedef union pde_4KB_t {
-    uint32_t val;
-    struct {
-        uint32_t present         : 1;
-        uint32_t read_write      : 1;
-        uint32_t user_supervisor : 1;
-        uint32_t write_through   : 1;
-        uint32_t cache_disabled  : 1;
-        uint32_t accessed        : 1;
-        uint32_t reserved        : 1;
-        uint32_t page_size       : 1;
-        uint32_t global_page     : 1;
-        uint32_t available       : 3;
-        uint32_t base_address    : 20;
-    } __attribute__ ((packed));
-} pde_4KB_t;
-
-typedef union pde_4MB_t {
-    uint32_t val;
-    struct {
-        uint32_t present         : 1;
-        uint32_t read_write      : 1;
-        uint32_t user_supervisor : 1;
-        uint32_t write_through   : 1;
-        uint32_t cache_disabled  : 1;
-        uint32_t accessed        : 1;
-        uint32_t dirty           : 1;
-        uint32_t page_size       : 1;
-        uint32_t global_page     : 1;
-        uint32_t available       : 3;
-        uint32_t pat_flag        : 1;
-        uint32_t reserved        : 9;
-        uint32_t base_address    : 10;
-    } __attribute__ ((packed));
-} pde_4MB_t;
-
-typedef union pte_t {
-    uint32_t val;
-    struct {
-        uint32_t present         : 1;
-        uint32_t read_write      : 1;
-        uint32_t user_supervisor : 1;
-        uint32_t write_through   : 1;
-        uint32_t cache_disabled  : 1;
-        uint32_t accessed        : 1;
-        uint32_t dirty           : 1;
-        uint32_t pat_flag        : 1;
-        uint32_t global_page     : 1;
-        uint32_t available       : 3;
-        uint32_t base_address    : 20;
-    } __attribute__ ((packed));
-} pte_t;
-
-typedef union pd_t {
-    pde_4KB_t KB;
-    pde_4MB_t MB;
-}pd_t;
-
-
-pd_t page_directory[ENTRY_NUM] __attribute__((aligned (PAGE_SIZE)));
+pde_t page_directory[ENTRY_NUM] __attribute__((aligned (PAGE_SIZE)));
 pte_t page_table[ENTRY_NUM] __attribute__((aligned (PAGE_SIZE)));
 
 

@@ -17,6 +17,7 @@
 #define  FIRST_USR_BEGIN        0x800000        /* The first user addr begin at 8MB (to 12 MB) */
 #define  SECOND_USR_BEGIN       0xC00000        /* The first user addr begin at 12MB (to 16 MB) */
 
+
  /* these macros are refered to gdt table */
 #define GDT_KERNEL_CS           16
 #define GDT_KERNEL_DS           24
@@ -32,12 +33,13 @@
 #define EIP_OFFSET              24              /* The EIP you need to jump to is the entry point from bytes 24-27 of
                                                     the executable that you have just loaded*/
 
+typedef uint32_t pid_t;
 typedef uint32_t gid_t;
 
 typedef struct process {
-    uint32_t                pid;                    /* process id number */
-    uint8_t                 *arg;                   /* store the arguments */
-    struct process          *parent_addr;            /* parent process addr */
+    pid_t                   pid;                    /* process id number */
+    // uint8_t                 arg;                    /* store the arguments */
+    struct process          *parent_addr;           /* parent process addr */
 
     uint32_t                tss_ESP0;               /* where the kenel mode stak/PCB begins */
     uint16_t                tss_SS0;    
@@ -51,17 +53,46 @@ typedef struct process {
     files                   pro_files;                  
 
     uint32_t                signal;
+    //
 } process_t;
 
+
+/* Two 4 KB pages containing both the process descriptor and the kernel stack. */
+typedef union {
+    process_t process;
+    uint32_t stack[2048];
+} process_union;
+
+/**
+ * @brief returns the process ID (PID) of the calling process
+ * 
+ * @return pid_t : The process ID of the calling process
+ */
+pid_t sys_getpid() {
+    // TODO
+    return 0;
+}
+
+
+/**
+ * @brief returns the process ID of the parent of the calling process.
+ * This will be either the ID of the process that created this process us‐
+ * ing fork(), or, if that process has already terminated, the ID  of  the
+ * process  to which this process has been reparented (either init(1) or a
+ * "subreaper" process defined via the prctl(2) PR_SET_CHILD_SUBREAPER op‐
+ * eration).
+ * 
+ * @return pid_t : process ID of the parent of the calling process
+ */
+pid_t sys_getppid() {
+    // TODO
+    return 0;
+}
 
 extern process_t     task_map[TASK_COUNT];
 extern process_t     *curr_process;
 
 
-int32_t parse_arg_to_process(uint8_t* command, uint8_t* stored_pro, uint8_t* stored_file);
 
-void usr_to_kernel();
-
-void process_create();
 
 #endif /* _PROCESS_H */

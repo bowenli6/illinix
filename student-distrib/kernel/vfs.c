@@ -74,11 +74,7 @@ asmlinkage int32_t sys_read(int32_t fd, void *buf, uint32_t nbytes) {
       return errno;
 
    /* Might be unsuitable for reading: return -EINVAL in the future */
-
-   /* validate buf */
-   if (!buf) return -EINVAL;
-   if ((errno = validate_addr(buf)) < 0) return errno;
-
+   
    /* validate nbytes */
    if (nbytes < 0) return -EINVAL;
 
@@ -113,10 +109,6 @@ asmlinkage int32_t sys_write(int32_t fd, const void *buf, uint32_t nbytes) {
       return errno;
 
    /* Might be unsuitable for writing: return -EINVAL in the future */
-
-   /* validate buf */
-   if (!buf) return -EINVAL;
-   if ((errno = validate_addr(buf)) < 0) return errno;
 
    /* validate nbytes */
    if (nbytes < 0) return -EINVAL;

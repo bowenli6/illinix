@@ -14,6 +14,8 @@ name:   PUSHL	%EBX          ;\
 	MOVL	16(%ESP),%EDX ;\
 	INT	$0x80         ;\
 	POPL	%EBX          ;\
+	// eax mov to errno
+	// movl eax -1
 	RET
 
 /* the system call library wrappers */

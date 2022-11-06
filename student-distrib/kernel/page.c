@@ -6,6 +6,11 @@
  * @brief Turn on paging related registers.
  *
  */
+
+//static int pde_alloc_index = 2;
+//pd_descriptor_t pdd[ENTRY_NUM];
+pte_t* _walk(pagedir_t pd, uint32_t va, int alloc);
+
 void enable_paging()
 {
     /* set CR3 to directory base address */
@@ -29,6 +34,14 @@ void enable_paging()
 	:  : "r"(CR0_PAGE_FLAG): "eax" );
 }
 
+void flush_tlb()
+{
+    asm volatile(
+    "movl %%cr3, %%eax      ;"
+    "movl %%eax, %%cr3      ;"
+    : : : "eax" );
+}
+
 /**
  * @brief Initialize page directory and page table.
  * 
@@ -38,36 +51,31 @@ void page_init()
     int i;
 
     /* initialize first 4MB directory */
-    page_directory[0].KB.present = 1;
-    page_directory[0].KB.read_write = 1;
-    page_directory[0].KB.base_address = (int)page_table >> PDE_OFFSET_4KB;
+    page_directory[0] = page_directory[0] | PTE_PRESENT | PTE_RW | ADDR_TO_PTE((int)page_table);
 
     /* initialize 4MB-8MB directory */
-    page_directory[1].MB.present = 1;
-    page_directory[1].MB.read_write = 1;
-    page_directory[1].MB.page_size = 1;
-    page_directory[1].MB.global_page = 1;
-    page_directory[1].MB.base_address = 1;
+    page_directory[1] = page_directory[1] | PTE_PRESENT | PTE_RW | PDE_MB | PTE_GLO | (1 << PDE_OFFSET_4MB);
 
     /* initialize 8MB-4GB page directories */
     for(i = 2; i < ENTRY_NUM; i++){
-        page_directory[i].MB.present = 0;   /* do not exist */
-        page_directory[i].MB.page_size = 1;
-        page_directory[i].MB.base_address = i;
+        page_directory[i] = page_directory[i] | PDE_MB;    /* do not exist */
     }
     
     /* initialize page tables */
     for(i = 0; i < ENTRY_NUM; i++)
     {
         /* only video memory is initialized as present */
-        page_table[i].present = (i == ( VIDEO >> PDE_OFFSET_4KB ) ) ? 1 : 0;
-        page_table[i].read_write = 1;
-        page_table[i].base_address = (i == ( VIDEO >> PDE_OFFSET_4KB ) ) ? i : 0;
+        if(i == (VIDEO >> PDE_OFFSET_4KB) ) {
+            page_table[i] = page_table[i] | PTE_PRESENT | PTE_RW | ADDR_TO_PTE(VIDEO);
+        }
+        else {
+            page_table[i] = 0 | PTE_RW;
+        }
     }
 
     /* turn on paging registers */
     enable_paging();
-
     return;
 }
+
 

@@ -2,13 +2,6 @@
 #include <pro/process.h>
 #include <io.h>
 
-asmlinkage int32_t sys_halt(uint8_t status) {
-   return 0;
-}
-
-asmlinkage int32_t sys_execute(const uint8_t *cmd) {
-   return 0;
-}
 
 asmlinkage int32_t sys_getargs(uint8_t *buf, int32_t nbytes) {
    return 0;
