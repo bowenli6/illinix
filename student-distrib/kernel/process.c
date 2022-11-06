@@ -23,14 +23,15 @@ asmlinkage int32_t sys_halt(uint8_t status) {
 
 asmlinkage int32_t sys_execute(const uint8_t *cmd) {
     int32_t errno;
+    int32_t fd;
     int8_t fname[NAMESIZE];
 
     if ((errno = parse_arg_to_process(cmd, NULL, fname)) < 0) 
         return errno;
 
     /* open the program file */
-    if ((errno = file_open(fname)) < 0) 
-        return errno;   
+    if ((fd = file_open(fname)) < 0) 
+        return fd;   
 
     /* check file */
 

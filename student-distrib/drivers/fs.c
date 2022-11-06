@@ -1,11 +1,14 @@
 #include <drivers/fs.h>
 #include <pro/process.h>
 #include <access.h>
+#include <errno.h>
 #include <lib.h>
-#include <io.h>
 
 
 fs_t fs;        /* Stores the file system. */
+
+static int32_t validate_inode(int8_t *fname);
+
 
 /**
  * @brief Initialize the file system.
@@ -32,7 +35,6 @@ void fs_init(uint32_t start_addr) {
  */
 int32_t read_dentry_by_name(const int8_t *fname, dentry_t *dentry) {
     if (!dentry) {
-        puts("ERROR: dentry is undefined.\n");
         return -1;
     }
     int i;    
@@ -61,12 +63,10 @@ int32_t read_dentry_by_name(const int8_t *fname, dentry_t *dentry) {
  */
 int32_t read_dentry_by_index(uint32_t index, dentry_t *dentry) {
     if (!dentry) {
-        puts("ERROR: dentry is undefined.\n");
         return -1;
     }
 
     if ((index >= FILES_MAX) || (index >= fs.boot->n_dir)) {
-        puts("ERROR: index is out of bounds.\n");
         return -1;
     }
 
@@ -96,24 +96,16 @@ int32_t read_data(uint32_t inode, uint32_t offset, uint8_t *buf, uint32_t length
     int nb_left;                    /* Number of bytes left in the data block. */
     inode_t file;                   /* The file inode. */
     int8_t *data_ptr;               /* The actuall data address to read within a data block. */
+    int32_t errno;
 
-    if (inode >= fs.boot->n_inode) {
-        puts("ERROR: invalid inode, no such inode exists in the file system.\n");
-        return -1;
-    }
+    if ((errno = validate_inode(inode)) < 0) return errno;
 
-    if (!buf) {
-        puts("ERROR: buf is undefined.\n");
-        return -1;
-    }
+    if (!buf) return -EINVAL;
     
     file = fs.inodes[inode];            /* Get the file inode. */
         
-    if (offset >= file.size) {
-        puts("ERROR: offset is out of bounds. ");
-        return -1;
-    }
-
+    if (offset >= file.size) return -ENOMEM;
+    
 
     /* The index of bytes start to read. */
     phy_pos = offset; 
@@ -157,8 +149,7 @@ int32_t read_data(uint32_t inode, uint32_t offset, uint8_t *buf, uint32_t length
             /* Update vir_pos to the next data block used by the file inode. */
             vir_pos.iblock = file.data_block[++vir_pos.nblock];
             if (vir_pos.iblock >= fs.boot->n_datab) {
-                puts("ERROR: invalid data block found.\n");
-                return -1;
+                return -EPERM;
             }
             vir_pos.datab = fs.data_block_addr[vir_pos.iblock];
             vir_pos.idx = 0;    /* Start from beginning of the new data block. */
@@ -182,20 +173,58 @@ uint32_t get_size(uint32_t index) {
     return fs.inodes[dentry.inode].size;
 }
 
-int32_t pro_loader(uint32_t inode) {
+int32_t pro_loader(int8_t *fname) {
+    int i;
     int32_t errno;
+    uint32_t inode;
     inode_t file;
+    uint32_t EIP;
     uint8_t header[40];
+    uint8_t magic_number[4] = { 0x7f, 0x45, 0x4c, 0x46 };
 
     /* check if the file is a user-level executable file */
+    if ((inode = validate_inode(fname)) < 0)
+        return inode;
     
     /* get the file inode */
     file = fs.inodes[inode];            /* Get the file inode. */
 
+  /* read header from the program image */
+    if ((errno = read_data(inode, 0, header, 40)) < 0)
+        return errno;
+
+    /* check magic number */
+    for (i = 0; i < 4; ++i) {
+        if (header[i] != magic_number[i])
+            return -EPERM;
+    }
+
+    EIP = (header[24] << 24) | (header[25] << 16) | (header[26] << 8) | (header[27]);
 
     /* map user virtual memory to process pid's physical memory */
     user_mem_map(current()->pid);
 
+    if ((errno = read_data(inode, 0, PROGRAM_IMG_BEGIN, file.size)) < 0)
+        return errno;
+
+    return EIP;
+}
+
+/**
+ * @brief Validate the input file inode
+ * 
+ * @param inode : A inode index of the file
+ * @return int32_t : positive or 0 denote success, negative values denote an error condition
+ */
+static int32_t validate_inode(int8_t *fname) {
+    int32_t errno;
+    dentry_t dentry;
+    uint32_t inode;
     
-    return read_data(inode, 0, PROGRAM_IMG_BEGIN, file.size);
+    if ((errno = read_dentry_by_name(fname, &dentry)) < 0) 
+        return errno;
+    
+    if (inode >= fs.boot->n_inode)
+        return -ENOENT;
+    return inode;
 }
