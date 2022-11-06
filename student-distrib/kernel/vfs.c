@@ -2,6 +2,7 @@
 #include <drivers/fs.h>
 #include <vfs/ece391_vfs.h>
 #include <pro/process.h>
+#include <errno.h>
 #include <access.h>
 
 static int32_t validate_fd(int32_t fd);
@@ -50,6 +51,7 @@ asmlinkage int32_t sys_close(int32_t fd) {
    /* invoke close routine */
    f_op = curr_process->pro_files.fd[fd].f_op;
    return f_op.close(fd); 
+}
 
 
 /**
@@ -82,7 +84,8 @@ asmlinkage int32_t sys_read(int32_t fd, void *buf, uint32_t nbytes) {
 
    /* copy data from user space to kernel space */
    if ((errno = copy_from_user((void *)kbuf, (void *)buf, nbytes)) <= 0)
-         return errno;
+      return errno;
+
    /* copy data from user space to kernel space*/
    /* invoke read routine */
    f_op = curr_process->pro_files.fd[fd].f_op;

@@ -61,13 +61,13 @@ void kernel_to_usr() {
     tss.esp0 = curr_process.tss_ESP0;
 
 
-    asm volatile("              \n\
+    // asm volatile("              \n\
             
-            "
-            : "=a"(val)
-            : "d"(port)
-            : "memory"
-    );
+    //         "
+    //         : "=a"(val)
+    //         : "d"(port)
+    //         : "memory"
+    // );
 
 
 
