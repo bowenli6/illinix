@@ -32,6 +32,8 @@
 typedef uint32_t* pagetable_t;
 typedef uint32_t* pagedir_t;
 
+typedef uint32_t pte_t;
+
 void page_init();
 void enable_paging();
 

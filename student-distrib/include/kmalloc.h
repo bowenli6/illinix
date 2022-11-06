@@ -1,11 +1,10 @@
 #ifndef _KMALLOC_H
 #define _KMALLOC_H
 
-#define PAGE_SIZE 0x1000
 #define RESERVED_PAGES 3
 #define USER_START_ADDR 0x80000000
 #define MAX_PAGES 16
-
+#define PAGE_SIZE 4096
 
 void kmalloc_init(void);
 void* kmalloc(void);

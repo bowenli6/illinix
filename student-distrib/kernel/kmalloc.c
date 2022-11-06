@@ -1,5 +1,6 @@
 #include <lib.h>
 #include <kmalloc.h>
+#include <boot/page.h>
 
 dmem_t dmem;
 
@@ -44,14 +45,16 @@ void* page_alloc()
  */
 void page_free(void* pt)
 {
-    mem_block* p = (mem_block*) pt, *temp, *last;
+    mem_block* p = (mem_block*) pt, *temp;
 
     /* legal free judgement */
     temp = dmem.alloc_list;
-    if(temp = NULL) panic("Free error occur!");
+    if(temp == NULL) //panic("Free error occur!");
+        return;
     if(temp != p){
         while(temp->next != p){
-            if(temp->next == NULL) panic("Free error occur!");
+            if(temp->next == NULL) //panic("Free error occur!");
+                return;
             temp = temp->next;
         }
         temp->next = temp->next->next;  /* remove from alloc list */
