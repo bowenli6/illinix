@@ -63,36 +63,6 @@ typedef union {
     uint32_t stack[2048];
 } process_union;
 
-/**
- * @brief returns the process ID (PID) of the calling process
- * 
- * @return pid_t : The process ID of the calling process
- */
-pid_t sys_getpid() {
-    // TODO
-    return 0;
-}
-
-
-/**
- * @brief returns the process ID of the parent of the calling process.
- * This will be either the ID of the process that created this process us‐
- * ing fork(), or, if that process has already terminated, the ID  of  the
- * process  to which this process has been reparented (either init(1) or a
- * "subreaper" process defined via the prctl(2) PR_SET_CHILD_SUBREAPER op‐
- * eration).
- * 
- * @return pid_t : process ID of the parent of the calling process
- */
-pid_t sys_getppid() {
-    // TODO
-    return 0;
-}
-
-extern process_t     task_map[TASK_COUNT];
-extern process_t     *curr_process;
-
-
-
+process_t *current();
 
 #endif /* _PROCESS_H */
