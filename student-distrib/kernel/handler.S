@@ -308,3 +308,18 @@ syscall_exit:
 resume_userspace:
     # TODO: Check for recheduling request, not implmented yet.
     jmp   syscall_exit
+
+
+.globl do_halt
+do_halt:
+    pushl %ebp 
+    movl  %esp, %ebp 
+    xorl  %ebp, %ebp
+    movl  16(%ebp), %ebx 
+    movl  %ebx, %eax
+    movl  12(%ebp), %ebx
+    movl  %ebx, %esp
+    movl  8(%ebp),  %ebx
+    movl  %ebx, %ebp
+    leave
+    ret

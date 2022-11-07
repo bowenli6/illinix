@@ -101,11 +101,11 @@ int32_t read_data(uint32_t inode, uint32_t offset, uint8_t *buf, uint32_t length
 
     if ((errno = validate_inode(inode)) < 0) return errno;
 
-    if (!buf) return -EINVAL;
+    if (!buf) return -1;
     
     file = fs.inodes[inode];            /* Get the file inode. */
         
-    if (offset >= file.size) return -ENOMEM;
+    if (offset >= file.size) return -1;
     
 
     /* The index of bytes start to read. */
@@ -150,7 +150,7 @@ int32_t read_data(uint32_t inode, uint32_t offset, uint8_t *buf, uint32_t length
             /* Update vir_pos to the next data block used by the file inode. */
             vir_pos.iblock = file.data_block[++vir_pos.nblock];
             if (vir_pos.iblock >= fs.boot->n_datab) {
-                return -EPERM;
+                return -1;
             }
             vir_pos.datab = fs.data_block_addr[vir_pos.iblock];
             vir_pos.idx = 0;    /* Start from beginning of the new data block. */
@@ -204,7 +204,7 @@ int32_t pro_loader(int8_t *fname, uint32_t *EIP) {
     /* check magic number */
     for (i = 0; i < 4; ++i) {
         if (header[i] != magic_number[i])
-            return -EPERM;
+            return -1;
         eip_buf[i] = header[i + 24];
     }
 
@@ -245,6 +245,6 @@ static int32_t validate_fname(int8_t *fname) {
  */
 static int32_t validate_inode(uint32_t inode) {
     if (inode >= fs.boot->n_inode)
-        return -EPERM;
+        return -1;
     return 0;
 }

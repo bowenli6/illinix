@@ -13,6 +13,7 @@ process_t *init;    /* Process 1 (init process) */
 process_union *task_map[TASK_COUNT];    /* Currently process 2 (the shell) and 3 */
 pid_t pid;
 
+extern void do_halt(uint32_t ebp, uint32_t esp, uint8_t status);
 
 static int32_t process_create(void);
 static void process_free(pid_t _pid);
@@ -50,17 +51,20 @@ void shell_init(void) {
  * @return int32_t : positive or 0 denote success, negative values denote an error condition
  */
 asmlinkage int32_t sys_halt(uint8_t status) {
-    uint32_t eip, esp;
+    /* If this is the shell, return to the shell */
+    if (pid == 2) 
+        context_switch(CURRENT);
 
+    /* If this is not the shell */
     process_t *curr = CURRENT;
-    user_mem_unmap(curr->pid);
-    eip = curr->parent->eip;
-    esp = curr->parent->esp;
-    curr = curr->parent;
-    process_free(curr->child->pid);
-    curr->child = NULL;
-    context_switch(curr);
-    return 0;
+    process_t *parent = CURRENT->parent;
+    parent->child = NULL;
+    update_tss(parent->pid);
+    process_free(curr->pid);
+
+    do_halt(parent->ebp_, parent->esp_, status);
+
+    return 0; // never reach here
 }
 
 
@@ -89,7 +93,6 @@ asmlinkage int32_t sys_execute(const int8_t *cmd) {
     if ((errno = pro_loader(fname, &EIP_reg)) < 0) {
         process_free(pid);
         pid = kill_pid();
-        update_tss(pid);
         return errno;
     }
 
@@ -98,6 +101,9 @@ asmlinkage int32_t sys_execute(const int8_t *cmd) {
 
     CURRENT->eip = EIP_reg;
     CURRENT->esp = USER_STACK_ADDR;
+
+    asm("movl %%esp, %0" : "=r"(CURRENT->esp_));
+    asm("movl %%ebp, %0" : "=r"(CURRENT->ebp_));
 
     /* switch to user mode (ring 3) */
     context_switch(CURRENT);
@@ -208,6 +214,7 @@ static int32_t process_create(void) {
 static void process_free(pid_t _pid) {
     free_kstack(_pid-2);
     task_map[_pid-2] = NULL;
+    user_mem_unmap(_pid);
 }
 
 

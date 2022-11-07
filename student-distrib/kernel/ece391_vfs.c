@@ -94,7 +94,7 @@ int32_t file_open(const int8_t *fname) {
  */
 int32_t file_close(int32_t fd) {
     if (!CURRENT->fds.fd[fd].f_count) {
-        return -EPERM;
+        return -1;
     }
 
     /* Close the file. */

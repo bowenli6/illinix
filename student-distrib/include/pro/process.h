@@ -32,8 +32,8 @@ typedef struct process {
     gid_t              gid;             /* process group id*/
     struct process     *parent;         /* parent process addr */
     struct process     *child;          /* child process addr */
-    uint32_t           esp0;
-    uint32_t           eip0;
+    uint32_t           esp_;
+    uint32_t           ebp_;
     uint32_t           esp;
     uint32_t           eip;
     files              fds;                  

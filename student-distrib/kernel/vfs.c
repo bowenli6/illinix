@@ -28,7 +28,7 @@ asmlinkage int32_t sys_open(const int8_t *filename) {
    /* copy data from user space to kernel space */
    // if ((errno = copy_from_user((void *)kbuf, (void *)filename, 
    //                            strlen(filename))) <= 0)
-         return errno;
+   if (*filename == '.') return directory_open(filename);
    return file_open(filename);
 }
 
@@ -77,7 +77,7 @@ asmlinkage int32_t sys_read(int32_t fd, void *buf, uint32_t nbytes) {
    /* Might be unsuitable for reading: return -EINVAL in the future */
    
    /* validate nbytes */
-   if (nbytes < 0) return -EINVAL;
+   if (nbytes < 0) return -1;
 
    /* copy data from user space to kernel space */
    // if ((errno = copy_from_user((void *)kbuf, (void *)buf, nbytes)) <= 0)
@@ -112,7 +112,7 @@ asmlinkage int32_t sys_write(int32_t fd, const void *buf, uint32_t nbytes) {
    /* Might be unsuitable for writing: return -EINVAL in the future */
 
    /* validate nbytes */
-   if (nbytes < 0) return -EINVAL;
+   if (nbytes < 0) return -1;
 
    /* copy data from user space to kernel space */
    // if ((errno = copy_from_user((void *)kbuf, (void *)buf, nbytes)) <= 0)
@@ -132,12 +132,11 @@ asmlinkage int32_t sys_write(int32_t fd, const void *buf, uint32_t nbytes) {
  * @return int32_t : 0 denote success, negative values denote an error condition
  */
 static int32_t validate_fd(int32_t fd) {
-   files *curr_fd = &(CURRENT->fds);
    int max_fd = CURRENT->fds.max_fd;
 
-   if (fd < 0 || fd >= max_fd) return -EBADF;
+   if (fd < 0 || fd >= max_fd) return -1;
 
-   if (!CURRENT->fds.fd[fd].f_count) return -EBADF;
+   if (!CURRENT->fds.fd[fd].f_count) return -1;
 
    /* should check if the file has permission to access in the future */
 
@@ -152,9 +151,9 @@ static int32_t validate_fd(int32_t fd) {
  * @return int32_t : 0 denote success, negative values denote an error condition
  */
 static int32_t validate_fname(const int8_t *filename) {
-   if (!filename) return -EINVAL;
+   if (!filename) return -1;
 
-   if (strlen(filename) > NAMESIZE) return -ENAMETOOLONG;
+   if (strlen(filename) > NAMESIZE) return -1;
 
    return 0;
 }
