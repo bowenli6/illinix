@@ -10,7 +10,7 @@ void syscall_handler();
 
 /* Required by ECE391. */
 asmlinkage int32_t sys_halt(uint8_t status);
-asmlinkage int32_t sys_execute(const uint8_t *cmd);
+asmlinkage int32_t sys_execute(const int8_t *cmd);
 asmlinkage int32_t sys_open(const int8_t *filename);
 asmlinkage int32_t sys_close(int32_t fd);
 asmlinkage int32_t sys_read(int32_t fd, void *buf, uint32_t nbytes);

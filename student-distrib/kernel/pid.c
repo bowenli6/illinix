@@ -11,7 +11,7 @@ pid_t size;
  * 
  * @return pid_t : The process id
  */
-pid_t alloc_pid(void) {
+pid_t alloc_pid() {
     int i, j, mask;
     
     if (size < BITMAP_SIZE) {
@@ -41,7 +41,7 @@ pid_t alloc_pid(void) {
  * @brief init the pidmap, calling only by the init process
  * 
  */
-void pidmap_init(void) {
+void pidmap_init() {
     memset((void *)pidmap, 0, BITMAP_SIZE);
     size = 2;   /* 0, 1 are allocted by idle and init process */
 }

@@ -6,7 +6,7 @@
 #define PID_SIZE    0x8000    /* Total bits of a 4KB page */
 #define BITMAP_SIZE 0x1000    /* 0x8000 / 8 */
 
-pid_t alloc_pid(void);
-void pidmap_init(void);
+pid_t alloc_pid();
+void pidmap_init();
 
 #endif

@@ -4,6 +4,7 @@
 #include <pro/process.h>
 #include <errno.h>
 #include <access.h>
+#include <lib.h>
 
 static int32_t validate_fd(int32_t fd);
 static int32_t validate_fname(const int8_t *filename);
@@ -49,7 +50,7 @@ asmlinkage int32_t sys_close(int32_t fd) {
       return errno;
    
    /* invoke close routine */
-   f_op = current()->pro_files.fd[fd].f_op;
+   f_op = current()->fds.fd[fd].f_op;
    return f_op.close(fd); 
 }
 
@@ -84,7 +85,7 @@ asmlinkage int32_t sys_read(int32_t fd, void *buf, uint32_t nbytes) {
 
    /* copy data from user space to kernel space*/
    /* invoke read routine */
-   f_op = current()->pro_files.fd[fd].f_op;
+   f_op = current()->fds.fd[fd].f_op;
    return f_op.read(fd, (void *)kbuf, nbytes);
 }
 
@@ -118,7 +119,7 @@ asmlinkage int32_t sys_write(int32_t fd, const void *buf, uint32_t nbytes) {
          return errno;
 
    /* invoke write routine */
-   f_op = current()->pro_files.fd[fd].f_op;
+   f_op = current()->fds.fd[fd].f_op;
    return f_op.write(fd, (void *)kbuf, nbytes);
 }
 
@@ -131,9 +132,9 @@ asmlinkage int32_t sys_write(int32_t fd, const void *buf, uint32_t nbytes) {
  * @return int32_t : 0 denote success, negative values denote an error condition
  */
 static int32_t validate_fd(int32_t fd) {
-   if (fd < 0 || fd >= current()->pro_files.max_fd) return -EBADF;
+   if (fd < 0 || fd >= current()->fds.max_fd) return -EBADF;
 
-   if (!current()->pro_files.fd[fd].f_count) return -EBADF;
+   if (!current()->fds.fd[fd].f_count) return -EBADF;
 
    /* should check if the file has permission to access in the future */
 
@@ -150,7 +151,7 @@ static int32_t validate_fd(int32_t fd) {
 static int32_t validate_fname(const int8_t *filename) {
    if (!filename) return -EINVAL;
 
-   if (strlen(filename > NAMESIZE)) return -ENAMETOOLONG;
+   if (strlen(filename) > NAMESIZE) return -ENAMETOOLONG;
 
    return 0;
 }

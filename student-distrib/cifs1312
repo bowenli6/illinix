@@ -1,0 +1,27 @@
+boot.o: boot.S include/boot/multiboot.h include/boot/x86_desc.h \
+  include/types.h
+handler.o: kernel/handler.S include/errno.h
+x86_desc.o: kernel/x86_desc.S include/boot/x86_desc.h include/types.h
+fs.o: drivers/fs.c include/drivers/fs.h include/types.h \
+  include/pro/process.h include/vfs/ece391_vfs.h include/vfs/file.h \
+  include/access.h include/errno.h include/lib.h
+keyboard.o: drivers/keyboard.c include/drivers/keyboard.h include/types.h \
+  include/drivers/terminal.h include/boot/i8259.h include/lib.h \
+  include/io.h
+rtc.o: drivers/rtc.c include/drivers/rtc.h include/types.h \
+  include/boot/i8259.h include/lib.h include/io.h
+terminal.o: drivers/terminal.c include/drivers/terminal.h \
+  include/drivers/keyboard.h include/types.h include/lib.h include/io.h
+access.o: kernel/access.c include/access.h include/types.h \
+  include/pro/process.h include/vfs/ece391_vfs.h include/vfs/file.h \
+  include/drivers/fs.h include/errno.h include/boot/x86_desc.h \
+  include/boot/page.h include/lib.h
+ece391_vfs.o: kernel/ece391_vfs.c include/vfs/ece391_vfs.h \
+  include/vfs/file.h include/types.h include/drivers/fs.h \
+  include/drivers/terminal.h include/drivers/keyboard.h \
+  include/drivers/rtc.h include/boot/syscall.h include/lib.h include/io.h
+exception.o: kernel/exception.c include/boot/exception.h include/io.h \
+  include/types.h
+file.o: kernel/file.c include/vfs/file.h include/types.h \
+  include/drivers/fs.h include/vfs/ece391_vfs.h include/lib.h \
+  include/io.h

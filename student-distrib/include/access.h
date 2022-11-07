@@ -2,6 +2,7 @@
 #define _ACCESS_H_
 
 #include <types.h>
+#include <pro/process.h>
 
 #define MAXADDR ((1 << 32) - 1)
 #define PROMASK 0xffffe000   

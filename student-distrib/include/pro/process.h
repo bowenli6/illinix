@@ -20,8 +20,8 @@
 
 /* user-level, virtual addr */
 #define VIR_MEM_BEGIN           0x08000000      /* The mem begins at 128MB */
+#define USER_STACK_ADDR         (0x8400000 - 0x4)
 #define PROGRAM_IMG_BEGIN       0x08048000      /* The program img begin */
-#define EIP_OFFSET              24              /* The EIP you need to jump to is the entry point from bytes 24-27 */
 
 typedef uint32_t pid_t;
 typedef uint32_t gid_t;

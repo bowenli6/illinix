@@ -12,6 +12,7 @@
 #include <drivers/rtc.h>
 #include <drivers/fs.h>
 #include <vfs/ece391_vfs.h>
+#include <pro/process.h>
 #include <debug.h>
 #include <lib.h>
 #include <io.h>
@@ -173,6 +174,7 @@ void entry(unsigned long magic, unsigned long addr) {
     keyboard_init();                /* Initialize the Keyboard driver. */
     RTC_init();                     /* Initialize the RTC driver. */
 
+    /* Process */
 
     /* Enable interrupts */
     printf("Enabling Interrupts\n");
@@ -181,11 +183,11 @@ void entry(unsigned long magic, unsigned long addr) {
     /* This is an test for share gitlab. */
 #ifdef RUN_TESTS
     /* Run tests */
-    launch_tests();
+    // launch_tests();
 #endif
 
-    /* Execute the first program ("shell") ... */
-    // shell();    
+    shell_init();                   /* Init shell process */
+
 
     /* Spin (nicely, so we don't chew up cycles) */
     asm volatile (".1: hlt; jmp .1;");

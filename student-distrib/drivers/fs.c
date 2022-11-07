@@ -7,7 +7,8 @@
 
 fs_t fs;        /* Stores the file system. */
 
-static int32_t validate_inode(int8_t *fname);
+static int32_t validate_inode(uint32_t inode);
+static int32_t validate_fname(int8_t *fname);
 
 
 /**
@@ -183,7 +184,7 @@ int32_t pro_loader(int8_t *fname) {
     uint8_t magic_number[4] = { 0x7f, 0x45, 0x4c, 0x46 };
 
     /* check if the file is a user-level executable file */
-    if ((inode = validate_inode(fname)) < 0)
+    if ((inode = validate_fname(fname)) < 0)
         return inode;
     
     /* get the file inode */
@@ -204,27 +205,36 @@ int32_t pro_loader(int8_t *fname) {
     /* map user virtual memory to process pid's physical memory */
     user_mem_map(current()->pid);
 
-    if ((errno = read_data(inode, 0, PROGRAM_IMG_BEGIN, file.size)) < 0)
+    if ((errno = read_data(inode, 0, (uint8_t *)PROGRAM_IMG_BEGIN, file.size)) < 0)
         return errno;
 
     return EIP;
 }
 
 /**
- * @brief Validate the input file inode
+ * @brief Validate the input file name
  * 
- * @param inode : A inode index of the file
+ * @param inode : A file name of the file
  * @return int32_t : positive or 0 denote success, negative values denote an error condition
  */
-static int32_t validate_inode(int8_t *fname) {
+static int32_t validate_fname(int8_t *fname) {
     int32_t errno;
     dentry_t dentry;
-    uint32_t inode;
     
     if ((errno = read_dentry_by_name(fname, &dentry)) < 0) 
         return errno;
     
+    return dentry.inode;
+}
+
+/**
+ * @brief Validate the input file inode
+ * 
+ * @param inode : inode of the file
+ * @return int32_t : positive or 0 denote success, negative values denote an error condition
+ */
+static int32_t validate_inode(uint32_t inode) {
     if (inode >= fs.boot->n_inode)
         return -ENOENT;
-    return inode;
+    return 0;
 }

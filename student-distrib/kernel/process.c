@@ -1,6 +1,8 @@
 #include <pro/process.h>
 #include <boot/syscall.h>
 #include <boot/x86_desc.h>
+#include <pro/pid.h>
+#include <lib.h>
 #include <drivers/fs.h>
 #include <access.h>
 #include <errno.h>  
@@ -14,7 +16,7 @@ pid_t pid;
 
 static int32_t process_create(void);
 static int32_t context_switch(void);
-static int32_t parse_arg(uint8_t* command, uint8_t *args, uint8_t *fname);
+static int32_t parse_arg(int8_t* command, int8_t *fname);
 
 
 /**
@@ -22,11 +24,7 @@ static int32_t parse_arg(uint8_t* command, uint8_t *args, uint8_t *fname);
  * 
  */
 void idle(void) {
-    asm ("            \n\
-        0: hlt        \n\
-        jmp 0b        \n\
-        "   
-    );
+    asm volatile (".1: hlt; jmp .1;");
 }
 
 
@@ -36,7 +34,8 @@ void idle(void) {
  * This process will be created by fork in the future
  */
 void shell_init(void) {
-    sys_execute((uint8_t)"shell");
+    pidmap_init();
+    sys_execute("shell");
 }
 
 
@@ -61,22 +60,25 @@ asmlinkage int32_t sys_halt(uint8_t status) {
  * @param cmd : A string contains the command of the process
  * @return int32_t : positive or 0 denote success, negative values denote an error condition
  */
-asmlinkage int32_t sys_execute(const uint8_t *cmd) {
+asmlinkage int32_t sys_execute(const int8_t *cmd) {
     int32_t errno, EIP_reg;
-    int8_t fname[NAMESIZE];
-
+    int8_t fname[NAMESIZE + 1];
+    memset(fname, 0, NAMESIZE + 1);
     /* parse arguments */
-    if ((errno = parse_arg(cmd, NULL, fname)) < 0) 
+    if ((errno = parse_arg((int8_t *)cmd, fname)) < 0) 
+        return errno;
+
+    /* create process */
+    if ((errno = process_create()) < 0)
         return errno;
 
     /* executable check and load program image into user's memory */
     if ((EIP_reg = pro_loader(fname)) < 0) 
         return EIP_reg;   
-
-    /* create process */
-    if ((errno = process_create()) < 0)
-        return errno;
     
+    task_map[pid-2]->process.eip = EIP_reg;
+    task_map[pid-2]->process.esp = USER_STACK_ADDR;
+
     /* switch to user mode (ring 3) */
     context_switch();
     return 0;
@@ -116,8 +118,8 @@ pid_t sys_getppid() {
  * @return 0  if the program executes a halt system call
  * @return < 0 if the command cannot be executed
  */
-static int32_t parse_arg(uint8_t *cmd, uint8_t *args, uint8_t *fname) {
-    uint8_t i = 0, j = 0;
+static int32_t parse_arg(int8_t *cmd, int8_t *fname) {
+    uint8_t i = 0;
 
     if (cmd == NULL) {
         return -EINVAL;
@@ -154,10 +156,8 @@ static int32_t parse_arg(uint8_t *cmd, uint8_t *args, uint8_t *fname) {
  * @return int32_t : 0
  */
 static int32_t process_create(void) {
-    int32_t errno;
-
-    if ((errno = alloc_pid()) < 0) 
-        return errno;
+    if ((pid = alloc_pid()) < 0) 
+        return pid;
 
     task_map[pid-2] = (process_union *)alloc_kstack(pid-2);
     
@@ -214,5 +214,5 @@ static int32_t context_switch(void) {
 }
 
 process_t *current(void) {
-    return &task_map[pid]->process;
+    return &task_map[pid-2]->process;
 }
