@@ -112,7 +112,8 @@ void user_mem_map(pid_t pid) {
  * @param pid process id (start at 2)
  */
 void user_mem_unmap(pid_t pid) {
-
+    page_directory[VIR_MEM_BEGIN >> PDE_OFFSET_4MB] = 0;
+    flush_tlb();
 }
 
 /**
@@ -132,6 +133,7 @@ void *alloc_kstack(pid_t pid) {
  * @param pid process id (start at 2)
  */
 void free_kstack(pid_t pid) {
-
+    uint32_t pt = PAGE_SIZE_4MB * (KERNEL_INDEX + 1) - KERNEL_PRESERVED - PAGE_SIZE * 2 * (pid + 1);
+    memset((char*)pt, 0, PAGE_SIZE *2);
 }
 
