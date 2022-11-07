@@ -15,8 +15,10 @@ pid_t pid;
 
 
 static int32_t process_create(void);
-static int32_t context_switch(void);
+static void process_free(pid_t _pid);
+static int32_t context_switch(process_t *p);
 static int32_t parse_arg(int8_t* command, int8_t *fname);
+static void update_tss(pid_t _pid);
 
 
 /**
@@ -48,6 +50,16 @@ void shell_init(void) {
  * @return int32_t : positive or 0 denote success, negative values denote an error condition
  */
 asmlinkage int32_t sys_halt(uint8_t status) {
+    uint32_t eip, esp;
+
+    process_t *curr = CURRENT;
+    user_mem_unmap(curr->pid);
+    eip = curr->parent->eip;
+    esp = curr->parent->esp;
+    curr = curr->parent;
+    process_free(curr->child->pid);
+    curr->child = NULL;
+    context_switch(curr);
     return 0;
 }
 
@@ -75,14 +87,10 @@ asmlinkage int32_t sys_execute(const int8_t *cmd) {
 
     /* executable check and load program image into user's memory */
     if ((errno = pro_loader(fname, &EIP_reg)) < 0) {
-
-        /* Deallocate process */
-        
-        /* get the previous process id */
-        if ((pid = kill_pid()) < 0)
-            return pid;
-        
-
+        process_free(pid);
+        pid = kill_pid();
+        update_tss(pid);
+        return errno;
     }
 
     /* init file array */
@@ -92,10 +100,10 @@ asmlinkage int32_t sys_execute(const int8_t *cmd) {
     CURRENT->esp = USER_STACK_ADDR;
 
     /* switch to user mode (ring 3) */
-    context_switch();
+    context_switch(CURRENT);
+
     return 0;
 }
-
 
 /**
  * @brief returns the process ID (PID) of the calling process
@@ -194,17 +202,28 @@ static int32_t process_create(void) {
 
 
 /**
+ * @brief Free a existing process_t
+ * 
+ */
+static void process_free(pid_t _pid) {
+    free_kstack(_pid-2);
+    task_map[_pid-2] = NULL;
+}
+
+
+/**
  * @brief Perform a context switch to ring 3 (user mode)
  * 
  * @return int32_t : 0 
  */
-static int32_t context_switch(void) {
+static int32_t context_switch(process_t *p) {
     /* (bottom) SS(handle by iret), DS, ESP, EFLAGS, CS, EIP (top) */
     /* popl and or are for getting esp, and set IF in EFLAGS
      * so that intrrupts will be reenabled in user mode. */
     
-    tss.ss0 = KERNEL_DS;
-    tss.esp0 = KERNEL_STACK_BEGIN - (pid - 2) * KERNEL_STACK_SZ - 0x4;
+    update_tss(p->pid);
+
+    sti();
 
     asm volatile ("                         \n\
                     andl  $0xFF, %%eax      \n\
@@ -220,9 +239,14 @@ static int32_t context_switch(void) {
                     iret                    \n\
                   "
                   :
-                  : "a"(USER_DS), "b"(CURRENT->esp), "c"(USER_CS), "d"(CURRENT->eip)
+                  : "a"(USER_DS), "b"(p->esp), "c"(USER_CS), "d"(p->eip)
                   : "memory"
     );      
     return 0;
+}
+
+static void update_tss(pid_t _pid) {
+    tss.ss0 = KERNEL_DS;
+    tss.esp0 = KERNEL_STACK_BEGIN - (_pid - 2) * KERNEL_STACK_SZ - 0x4;
 }
 

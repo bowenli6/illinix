@@ -213,9 +213,11 @@ int32_t pro_loader(int8_t *fname, uint32_t *EIP) {
     /* map user virtual memory to process pid's physical memory */
     user_mem_map(CURRENT->pid);
 
-    if ((errno = read_data(inode, 0, (uint8_t *)PROGRAM_IMG_BEGIN, file.size)) < 0)
+    if ((errno = read_data(inode, 0, (uint8_t *)PROGRAM_IMG_BEGIN, file.size)) < 0) {
+        user_mem_unmap(CURRENT->pid);
         return errno;
-
+    }
+    
     return 0;
 }
 

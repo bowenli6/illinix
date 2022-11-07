@@ -132,7 +132,10 @@ asmlinkage int32_t sys_write(int32_t fd, const void *buf, uint32_t nbytes) {
  * @return int32_t : 0 denote success, negative values denote an error condition
  */
 static int32_t validate_fd(int32_t fd) {
-   if (fd < 0 || fd >= CURRENT->fds.max_fd) return -EBADF;
+   files *curr_fd = &(CURRENT->fds);
+   int max_fd = CURRENT->fds.max_fd;
+
+   if (fd < 0 || fd >= max_fd) return -EBADF;
 
    if (!CURRENT->fds.fd[fd].f_count) return -EBADF;
 

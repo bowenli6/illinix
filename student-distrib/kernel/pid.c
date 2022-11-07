@@ -12,7 +12,8 @@ pid_t size;
  * @return pid_t : The process id
  */
 pid_t alloc_pid() {
-    int i, j, mask;
+    int i;
+    // int i, j, mask;
     
     if (size < BITMAP_SIZE) {
         i = size++;

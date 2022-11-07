@@ -9,7 +9,7 @@
 #define TASK_COUNT              2               /* For cp3 we only need to support two tasks */
 
 /* kernel, physical addr */
-#define KERNEL_STACK_BEGIN       0x800000        /* The pyphisical addr begin at the end of 8MB; it should go up wards*/
+#define KERNEL_STACK_BEGIN       0x700000        /* The pyphisical addr begin at the end of 8MB; it should go up wards*/
 #define KERNEL_STACK_SZ          0x2000          /* Per kernel stack size is 8KB */
 #define USR_STACK_SZ             0x400000       /* 4 MB */
 
@@ -32,6 +32,8 @@ typedef struct process {
     gid_t              gid;             /* process group id*/
     struct process     *parent;         /* parent process addr */
     struct process     *child;          /* child process addr */
+    uint32_t           esp0;
+    uint32_t           eip0;
     uint32_t           esp;
     uint32_t           eip;
     files              fds;                  

@@ -113,7 +113,13 @@ System calls Linkage
     Solution:   Discard the call to copy from user since we have direct mapping this time 
 
 Process 
-4.  Priblem:    Shell stopped after typing a error command
+4.  Problem:    Shell stopped after typing a error command
     Reason:     Forget to kill the error process and resume shell process 
     Time used:  1 hour
     Solution:   when a error occur, context switch to shell
+
+
+5.  Problem:    Process switch failed
+    Reason:     
+    Time used:
+    Solution:
