@@ -113,7 +113,7 @@ void user_mem_map(pid_t pid) {
  * @return void* pointer to the process kernel stack
  */
 void *alloc_kstack(int pid) {
-    uint32_t pt = PAGE_SIZE_4MB * (KERNEL_INDEX + 1) - PAGE_SIZE * 2 * (pid + 1);
+    uint32_t pt = PAGE_SIZE_4MB * (KERNEL_INDEX + 1) - KERNEL_PRESERVED - PAGE_SIZE * 2 * (pid + 1);
     return (void*)pt;
 }
 
