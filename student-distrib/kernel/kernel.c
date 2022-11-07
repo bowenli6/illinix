@@ -163,8 +163,6 @@ void entry(unsigned long magic, unsigned long addr) {
     /* File System */
     module_t *mod = (module_t *)mbi->mods_addr;
     fs_init(mod->mod_start);        /* Initialize the file system driver. */ 
-    vfs_init();                     /* Initialize the virtual file system. */
-
 
     /* Virtual Memory */
     page_init();                    /* Initialize page tables. */

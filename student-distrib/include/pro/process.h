@@ -34,7 +34,6 @@ typedef struct process {
     struct process     *child;          /* child process addr */
     uint32_t           esp;
     uint32_t           eip;
-    vfs_t              fs;
     files              fds;                  
 } process_t;
 
@@ -45,7 +44,12 @@ typedef union {
     uint32_t stack[2048];
 } process_union;
 
-process_t *current(void);
+
+extern process_union *task_map[TASK_COUNT];
+extern pid_t pid;
+
+#define CURRENT (&task_map[pid-2]->process)
+
 void shell_init(void);
 
 #endif /* _PROCESS_H */

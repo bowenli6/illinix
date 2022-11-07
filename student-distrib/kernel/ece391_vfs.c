@@ -4,6 +4,7 @@
 #include <drivers/fs.h>
 #include <pro/process.h>
 #include <boot/syscall.h>
+#include <errno.h>
 #include <lib.h>
 #include <io.h>
 
@@ -44,18 +45,20 @@ static file_op rtc_op = {
 
 static int32_t __open(int32_t fd, const int8_t *fname, file_type_t type, file_op *op);
 
-files vfs;   /* Stores the virtual file system. */
-
 /**
  * @brief Initialize the virtual file system.
  * 
  * @return int32_t : 0 on success, otherwise on failure.
  */
-int32_t vfs_init() {
+int32_t fd_init() {
     int i;
+
+    CURRENT->fds.count = 0;
+    CURRENT->fds.max_fd = OPEN_MAX;
+
     for (i = 0; i < OPEN_MAX; ++i) {
-        current()->fds.fd[i].f_count = 0;
-        vfs.fd[i].f_flags = UNUSED;
+        CURRENT->fds.fd[i].f_count = 0;
+        CURRENT->fds.fd[i].f_flags = UNUSED;
     }
     return (__open(0, "stdin", TERMINAL, &terminal_op)) + (__open(1, "stdout", TERMINAL, &terminal_op));
 }
@@ -77,7 +80,7 @@ int32_t file_open(const int8_t *fname) {
         fd = file_init(2, &file, &dentry, &f_op); 
 
         /* Copy the file object into the vfs fd. */
-        memcpy((void*)&(current()->fds.fd[fd]), (void*)&file, sizeof(file_t));
+        memcpy((void*)&(CURRENT->fds.fd[fd]), (void*)&file, sizeof(file_t));
     }
     return fd;
 }
@@ -90,14 +93,13 @@ int32_t file_open(const int8_t *fname) {
  * @return int32_t 0 on success, -1 on failure.
  */
 int32_t file_close(int32_t fd) {
-    if (current()->fds.fd[fd].f_flags == UNUSED) {
-        puts("ERROR: File has already been closed.\n");
-        return -1;
+    if (!CURRENT->fds.fd[fd].f_count) {
+        return -EPERM;
     }
 
     /* Close the file. */
-    current()->fds.fd[fd].f_count--; 
-    current()->fds.fd[fd].f_flags = UNUSED;
+    CURRENT->fds.fd[fd].f_count--; 
+    CURRENT->fds.fd[fd].f_flags = UNUSED;
     return 0;
 }
 
@@ -113,7 +115,7 @@ int32_t file_close(int32_t fd) {
  */
 int32_t file_read(int32_t fd, void *buf, int32_t nbytes) {
     int32_t nread;
-    file_t *file = &(current()->fds.fd[fd]);
+    file_t *file = &(CURRENT->fds.fd[fd]);
     if (file->f_flags == UNUSED) {
         puts("ERROR: File does not exist.\n");
         return -1;
@@ -169,18 +171,18 @@ int32_t directory_close(int32_t fd) {
  */
 int32_t directory_read(int32_t fd, void *buf, int32_t nbytes) {
     int32_t nread;
-    if (vfs.fd[fd].f_flags == UNUSED) {
+    if (CURRENT->fds.fd[fd].f_flags == UNUSED) {
         puts("ERROR: File does not exist.\n");
         return -1;
     }
 
-    if (vfs.fd[fd].f_pos >= fs.boot->n_dir) 
+    if (CURRENT->fds.fd[fd].f_pos >= fs.boot->n_dir) 
         return 0;
     if (nbytes > NAMESIZE)
         nread = NAMESIZE;
     else
         nread = nbytes;
-    memcpy(buf, (void*)(fs.boot->dirs[vfs.fd[fd].f_pos++].fname), nread);
+    memcpy(buf, (void*)(fs.boot->dirs[CURRENT->fds.fd[fd].f_pos++].fname), nread);
     return nread;
 }
 
@@ -216,6 +218,6 @@ static int32_t __open(int32_t fd, const int8_t *fname, file_type_t type, file_op
         printf("%s file object allocation error.\n", fname);
         return -1;
     }
-    memcpy((void*)(&vfs.fd[fd]), (void*)&file, sizeof(file_t));
+    memcpy((void*)&(CURRENT->fds.fd[fd]), (void*)&file, sizeof(file_t));
     return fd;
 }

@@ -7,6 +7,7 @@
 
 #define INUSED      1                      /* A file is inused. */
 #define UNUSED      0                      /* A file is unused. */
+#define MAXREAD     0xfffff
 
 typedef struct {
     int32_t (*open)(const int8_t *);
@@ -26,7 +27,7 @@ typedef struct {
     uint32_t f_count;       /* File object's reference count. */
     uint32_t f_flags;       /* Flags specified when opening the file. */
     uint32_t f_pos;         /* Current file offset (file pointer). */
-    uint32_t f_maxcount;    /* Maximum number of bytes that can be read or written with a single operation. */
+    // uint32_t f_maxcount;    /* Maximum number of bytes that can be read or written with a single operation. */
     // mode_t   f_mode;        /* Process access mode. */
     // uid_t    f_uid;         /* Owner identifier. */
     // gid_t    f_gid;         /* Group identifier. */ 

@@ -31,7 +31,7 @@ int32_t copy_from_user(void *to, const void *from, uint32_t n) {
     GETPRO(process);
     
     memcpy(to, from, n);
-    return 0;
+    return 1;
 }
 
 
@@ -57,7 +57,7 @@ int32_t copy_to_user(void *to, const void *from, uint32_t n) {
     GETPRO(process);
     
     memcpy(to, from, n);
-    return n;
+    return 1;
 }
 
 
@@ -97,7 +97,7 @@ static int32_t validate_addr(void *addr) {
 /**
  * @brief map user virtual memory to process pid's physical memory
  * 
- * @param pid process id
+ * @param pid process id (start at 2)
  */
 void user_mem_map(pid_t pid) {
     page_directory[VIR_MEM_BEGIN >> PDE_OFFSET_4MB] |= PTE_PRESENT | PTE_RW
@@ -106,15 +106,32 @@ void user_mem_map(pid_t pid) {
 }
 
 
+/**
+ * @brief user_mem_unmap
+ * 
+ * @param pid process id (start at 2)
+ */
+void user_mem_unmap(pid_t pid) {
+
+}
 
 /**
- * @brief alloc a 8KB memory in kernel for process pid
+ * @brief Alloc a 8KB memory in kernel for process pid
  * 
- * @param pid process id
+ * @param pid process id (start at 2)
  * @return void* pointer to the process kernel stack
  */
-void *alloc_kstack(int pid) {
+void *alloc_kstack(pid_t pid) {
     uint32_t pt = PAGE_SIZE_4MB * (KERNEL_INDEX + 1) - KERNEL_PRESERVED - PAGE_SIZE * 2 * (pid + 1);
     return (void*)pt;
+}
+
+/**
+ * @brief Free the memory that allocate by alloc_kstack
+ * 
+ * @param pid process id (start at 2)
+ */
+void free_kstack(pid_t pid) {
+
 }
 

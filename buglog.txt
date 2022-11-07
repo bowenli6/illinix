@@ -94,3 +94,26 @@ File System:
 ----------------------------------------------------------------------------------------------------
 Checkpoint3:
 
+System calls Linkage
+1.  Problem:    Page fault calling fputs 
+    Reason:     (1) Access sys_open instead of sys_write
+                (2) Forget to init file descriptor array for each process
+    Time used:  1 hour
+    Solution:   change the jump table offset or add a reset sys_reset at the beginning of the jump table.
+                init processes' file descriptor array
+
+2.  Problem:    syscall handler cannot return back to user mode (ring 3)
+    Reason:     does not iret properly 
+    Time used:  10 min 
+    Solution:   pop and iret
+
+3.  Problem:    Cannot read from sys_read
+    Reason:     use unimplment function copy from user 
+    Time used:  20 min
+    Solution:   Discard the call to copy from user since we have direct mapping this time 
+
+Process 
+4.  Priblem:    Shell stopped after typing a error command
+    Reason:     Forget to kill the error process and resume shell process 
+    Time used:  1 hour
+    Solution:   when a error occur, context switch to shell

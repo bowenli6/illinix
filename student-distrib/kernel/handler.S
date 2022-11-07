@@ -12,6 +12,7 @@ NCALL    = 6
 USER_DS  = 0x002B
 
 syscall_table:
+    .long sys_restart   /* Used for restarting */
 	.long sys_halt
 	.long sys_execute
 	.long sys_read
@@ -103,21 +104,6 @@ error_code:
 
 ret_from_exception:
     jmp     ret_from_exception      # Dead loop for testing now.
-
-restore_all:
-    popl    %ebx
-    popl    %ecx
-    popl    %edx
-    popl    %esi                # restore the registers and flgas.
-    popl    %edi
-    popl    %ebp
-    popl    %eax
-    popl    %ds
-    popl    %es
-    addl    $4, %esp
-    sti                         # enable interrupts
-    iret                        # return from the exceptions to the previous stats.
-
 
 # Exception handlers
 
@@ -306,7 +292,19 @@ nobadsys:
     call  *syscall_table(, %eax, 4)         # perform the system call.
     movl  %eax, EAX(%esp)		            # store the return value
 syscall_exit:
-	RESTORE_ALL                             # return from the syscall
+	#RESTORE_ALL                             # return from the syscall
+    popl %ebx
+	popl %ecx
+	popl %edx
+	popl %esi
+	popl %edi
+	popl %ebp
+	popl %eax
+    popl %ds
+	popl %es
+	addl $4, %esp
+	iret;		    
+
 resume_userspace:
     # TODO: Check for recheduling request, not implmented yet.
     jmp   syscall_exit

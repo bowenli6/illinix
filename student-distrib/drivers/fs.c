@@ -174,12 +174,18 @@ uint32_t get_size(uint32_t index) {
     return fs.inodes[dentry.inode].size;
 }
 
-int32_t pro_loader(int8_t *fname) {
+
+/**
+ * @brief Load program image into user vitural address space
+ * 
+ * @param fname file name of the program
+ * @return int32_t : positive or 0 denote success, negative values denote an error condition
+ */
+int32_t pro_loader(int8_t *fname, uint32_t *EIP) {
     int i;
     int32_t errno;
     uint32_t inode;
     inode_t file;
-    uint32_t EIP;
     uint8_t header[40];
     uint8_t eip_buf[4];
     uint8_t magic_number[4] = { 0x7f, 0x45, 0x4c, 0x46 };
@@ -202,15 +208,15 @@ int32_t pro_loader(int8_t *fname) {
         eip_buf[i] = header[i + 24];
     }
 
-    EIP = *(uint32_t*)eip_buf;
+    *EIP = *(uint32_t*)eip_buf;
 
     /* map user virtual memory to process pid's physical memory */
-    user_mem_map(current()->pid);
+    user_mem_map(CURRENT->pid);
 
     if ((errno = read_data(inode, 0, (uint8_t *)PROGRAM_IMG_BEGIN, file.size)) < 0)
         return errno;
 
-    return EIP;
+    return 0;
 }
 
 /**
@@ -237,6 +243,6 @@ static int32_t validate_fname(int8_t *fname) {
  */
 static int32_t validate_inode(uint32_t inode) {
     if (inode >= fs.boot->n_inode)
-        return -ENOENT;
+        return -EPERM;
     return 0;
 }

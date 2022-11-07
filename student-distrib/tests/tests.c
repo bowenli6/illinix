@@ -385,76 +385,76 @@ void test_directory_ls() {
 	// 	"verylargetextwithverylongname.txt", "ls", 
 	// 	"testprint", "created.txt", "frame1.txt", "hello"
 	// };
-void test_file_read() {
-	TEST_HEADER;
-	int exit;
-	char buf[10];
-	char fname[33];
-	char filebuf[10000];
-	int fd, nread, size;
-	dentry_t d;
-	int in = terminal_open("stdin");
-	int out = terminal_open("stdout");
-	puts("This test will read every regular file from the file system.\n");
-	puts("For every file, you need to type read to get the next file printed to the screen.\n");
-	puts("Enjoy!\n");
+// void test_file_read() {
+// 	TEST_HEADER;
+// 	int exit;
+// 	char buf[10];
+// 	char fname[33];
+// 	char filebuf[10000];
+// 	int fd, nread, size;
+// 	dentry_t d;
+// 	int in = terminal_open("stdin");
+// 	int out = terminal_open("stdout");
+// 	puts("This test will read every regular file from the file system.\n");
+// 	puts("For every file, you need to type read to get the next file printed to the screen.\n");
+// 	puts("Enjoy!\n");
 
-	while (1) {
-		puts("Type the file name you want to read, (exit to quit): \n");
-		memset((void*)fname, 0, 33);
-		nread = terminal_read(in, (void*)fname, 32);
-		if (!strncmp(fname, "exit", 4))
-			break;
-		fname[nread-1] = '\0';
-		if ((fd = file_open(fname)) < 0) {
-			printf("Failed to open [%s]\n", fname);
-			continue;
-		}
-		read_dentry_by_name(fname, &d);
-		size = fs.inodes[d.inode].size;
-		printf("The file you have just open is: %s\n", fname);
-		printf("The type of this file is(0: RTC, 1: Directory, 2: Regular file): %d\n", d.type);
-		printf("The correct size of this file is : %d\n", size);
-		exit = 1;
-		while (size && exit && (nread = file_read(fd, filebuf, 1000))) {
-			if (nread == -1) {
-				printf("Failed to read from [%s]\n", fname);
-				exit = 0;
-				file_close(fd);
-				break;
-			}
-			clear();
-			printf("The number of bytes we read is : %d\n", nread);
-			size -= nread;
-			printf("The Remaining number of bytes in the file is : %d\n", size);
-			printf("The file position is now :%d\n", vfs.fd[fd].f_pos);
-			puts("Please type s to see the file: \n");
-			while (strncmp(buf, "s", 1)) {
-				memset((void*)buf, 0, 10);
-				terminal_read(in, (void*)buf, 10);
-			}
-			memset((void*)buf, 0, 10);
-			terminal_write(out, filebuf, nread);
-			puts("Do you want to see the remaining content of this file? (y or n) \n");
-			while (1) {
-				memset((void*)buf, 0, 10);
-				terminal_read(in, (void*)buf, 10);
-				if (!strncmp(buf, "n", 1)) {
-					exit = 0;
-					break;
-				} else {
-					break;
-				}
-			}
-			memset((void*)buf, 0, 10);
-			memset((void*)filebuf, 0, 1000);
-		}
-		file_close(fd);
-	}
-	terminal_close(in);
-	terminal_close(out);
-	pre_test();
-}
+// 	while (1) {
+// 		puts("Type the file name you want to read, (exit to quit): \n");
+// 		memset((void*)fname, 0, 33);
+// 		nread = terminal_read(in, (void*)fname, 32);
+// 		if (!strncmp(fname, "exit", 4))
+// 			break;
+// 		fname[nread-1] = '\0';
+// 		if ((fd = file_open(fname)) < 0) {
+// 			printf("Failed to open [%s]\n", fname);
+// 			continue;
+// 		}
+// 		read_dentry_by_name(fname, &d);
+// 		size = fs.inodes[d.inode].size;
+// 		printf("The file you have just open is: %s\n", fname);
+// 		printf("The type of this file is(0: RTC, 1: Directory, 2: Regular file): %d\n", d.type);
+// 		printf("The correct size of this file is : %d\n", size);
+// 		exit = 1;
+// 		while (size && exit && (nread = file_read(fd, filebuf, 1000))) {
+// 			if (nread == -1) {
+// 				printf("Failed to read from [%s]\n", fname);
+// 				exit = 0;
+// 				file_close(fd);
+// 				break;
+// 			}
+// 			clear();
+// 			printf("The number of bytes we read is : %d\n", nread);
+// 			size -= nread;
+// 			printf("The Remaining number of bytes in the file is : %d\n", size);
+// 			printf("The file position is now :%d\n", vfs.fd[fd].f_pos);
+// 			puts("Please type s to see the file: \n");
+// 			while (strncmp(buf, "s", 1)) {
+// 				memset((void*)buf, 0, 10);
+// 				terminal_read(in, (void*)buf, 10);
+// 			}
+// 			memset((void*)buf, 0, 10);
+// 			terminal_write(out, filebuf, nread);
+// 			puts("Do you want to see the remaining content of this file? (y or n) \n");
+// 			while (1) {
+// 				memset((void*)buf, 0, 10);
+// 				terminal_read(in, (void*)buf, 10);
+// 				if (!strncmp(buf, "n", 1)) {
+// 					exit = 0;
+// 					break;
+// 				} else {
+// 					break;
+// 				}
+// 			}
+// 			memset((void*)buf, 0, 10);
+// 			memset((void*)filebuf, 0, 1000);
+// 		}
+// 		file_close(fd);
+// 	}
+// 	terminal_close(in);
+// 	terminal_close(out);
+// 	pre_test();
+// }
 
 /**
  * @brief Test for RTC read and write
@@ -510,29 +510,29 @@ void test_checkpoint2() {
 
 /* Checkpoint 3 tests */
 
-int test_shell() {
-	int32_t cnt, rval;
-	const int32_t BUFSIZE = 1024;
-    int8_t buf[BUFSIZE];
-	int errno;
+// int test_shell() {
+// 	int32_t cnt, rval;
+// 	const int32_t BUFSIZE = 1024;
+//     int8_t buf[BUFSIZE];
+// 	int errno;
 
-    if ((errno = fputs(stdout, "Starting illinix Shell\n")) < 0) {
-		fputs(stdout, "Error occurs\n");
-	}
+//     if ((errno = fputs(stdout, "Starting illinix Shell\n")) < 0) {
+// 		fputs(stdout, "Error occurs\n");
+// 	}
 
-    while (1) {
-        fputs (stdout, "illinix> ");
-		if (-1 == (cnt = sys_read (0, buf, BUFSIZE-1))) {
-			fputs (1, "read from keyboard failed\n");
-			return 3;
-		}
-		if (cnt > 0 && '\n' == buf[cnt - 1])
-			cnt--;
-		buf[cnt] = '\0';
-		if (0 == strncmp (buf, "exit", 4))
-			return 0;
-		if ('\0' == buf[0])
-			continue;
+//     while (1) {
+//         fputs (stdout, "illinix> ");
+// 		if (-1 == (cnt = sys_read (0, buf, BUFSIZE-1))) {
+// 			fputs (1, "read from keyboard failed\n");
+// 			return 3;
+// 		}
+// 		if (cnt > 0 && '\n' == buf[cnt - 1])
+// 			cnt--;
+// 		buf[cnt] = '\0';
+// 		if (0 == strncmp (buf, "exit", 4))
+// 			return 0;
+// 		if ('\0' == buf[0])
+// 			continue;
 		// rval = sys_execute (buf);
 		// if (-1 == rval)
 		// 	fputs (1, "no such command\n");
@@ -540,8 +540,8 @@ int test_shell() {
 		// 	fputs (1, "program terminated by exception\n");
 		// else if (0 != rval)
 		// 	fputs (1, "program terminated abnormally\n");
-	}
-}
+// 	}
+// }
 
 int testprint () {
 	fputs(1, "Hello World!\n");

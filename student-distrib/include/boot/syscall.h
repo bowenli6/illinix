@@ -21,6 +21,8 @@ asmlinkage int32_t sys_set_handler(int32_t signum, void *handler_addr);
 asmlinkage int32_t sys_sigreturn(void);
 
 
+asmlinkage int32_t sys_restart(void);
+
 // /* --------------------------------Process-------------------------------- */
 
 

@@ -7,7 +7,7 @@
 
 #include <vfs/file.h>
 
-int32_t vfs_init();
+int32_t fd_init();
 int32_t file_open(const int8_t *fname);
 int32_t file_close(int32_t fd);
 int32_t file_read(int32_t fd, void *buf, int32_t nbytes);
@@ -32,11 +32,7 @@ typedef struct {
     uint32_t count;         /* Number of processes sharing this table */
     uint32_t max_fd;        /* Current maximun number of file objects */
     file_t fd[OPEN_MAX];    /* Pointers to array of file object pointers */
-    file_t fd_init;         /* Initial array of the file object pointers */
 } files;
-
-
-extern files vfs;
 
 
 

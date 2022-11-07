@@ -3,6 +3,10 @@
 #include <io.h>
 
 
+asmlinkage int32_t sys_restart(void) {
+   return 0;
+}
+
 asmlinkage int32_t sys_getargs(uint8_t *buf, int32_t nbytes) {
    return 0;
 }

@@ -61,8 +61,9 @@ asmlinkage int32_t sys_halt(uint8_t status) {
  * @return int32_t : positive or 0 denote success, negative values denote an error condition
  */
 asmlinkage int32_t sys_execute(const int8_t *cmd) {
-    int32_t errno, EIP_reg;
+    int32_t errno;
     int8_t fname[NAMESIZE + 1];
+    uint32_t EIP_reg;
     memset(fname, 0, NAMESIZE + 1);
     /* parse arguments */
     if ((errno = parse_arg((int8_t *)cmd, fname)) < 0) 
@@ -73,10 +74,22 @@ asmlinkage int32_t sys_execute(const int8_t *cmd) {
         return errno;
 
     /* executable check and load program image into user's memory */
-    EIP_reg = pro_loader(fname);
+    if ((errno = pro_loader(fname, &EIP_reg)) < 0) {
 
-    task_map[pid-2]->process.eip = EIP_reg;
-    task_map[pid-2]->process.esp = USER_STACK_ADDR;
+        /* Deallocate process */
+        
+        /* get the previous process id */
+        if ((pid = kill_pid()) < 0)
+            return pid;
+        
+
+    }
+
+    /* init file array */
+    fd_init();
+
+    CURRENT->eip = EIP_reg;
+    CURRENT->esp = USER_STACK_ADDR;
 
     /* switch to user mode (ring 3) */
     context_switch();
@@ -118,24 +131,27 @@ pid_t sys_getppid() {
  * @return < 0 if the command cannot be executed
  */
 static int32_t parse_arg(int8_t *cmd, int8_t *fname) {
-    uint8_t i = 0;
-
     if (cmd == NULL) {
         return -EINVAL;
     }
 
     /* parse the command into file name and the rest of the command */
     
-    while (cmd[i] != '\0') {
+    while (*cmd) {
 
-        if (cmd[i] == ' ') {
-            fname[i] = '\0';
-            i++;
+        if (*cmd == ' ') {
+            *fname = '\0';
+            cmd++;
             break;
         }
 
-        fname[i] = cmd[i];
-        i++;
+        if (*cmd == '\n' || *cmd == '\r') {
+            *fname = '\0';
+            cmd++;
+            break;
+        }
+
+        *fname++ = *cmd++;
     }
 
     // while (command[i] != '\0') {
@@ -161,16 +177,16 @@ static int32_t process_create(void) {
     task_map[pid-2] = (process_union *)alloc_kstack(pid-2);
     
     /* setup current pid */
-    task_map[pid-2]->process.pid = pid;
+    CURRENT->pid = pid;
 
     /* setup the kernel stack info */
 
     /* set the parent pointer */
     if (pid == 2) {
-        task_map[pid-2]->process.parent = NULL;
+        CURRENT->parent = NULL;
     } else {
-        task_map[pid-2]->process.parent = &task_map[pid-3]->process;
-        task_map[pid-3]->process.child = &task_map[pid-2]->process;
+        CURRENT->parent = &task_map[pid-3]->process;
+        task_map[pid-3]->process.child = CURRENT;
     }
 
     return 0;
@@ -183,11 +199,11 @@ static int32_t process_create(void) {
  * @return int32_t : 0 
  */
 static int32_t context_switch(void) {
-    process_union *p = task_map[pid-2];
     /* (bottom) SS(handle by iret), DS, ESP, EFLAGS, CS, EIP (top) */
     /* popl and or are for getting esp, and set IF in EFLAGS
      * so that intrrupts will be reenabled in user mode. */
     
+    tss.ss0 = KERNEL_DS;
     tss.esp0 = KERNEL_STACK_BEGIN - (pid - 2) * KERNEL_STACK_SZ - 0x4;
 
     asm volatile ("                         \n\
@@ -204,12 +220,9 @@ static int32_t context_switch(void) {
                     iret                    \n\
                   "
                   :
-                  : "a"(USER_DS), "b"(p->process.esp), "c"(USER_CS), "d"(p->process.eip)
+                  : "a"(USER_DS), "b"(CURRENT->esp), "c"(USER_CS), "d"(CURRENT->eip)
                   : "memory"
     );      
     return 0;
 }
 
-process_t *current(void) {
-    return &task_map[pid-2]->process;
-}

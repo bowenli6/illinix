@@ -7,6 +7,7 @@
 #define BITMAP_SIZE 0x1000    /* 0x8000 / 8 */
 
 pid_t alloc_pid();
+pid_t kill_pid();
 void pidmap_init();
 
 #endif

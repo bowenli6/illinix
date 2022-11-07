@@ -19,18 +19,18 @@ pid_t alloc_pid() {
         return i;
     }
 
-    mask = 0x1;
-    for (i = 0; i < BITMAP_SIZE; ++i) {
-        uint8_t pid_group = pidmap[i];
-        j = 0;
+    // mask = 0x1;
+    // for (i = 0; i < BITMAP_SIZE; ++i) {
+    //     uint8_t pid_group = pidmap[i];
+    //     j = 0;
 
-        while (j < 8) {
-            if (!(pid_group & (mask << j))) {
-                return i * 8 + j;
-            }
-            j++;
-        }
-    }
+    //     while (j < 8) {
+    //         if (!(pid_group & (mask << j))) {
+    //             return i * 8 + j;
+    //         }
+    //         j++;
+    //     }
+    // }
 
     /* resource temporarily unavailable */
     return -EAGAIN;
@@ -45,4 +45,19 @@ void pidmap_init() {
     memset((void *)pidmap, 0, BITMAP_SIZE);
     size = 2;   /* 0, 1 are allocted by idle and init process */
 }
+
+
+/**
+ * @brief Kill the current pid
+ * 
+ * @return return the previous pid
+ */
+pid_t kill_pid() {
+    if (size > 2)
+        return --size;
+    
+    return -1;
+
+}
+
 
