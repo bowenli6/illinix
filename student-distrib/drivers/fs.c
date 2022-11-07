@@ -181,6 +181,7 @@ int32_t pro_loader(int8_t *fname) {
     inode_t file;
     uint32_t EIP;
     uint8_t header[40];
+    uint8_t eip_buf[4];
     uint8_t magic_number[4] = { 0x7f, 0x45, 0x4c, 0x46 };
 
     /* check if the file is a user-level executable file */
@@ -198,9 +199,10 @@ int32_t pro_loader(int8_t *fname) {
     for (i = 0; i < 4; ++i) {
         if (header[i] != magic_number[i])
             return -EPERM;
+        eip_buf[i] = header[i + 24];
     }
 
-    EIP = (header[24] << 24) | (header[25] << 16) | (header[26] << 8) | (header[27]);
+    EIP = *(uint32_t*)eip_buf;
 
     /* map user virtual memory to process pid's physical memory */
     user_mem_map(current()->pid);

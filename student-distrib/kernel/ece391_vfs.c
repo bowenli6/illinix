@@ -2,6 +2,7 @@
 #include <drivers/terminal.h>
 #include <drivers/rtc.h>
 #include <drivers/fs.h>
+#include <pro/process.h>
 #include <boot/syscall.h>
 #include <lib.h>
 #include <io.h>
@@ -53,7 +54,7 @@ files vfs;   /* Stores the virtual file system. */
 int32_t vfs_init() {
     int i;
     for (i = 0; i < OPEN_MAX; ++i) {
-        vfs.fd[i].f_count = 0;
+        current()->fds.fd[i].f_count = 0;
         vfs.fd[i].f_flags = UNUSED;
     }
     return (__open(0, "stdin", TERMINAL, &terminal_op)) + (__open(1, "stdout", TERMINAL, &terminal_op));
@@ -76,7 +77,7 @@ int32_t file_open(const int8_t *fname) {
         fd = file_init(2, &file, &dentry, &f_op); 
 
         /* Copy the file object into the vfs fd. */
-        memcpy((void*)&(vfs.fd[fd]), (void*)&file, sizeof(file_t));
+        memcpy((void*)&(current()->fds.fd[fd]), (void*)&file, sizeof(file_t));
     }
     return fd;
 }
@@ -89,14 +90,14 @@ int32_t file_open(const int8_t *fname) {
  * @return int32_t 0 on success, -1 on failure.
  */
 int32_t file_close(int32_t fd) {
-    if (vfs.fd[fd].f_flags == UNUSED) {
+    if (current()->fds.fd[fd].f_flags == UNUSED) {
         puts("ERROR: File has already been closed.\n");
         return -1;
     }
 
     /* Close the file. */
-    vfs.fd[fd].f_count--; 
-    vfs.fd[fd].f_flags = UNUSED;
+    current()->fds.fd[fd].f_count--; 
+    current()->fds.fd[fd].f_flags = UNUSED;
     return 0;
 }
 
@@ -112,7 +113,7 @@ int32_t file_close(int32_t fd) {
  */
 int32_t file_read(int32_t fd, void *buf, int32_t nbytes) {
     int32_t nread;
-    file_t *file = &(vfs.fd[fd]);
+    file_t *file = &(current()->fds.fd[fd]);
     if (file->f_flags == UNUSED) {
         puts("ERROR: File does not exist.\n");
         return -1;

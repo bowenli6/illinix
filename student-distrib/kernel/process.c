@@ -73,9 +73,8 @@ asmlinkage int32_t sys_execute(const int8_t *cmd) {
         return errno;
 
     /* executable check and load program image into user's memory */
-    if ((EIP_reg = pro_loader(fname)) < 0) 
-        return EIP_reg;   
-    
+    EIP_reg = pro_loader(fname);
+
     task_map[pid-2]->process.eip = EIP_reg;
     task_map[pid-2]->process.esp = USER_STACK_ADDR;
 
@@ -184,24 +183,22 @@ static int32_t process_create(void) {
  * @return int32_t : 0 
  */
 static int32_t context_switch(void) {
-    process_union *p = task_map[pid];
+    process_union *p = task_map[pid-2];
     /* (bottom) SS(handle by iret), DS, ESP, EFLAGS, CS, EIP (top) */
     /* popl and or are for getting esp, and set IF in EFLAGS
      * so that intrrupts will be reenabled in user mode. */
+    
+    tss.esp0 = KERNEL_STACK_BEGIN - (pid - 2) * KERNEL_STACK_SZ - 0x4;
 
     asm volatile ("                         \n\
-                    cli                     \n\
                     andl  $0xFF, %%eax      \n\
                     movw  %%ax, %%ds        \n\
-                    movw  %%ax, %%es        \n\
-                    movw  %%ax, %%fs        \n\
-                    movw  %%ax, %%gs        \n\
                     pushl %%eax             \n\
                     pushl %%ebx             \n\
                     pushfl                  \n\
-                    popl  %%eax             \n\
-                    orl   $0x200, %%eax     \n\
-                    pushl %%eax             \n\
+                    popl  %%ebx             \n\
+                    orl   $0x200, %%ebx     \n\
+                    pushl %%ebx             \n\
                     pushl %%ecx             \n\
                     pushl %%edx             \n\
                     iret                    \n\

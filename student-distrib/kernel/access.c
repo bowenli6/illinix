@@ -82,14 +82,15 @@ static int32_t validate_addr(void *addr) {
     */
 
    /* Implmentation */
-   uint32_t a = (uint32_t) addr;
-   uint32_t size = (uint32_t) MAXADDR;
+//    uint32_t a = (uint32_t) addr;
+//    uint32_t size = (uint32_t) MAXADDR;
 
-   if (a + size < a)
-    //    a + size > curr_process->addr.limit.seg)
-       return 0;
+//    if (a + size < a)
+//     //    a + size > curr_process->addr.limit.seg)
+//        return 0;
        
-   return -EFAULT;
+//    return -EFAULT;
+    return 0;
 }
 
 
