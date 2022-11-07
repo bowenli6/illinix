@@ -5,40 +5,80 @@
 #include <access.h>
 #include <errno.h>  
 
-/* this map will indicate which task is active now */
-process_union *task_map[TASK_COUNT];
-int32_t curr_pid;
-// tss is the current tss we are using
+/* This map will indicate which task is active now */
+process_t *sched;   /* Process 0 (swapper process or the scheduler always hlt this time)*/
+process_t *init;    /* Process 1 (init process) */
+process_union *task_map[TASK_COUNT];    /* Currently process 2 (the shell) and 3 */
+pid_t pid;
 
 
-static int32_t parse_arg_to_process(uint8_t* command, uint8_t* stored_pro, uint8_t* stored_file);
+static int32_t process_create(void);
+static int32_t context_switch(void);
+static int32_t parse_arg(uint8_t* command, uint8_t *args, uint8_t *fname);
 
-void process_init() {
-    curr_pid = -1;
+
+/**
+ * @brief create a kernel process 0
+ * 
+ */
+void idle(void) {
+    asm ("            \n\
+        0: hlt        \n\
+        jmp 0b        \n\
+        "   
+    );
 }
 
 
+/**
+ * @brief create a user process wit pid 2 (the shell)
+ * 
+ * This process will be created by fork in the future
+ */
+void shell_init(void) {
+    sys_execute((uint8_t)"shell");
+}
 
+
+/**
+ * @brief A system call service routine for exiting a process
+ * The calling convation of this function is to use the 
+ * arguments from the stack
+ * 
+ * @param status : 
+ * @return int32_t : positive or 0 denote success, negative values denote an error condition
+ */
 asmlinkage int32_t sys_halt(uint8_t status) {
     return 0;
 }
 
+
+/**
+ * @brief A system call service routine for creating a process
+ * The calling convation of this function is to use the 
+ * arguments from the stack
+ * 
+ * @param cmd : A string contains the command of the process
+ * @return int32_t : positive or 0 denote success, negative values denote an error condition
+ */
 asmlinkage int32_t sys_execute(const uint8_t *cmd) {
     int32_t errno, EIP_reg;
     int8_t fname[NAMESIZE];
 
-
-    if ((errno = parse_arg_to_process(cmd, NULL, fname)) < 0) 
+    /* parse arguments */
+    if ((errno = parse_arg(cmd, NULL, fname)) < 0) 
         return errno;
 
-    /* open the program file */
+    /* executable check and load program image into user's memory */
     if ((EIP_reg = pro_loader(fname)) < 0) 
         return EIP_reg;   
 
-    /* check file */
+    /* create process */
     if ((errno = process_create()) < 0)
         return errno;
     
+    /* switch to user mode (ring 3) */
+    context_switch();
     return 0;
 }
 
@@ -49,7 +89,7 @@ asmlinkage int32_t sys_execute(const uint8_t *cmd) {
  * @return pid_t : The process ID of the calling process
  */
 pid_t sys_getpid() {
-    // TODO
+    
     return 0;
 }
 
@@ -74,28 +114,27 @@ pid_t sys_getppid() {
  * @brief store the entire command line witout the leading file name
  * 
  * @return 0  if the program executes a halt system call
- * @return -1 if the command cannot be executed
+ * @return < 0 if the command cannot be executed
  */
-static int32_t parse_arg_to_process(uint8_t* command, uint8_t* stored_pro, uint8_t* stored_file) {
+static int32_t parse_arg(uint8_t *cmd, uint8_t *args, uint8_t *fname) {
     uint8_t i = 0, j = 0;
 
-    if (command == NULL) {
-        printf("The command itself is null, we can get no information. \n");
-        return -1;                          /* return -1 if the command can not be executed */
+    if (cmd == NULL) {
+        return -EINVAL;
     }
 
     /* parse the command into file name and the rest of the command */
     
-    while (command[i] != '\0') {
+    while (cmd[i] != '\0') {
 
-        if (command[i] == ' ') {
-            stored_file[i] = '\0';
-            i += 1;
+        if (cmd[i] == ' ') {
+            fname[i] = '\0';
+            i++;
             break;
         }
 
-        stored_file[i] = command[i];
-        i += 1;
+        fname[i] = cmd[i];
+        i++;
     }
 
     // while (command[i] != '\0') {
@@ -110,79 +149,70 @@ static int32_t parse_arg_to_process(uint8_t* command, uint8_t* stored_pro, uint8
 
 
 /**
- * @brief this function is used user mode to kernel mode
+ * @brief Create a process_t for a new process
  * 
- * @return none
+ * @return int32_t : 0
  */
-void usr_to_kernel() {
-    return;
+static int32_t process_create(void) {
+    int32_t errno;
+
+    if ((errno = alloc_pid()) < 0) 
+        return errno;
+
+    task_map[pid-2] = (process_union *)alloc_kstack(pid-2);
+    
+    /* setup current pid */
+    task_map[pid-2]->process.pid = pid;
+
+    /* setup the kernel stack info */
+
+    /* set the parent pointer */
+    if (pid == 2) {
+        task_map[pid-2]->process.parent = NULL;
+    } else {
+        task_map[pid-2]->process.parent = &task_map[pid-3]->process;
+        task_map[pid-3]->process.child = &task_map[pid-2]->process;
+    }
+
+    return 0;
 }
 
 
 /**
- * @brief this function is used for kernel mode to usr mode
+ * @brief Perform a context switch to ring 3 (user mode)
  * 
- * @return none
+ * @return int32_t : 0 
  */
-void kernel_to_usr(int32_t EIP_reg) {
-    
-    uint32_t EFLAGS_reg, ESP_reg;
-    uint16_t CS_reg, DS_reg, SS_reg;
+static int32_t context_switch(void) {
+    process_union *p = task_map[pid];
+    /* (bottom) SS(handle by iret), DS, ESP, EFLAGS, CS, EIP (top) */
+    /* popl and or are for getting esp, and set IF in EFLAGS
+     * so that intrrupts will be reenabled in user mode. */
 
-    // EIP_reg
-    CS_reg = GDT_USR_CS | USR_LEVEL;
-    DS_reg = GDT_USR_DS | USR_LEVEL;
-    EFLAGS_reg = tss.eflags;
-    ESP_reg = USR_STACK_SZ + VIR_MEM_BEGIN;                 /* which starts from 132MB */
-
-    /* store the ss0 and esp0 to the tss */
-    tss.ss0 = current()->tss_SS0;
-    tss.esp0 = current()->tss_ESP0;
-
-
-    // asm volatile("              \n\
-            
-    //         "
-    //         : "=a"(val)
-    //         : "d"(port)
-    //         : "memory"
-    // );
-
+    asm volatile ("                         \n\
+                    cli                     \n\
+                    andl  $0xFF, %%eax      \n\
+                    movw  %%ax, %%ds        \n\
+                    movw  %%ax, %%es        \n\
+                    movw  %%ax, %%fs        \n\
+                    movw  %%ax, %%gs        \n\
+                    pushl %%eax             \n\
+                    pushl %%ebx             \n\
+                    pushfl                  \n\
+                    popl  %%eax             \n\
+                    orl   $0x200, %%eax     \n\
+                    pushl %%eax             \n\
+                    pushl %%ecx             \n\
+                    pushl %%edx             \n\
+                    iret                    \n\
+                  "
+                  :
+                  : "a"(USER_DS), "b"(p->process.esp), "c"(USER_CS), "d"(p->process.eip)
+                  : "memory"
+    );      
+    return 0;
 }
 
-
-static int32_t process_create() {
-    int32_t errno;
-
-    if (++curr_pid < 0) {
-        return -EINVAL;
-    }
-    if (curr_pid >= 2) {    /* Reach the maxium value of processes */
-        return -EINVAL;
-    }
-
-    task_map[curr_pid] = (process_union *)alloc_kstack(curr_pid);
-    
-    /* setup current pid */
-    task_map[curr_pid]->process.pid = curr_pid;
-
-    /* setup the kernel stack info */
-    task_map[curr_pid]->process.tss_ESP0 = (uint32_t) task_map[curr_pid] + KERNEL_STACK_SZ;
-    task_map[curr_pid]->process.tss_SS0 = task_map[curr_pid]->process.tss_ESP0;
-
-    /* set the parent pointer */
-    if (curr_pid == 0) {
-        task_map[curr_pid]->process.parent_addr = NULL;
-    } else {
-        task_map[curr_pid]->process.parent_addr = (process_t*)(&task_map[0]->process);
-    }
-
-    /* setup user level stack info */
-
-    return curr_pid;
-}
-
-
-process_t *current() {
-    return &task_map[curr_pid]->process;
+process_t *current(void) {
+    return &task_map[pid]->process;
 }

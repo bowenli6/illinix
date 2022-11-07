@@ -1,5 +1,5 @@
-#ifndef _PROCESS_H
-#define _PROCESS_H
+#ifndef _PROCESS_H_
+#define _PROCESS_H_
 
 #include <types.h>
 #include <vfs/ece391_vfs.h>
@@ -18,15 +18,6 @@
 #define  SECOND_USR_BEGIN       0xC00000        /* The first user addr begin at 12MB (to 16 MB) */
 
 
- /* these macros are refered to gdt table */
-#define GDT_KERNEL_CS           16
-#define GDT_KERNEL_DS           24
-#define GDT_USR_CS              32
-#define GDT_USR_DS              40  
-#define USR_LEVEL               3
-#define KERNEL_LEVEL            0
-
-
 /* user-level, virtual addr */
 #define VIR_MEM_BEGIN           0x08000000      /* The mem begins at 128MB */
 #define PROGRAM_IMG_BEGIN       0x08048000      /* The program img begin */
@@ -36,20 +27,15 @@ typedef uint32_t pid_t;
 typedef uint32_t gid_t;
 
 typedef struct process {
-    pid_t                   pid;                    /* process id number */
-    // uint8_t                 arg;                    /* store the arguments */
-    struct process          *parent_addr;           /* parent process addr */
-
-    uint32_t                tss_ESP0;               /* where the kenel mode stak/PCB begins */
-    uint16_t                tss_SS0;    
-    uint32_t                tss_ESP;
-    uint16_t                tss_SS;
-
-    vfs_t                   pro_vfs;
-    files                   pro_files;                  
-
-    uint32_t                signal;
-    //
+    volatile long      state;	        /* -1 unrunnable, 0 runnable, >0 stopped */
+    pid_t              pid;             /* process id number */
+    gid_t              gid;             /* process group id*/
+    struct process     *parent;         /* parent process addr */
+    struct process     *child;          /* child process addr */
+    uint32_t           esp;
+    uint32_t           eip;
+    vfs_t              fs;
+    files              fds;                  
 } process_t;
 
 
@@ -59,6 +45,7 @@ typedef union {
     uint32_t stack[2048];
 } process_union;
 
-process_t *current();
+process_t *current(void);
+void shell_init(void);
 
 #endif /* _PROCESS_H */
