@@ -94,6 +94,7 @@ asmlinkage int32_t sys_execute(const int8_t *cmd) {
         process_free(pid);
         pid = kill_pid();
         return errno;
+        
     }
 
     /* init file array */
@@ -199,8 +200,8 @@ static int32_t process_create(void) {
     if (pid == 2) {
         CURRENT->parent = NULL;
     } else {
-        CURRENT->parent = &task_map[pid-3]->process;
-        task_map[pid-3]->process.child = CURRENT;
+        CURRENT->parent = &task_map[0]->process;
+        task_map[0]->process.child = CURRENT;
     }
 
     return 0;
@@ -212,9 +213,9 @@ static int32_t process_create(void) {
  * 
  */
 static void process_free(pid_t _pid) {
-    free_kstack(_pid-2);
     task_map[_pid-2] = NULL;
-    user_mem_unmap(_pid);
+    kill_pid();
+    // user_mem_unmap(_pid);
 }
 
 
@@ -254,6 +255,6 @@ static int32_t context_switch(process_t *p) {
 
 static void update_tss(pid_t _pid) {
     tss.ss0 = KERNEL_DS;
-    tss.esp0 = KERNEL_STACK_BEGIN - (_pid - 2) * KERNEL_STACK_SZ - 0x4;
+    tss.esp0 = KERNEL_STACK_BEGIN - (_pid - 1) * KERNEL_STACK_SZ - 0x4;
 }
 

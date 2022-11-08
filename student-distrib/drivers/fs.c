@@ -7,6 +7,7 @@
 
 fs_t fs;        /* Stores the file system. */
 
+
 static int32_t validate_inode(uint32_t inode);
 static int32_t validate_fname(int8_t *fname);
 
@@ -90,12 +91,12 @@ int32_t read_dentry_by_index(uint32_t index, dentry_t *dentry) {
  *                    number of bytes read on success.
  */
 int32_t read_data(uint32_t inode, uint32_t offset, uint8_t *buf, uint32_t length) {
-    int phy_pos;                    /* The physical position of the file to read. */
     virtual_pos vir_pos;            /* The virtual position of the file to read*/
+    int phy_pos;                    /* The physical position of the file to read. */
     int nread_needed;               /* Number of bytes need to read. */
     int nread_each;                 /* Number of bytes read each time. */
     int nb_left;                    /* Number of bytes left in the data block. */
-    inode_t file;                   /* The file inode. */
+    inode_t *file;                  /* The file inode. */
     int8_t *data_ptr;               /* The actuall data address to read within a data block. */
     int32_t errno;
 
@@ -103,9 +104,9 @@ int32_t read_data(uint32_t inode, uint32_t offset, uint8_t *buf, uint32_t length
 
     if (!buf) return -1;
     
-    file = fs.inodes[inode];            /* Get the file inode. */
+    file = &fs.inodes[inode];            /* Get the file inode. */
         
-    if (offset >= file.size) return -1;
+    if (offset >= file->size) return -1;
     
 
     /* The index of bytes start to read. */
@@ -115,16 +116,16 @@ int32_t read_data(uint32_t inode, uint32_t offset, uint8_t *buf, uint32_t length
     vir_pos.nblock = phy_pos / BLOCK_SIZE;      
 
     /* The index of the starting data block we need to read. */
-    vir_pos.iblock = file.data_block[vir_pos.nblock];
+    vir_pos.iblock = file->data_block[vir_pos.nblock];
 
     /* The data block object of the starting data block we need to read. */
-    vir_pos.datab = fs.data_block_addr[vir_pos.iblock];
+    vir_pos.datab = &fs.data_block_addr[vir_pos.iblock];
 
     /* The index of the data we want to read. */
     vir_pos.idx = phy_pos % BLOCK_SIZE;
 
     /* The number of bytes left in this file. */
-    nb_left = file.size - (vir_pos.nblock * BLOCK_SIZE) - vir_pos.idx;
+    nb_left = file->size - (vir_pos.nblock * BLOCK_SIZE) - vir_pos.idx;
 
     if (length >= nb_left) {
         nread_needed = nb_left;
@@ -135,7 +136,7 @@ int32_t read_data(uint32_t inode, uint32_t offset, uint8_t *buf, uint32_t length
 
     while (nread_needed) {
         nread_each = BLOCK_SIZE - vir_pos.idx; 
-        data_ptr = &(vir_pos.datab.data[vir_pos.idx]);
+        data_ptr = &(vir_pos.datab->data[vir_pos.idx]);
         if (nread_each >= nread_needed) {
             /* Numebr of bytes need to read is less than the remaining data size within the block. */
             memcpy((void*)buf, (void*)data_ptr, nread_needed);
@@ -148,11 +149,11 @@ int32_t read_data(uint32_t inode, uint32_t offset, uint8_t *buf, uint32_t length
             nb_left -= nread_each;
             nread_needed -= nread_each;
             /* Update vir_pos to the next data block used by the file inode. */
-            vir_pos.iblock = file.data_block[++vir_pos.nblock];
+            vir_pos.iblock = file->data_block[++vir_pos.nblock];
             if (vir_pos.iblock >= fs.boot->n_datab) {
                 return -1;
             }
-            vir_pos.datab = fs.data_block_addr[vir_pos.iblock];
+            vir_pos.datab = &fs.data_block_addr[vir_pos.iblock];
             vir_pos.idx = 0;    /* Start from beginning of the new data block. */
         }
     }
@@ -197,7 +198,7 @@ int32_t pro_loader(int8_t *fname, uint32_t *EIP) {
     /* get the file inode */
     file = fs.inodes[inode];            /* Get the file inode. */
 
-  /* read header from the program image */
+    /* read header from the program image */
     if ((errno = read_data(inode, 0, header, 40)) < 0)
         return errno;
 

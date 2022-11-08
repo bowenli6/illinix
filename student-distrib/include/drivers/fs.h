@@ -54,7 +54,7 @@ typedef struct {
     int idx;                            /* The index we want to start at a given data block. */
     int nblock;                         /* The nth block to read. (NOT data block index) */
     uint32_t iblock;                    /* The index of the data_block. */
-    data_block datab;                   /* The data block used by the offset. */
+    data_block *datab;                  /* The data block used by the offset. */
 } virtual_pos;
 
 
