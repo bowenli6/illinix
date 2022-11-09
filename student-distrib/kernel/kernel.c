@@ -181,11 +181,11 @@ void entry(unsigned long magic, unsigned long addr) {
     /* This is an test for share gitlab. */
 #ifdef RUN_TESTS
     /* Run tests */
-    launch_tests();
+    // launch_tests();
 #endif
-
-    // shell_init();                   /* Init shell process */
-
+    clear();
+    shell();                   /* Init shell process */
+    
 
     /* Spin (nicely, so we don't chew up cycles) */
     asm volatile (".1: hlt; jmp .1;");

@@ -283,7 +283,19 @@ rtc_handler:
 .globl syscall_handler
 syscall_handler:
     pushl %eax                              # save the system call number.
-    SAVE_ALL
+    cld
+	pushl %es
+	pushl %ds
+	pushl %eax
+	pushl %ebp
+	pushl %edi
+	pushl %esi
+	pushl %edx
+	pushl %ecx
+	pushl %ebx
+	movl $USER_DS, %edx
+	movl %edx, %ds
+	movl %edx, %es
     cmpl  $NCALL, %eax                      # validity check performed on the system call number.
     jb    nobadsys
     movl  $(-ENOSYS), EAX(%esp)             # set the error number.

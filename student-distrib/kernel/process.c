@@ -7,7 +7,6 @@
 #include <access.h>
 #include <errno.h>  
 
-/* This map will indicate which task is active now */
 process_t *sched;   /* Process 0 (swapper process or the scheduler always hlt this time)*/
 process_t *init;    /* Process 1 (init process) */
 process_union *task_map[TASK_COUNT];    /* Currently process 2 (the shell) and 3 */
@@ -36,7 +35,7 @@ void idle(void) {
  * 
  * This process will be created by fork in the future
  */
-void shell_init(void) {
+void shell(void) {
     pidmap_init();
     sys_execute("shell");
 }
@@ -94,7 +93,6 @@ asmlinkage int32_t sys_execute(const int8_t *cmd) {
         process_free(pid);
         pid = kill_pid();
         return errno;
-        
     }
 
     /* init file array */

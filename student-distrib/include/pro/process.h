@@ -52,6 +52,6 @@ extern pid_t pid;
 
 #define CURRENT (&task_map[pid-2]->process)
 
-void shell_init(void);
+void shell(void);
 
 #endif /* _PROCESS_H */
