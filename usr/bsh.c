@@ -14,6 +14,7 @@
  */
 
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
 #include <errno.h>
@@ -40,20 +41,23 @@ int main(void) {
     char user[MAXUSER];         /* user name of this process */
     char dir[MAXDIR];           /* current directory name */
     char cmdline[MAXLINE];      /* command line */
-    int nread;                  /* number of bytes read */
 
     /* get the user name */
+    strcpy(user, "bowen");
     // TODO
 
     /* get the current directory */
+    strcpy(dir, "~");
     // TODO
 
     while (1) {
         /* print */
-        printf("%s@i386 %s %%", user, dir);
+        printf("%s@illinix %s %% ", user, dir);
 
         /* read */
-        nread = (int) fgets(cmdline, MAXLINE, stdin);
+        if (!fgets(cmdline, MAXLINE, stdin))
+            fprintf(stderr, "Read command line failed!\n");
+        
         if (feof(stdin)) 
             exit(0);
     
@@ -67,6 +71,49 @@ int main(void) {
         // TODO
     }
 }
+
+
+/**
+ * @brief Evaluate and execute a command from the shell input line.
+ * 
+ * @param cmd : command line
+ * @return int : 1 if the command is cd, 0 otherwise
+ */
+static int eval(char *cmd) {
+    char *argv[MAXARGS];    /* argument list for exec() */
+    char buf[MAXLINE];      /* holds modified command line */
+    int background;         /* does the process run in background? */
+    pid_t pid;              /* process id */
+    int status;             /* wait process status */
+    
+    /* parse */
+    strcpy(buf, cmd);
+    background = parse(buf, argv);
+
+    /* empty command */
+    if (*argv == NULL) return 0;
+
+    /* buildin command executes and exits */
+    if (buildin(argv)) return 0;
+
+    /* not buildin command, fork a new process */
+    if (!(pid = Fork())) {
+         /* child process */
+        Execv(argv[0], argv);
+    } else {
+        /* parent process */
+        if (background) {
+            printf("%d is executing %s in background", pid, cmd);
+        } else {
+            /* parent waits for foreground process to terminate */
+            Waitpid(pid, &status);
+        }
+    }
+    if (!strcmp(argv[0], "cd"))
+        return 1;
+    return 0;
+}
+
 
 
 /**
@@ -90,7 +137,7 @@ static int parse(char *buf, char *argv[]) {
 
     /* build the argv list */
     argc = 0;
-    while ((delim = stchr(buf, ' '))) {
+    while ((delim = strchr(buf, ' '))) {
         /* copy argument */
         argv[argc++] = buf;
         *delim = '\0';
@@ -99,7 +146,7 @@ static int parse(char *buf, char *argv[]) {
         /* skipping leading spaces */
         while (*buf && (*buf == ' ')) ++buf;
     }
-    argv[argc] == NULL;
+    argv[argc] = NULL;
 
     /* blank line */
     if (!argc) return 1;
@@ -109,44 +156,6 @@ static int parse(char *buf, char *argv[]) {
         argv[--argc] = NULL;
     
     return background;
-}
-
-/**
- * @brief Evaluate and execute a command from the shell input line.
- * 
- * @param cmd : command line
- * @return int : 1 if the command is cd, 0 otherwise
- */
-static int eval(char *cmd) {
-    char *argv[MAXARGS];    /* argument list for exec() */
-    char buf[MAXLINE];      /* holds modified command line */
-    int background;         /* does the process run in background? */
-    pid_t pid;              /* process id */
-    int status;             /* wait process status */
-    
-    /* parse */
-    strcpy(buf, cmd);
-    background = parse(buf, argv);
-
-    /* empty command */
-    if (*argv == NULL) return;
-
-    /* buildin command executes and exits */
-    if (buildin(argv)) return;
-
-    /* not buildin command, fork a new process */
-    if (!(pid = Fork())) {
-         /* child process */
-        Execv(argv[0], argv);
-    } else {
-        /* parent process */
-        if (background) {
-            printf("\n%d is executing %s in background", pid, cmd);
-        } else {
-            /* parent waits for foreground process to terminate */
-            Waitpid(pid, &status);
-        }
-    }
 }
 
 
@@ -174,7 +183,7 @@ int buildin(char *argv[]) {
 
 
 /**
- * @brief display a Unix-style error
+ * @brief Stevens-style error printing for a Unix-style error
  * 
  * @param msg : error message
  */
@@ -194,7 +203,7 @@ static pid_t Fork(void) {
     pid_t pid;
 
     if ((pid = fork()) < 0)
-        unix_error("Fork failed!");
+        unix_error("Fork failed");
 
     return pid;
 }
@@ -205,18 +214,18 @@ static pid_t Fork(void) {
  */
 static void Execv(char *pathname, char *argv[]) {
     if (execv(pathname, argv) < 0)
-        unix_error("Command not found!");
+        unix_error("Command not found");
 }
 
 
 /**
- * @brief wait for process to change state
+ * @brief Stevens-style error-handling wrapper function for waitpid
  * 
  * @param pid : child process id to wait
  * @param wstatus : child process status
  */
 static void Waitpid(pid_t pid, int *wstatus) {
     if (waitpid(pid, wstatus, 0) < 0) {
-        unix_error("waitfg: waitpid failed!");
+        unix_error("waitfg: waitpid failed");
     }
 }
