@@ -1,3 +1,14 @@
+/**
+ * @file string.c
+ * @brief C Standard Library
+ * @version 0.1
+ * @date 2022-11-09
+ * 
+ * @copyright Copyright (c) 2022
+ * 
+ */
+
+
 #include "../include/string.h"
 #include "../include/stdio.h"
 #include "../include/stdlib.h"
@@ -372,11 +383,4 @@ void *memmove(void *dest, const void *src, size_t n) {
             : "edx", "memory", "cc"
     );
     return dest;
-}
-
-
-int main() {
-    char buf[10] = "1*2*3*4567";
-    printf("%s\n", strrchr(buf, '*'));
-    return 0;
 }

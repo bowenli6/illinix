@@ -103,7 +103,7 @@ error_code:
 
 
 ret_from_exception:
-    jmp     ret_from_exception      # Dead loop for testing now.
+    jmp     sys_halt                # abort 
 
 # Exception handlers
 

@@ -1,5 +1,6 @@
 #include <boot/syscall.h>
 #include <drivers/fs.h>
+#include <drivers/rtc.h>
 #include <vfs/ece391_vfs.h>
 #include <pro/process.h>
 #include <errno.h>
@@ -29,6 +30,7 @@ asmlinkage int32_t sys_open(const int8_t *filename) {
    // if ((errno = copy_from_user((void *)kbuf, (void *)filename, 
    //                            strlen(filename))) <= 0)
    if (*filename == '.') return directory_open(filename);
+   if (!strcmp(filename, "rtc")) rtc_open(filename);
    return file_open(filename);
 }
 
