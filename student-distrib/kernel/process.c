@@ -1,4 +1,5 @@
 #include <pro/process.h>
+#include <pro/sched.h>
 #include <boot/syscall.h>
 #include <boot/x86_desc.h>
 #include <pro/pid.h>
@@ -7,8 +8,7 @@
 #include <access.h>
 #include <errno.h>  
 
-process_t *sched;   /* Process 0 (swapper process or the scheduler always hlt this time)*/
-process_t *init;    /* Process 1 (init process) */
+process_union *init;    /* Process 1 (init process) */
 process_union *task_map[TASK_COUNT];    /* Currently process 2 (the shell) and 3 */
 pid_t pid;
 
@@ -22,22 +22,25 @@ static void update_tss(pid_t _pid);
 
 
 /**
- * @brief create a kernel process 0
- * 
+ * @brief the task of the system process 0
+ * working as a scheduler and a time interrupt handler (only for now)
  */
-void idle(void) {
-    asm volatile (".1: hlt; jmp .1;");
+void swapper() { 
+    while (!schedule()) 
+        pause();
 }
 
 
 /**
  * @brief create a user process wit pid 2 (the shell)
  * 
- * This process will be created by fork in the future
+ * the task of the init process
+ * 
+ * shell process will be created by fork in the future
  */
-void shell(void) {
+void init_task() {
     pidmap_init();
-    sys_execute("shell");
+    (void) sys_execute("shell");
 }
 
 

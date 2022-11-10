@@ -183,10 +183,7 @@ void entry(unsigned long magic, unsigned long addr) {
     /* Run tests */
     // launch_tests();
 #endif
-    clear();
-    shell();                   /* Init shell process */
-    
 
-    /* Spin (nicely, so we don't chew up cycles) */
-    asm volatile (".1: hlt; jmp .1;");
+    clear();
+    swapper();  /* process 0 starts schedule tasks for users */
 }

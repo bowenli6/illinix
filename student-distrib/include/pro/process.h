@@ -52,6 +52,7 @@ extern pid_t pid;
 
 #define CURRENT (&task_map[pid-2]->process)
 
-void shell(void);
+void swapper();
+void init_task();
 
-#endif /* _PROCESS_H */
+#endif /* _PROCESS_H_ */
