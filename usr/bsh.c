@@ -43,20 +43,23 @@ int main(void) {
     char cmdline[MAXLINE];      /* command line */
 
     /* get the user name */
-    strcpy(user, "bowen");
+    strcpy(user, "root");
     // TODO
 
     /* get the current directory */
     strcpy(dir, "~");
     // TODO
 
+    /* REPL: read eval print loop */
     while (1) {
         /* print */
         printf("%s@illinix %s %% ", user, dir);
 
         /* read */
-        if (!fgets(cmdline, MAXLINE, stdin))
+        if (!fgets(cmdline, MAXLINE, stdin)) {
             fprintf(stderr, "Read command line failed!\n");
+            continue;
+        }
         
         if (feof(stdin)) 
             exit(0);
