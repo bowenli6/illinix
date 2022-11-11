@@ -1,4 +1,5 @@
 #include <io.h>
+#include <drivers/terminal.h>
 #include <lib.h>
 #include <boot/syscall.h>
 
@@ -212,7 +213,7 @@ void test_interrupts(void) {
  * Will be deleted when VGA is supported.
  */
 void back() {
-    if (screen_x == 0 && screen_y == 0) 
+    if (screen_x == cursor_x && screen_y == cursor_y) 
         return;
     if (screen_x == 0) {
         screen_x = NUM_COLS - 1;

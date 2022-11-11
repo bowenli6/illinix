@@ -5,6 +5,9 @@
 
 #define TERBUF_SIZE 128
 
+#define NUM_COLS    80
+#define NUM_ROWS    25
+
 typedef struct {
     uint8_t capslock;                   /* 0 if capslock is not pressed, 1 otherwise. */
     uint8_t shift;                      /* 0 if Lshift and Rshift are not pressed, 1 otherwise. */
@@ -18,6 +21,9 @@ typedef struct {
 
 
 extern terminal_t terminal;
+
+extern int cursor_x;
+extern int cursor_y;
 
 void key_press(uint32_t scancode);
 void key_release(uint32_t scancode);

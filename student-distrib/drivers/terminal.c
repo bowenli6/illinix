@@ -1,10 +1,11 @@
 #include <drivers/terminal.h>
 #include <lib.h>
 #include <io.h>
-
+#include <boot/syscall.h>
 
 terminal_t terminal;    /* The terminal object. */
-
+int cursor_x;
+int cursor_y;
 
 /* Local functions, see headers for descriptions. */
 
@@ -28,6 +29,8 @@ static void terminal_init() {
     terminal.buftl = 0;                 /* 0 characters read. */
     terminal.size = 0;                  /* No character yet. */
     terminal.exit = 0;                  /* \n is not read. */
+    cursor_x = 0;
+    cursor_y = 0;
     memset((void*)terminal.buffer, 0, TERBUF_SIZE);
 }
 
@@ -140,6 +143,14 @@ static void out(const void *buf, int32_t nbytes) {
     
     for (i = 0; i < nbytes; ++i)
         putc(((char*)buf)[i]);   /* output to the screen. */
+
+    cursor_x += ((cursor_x + nbytes) % NUM_COLS);
+    cursor_y += ((cursor_x + nbytes) / NUM_COLS);
+    if (cursor_y > NUM_ROWS) {
+        cursor_y = NUM_ROWS - 1;
+    } 
+
+
 }
 
 
@@ -255,7 +266,9 @@ int32_t terminal_read(int32_t fd, void *buf, int32_t nbytes) {
         /* normal case: the nread <= nbytes. */
         bufcpy(buf, (void*)terminal.buffer, nread, terminal.bufhd);
     }
-
+    if (!strcmp(buf, "exit")) {
+        sys_halt(0);
+    }
     /* change the bufhd points to next part. */
     terminal.bufhd = (terminal.bufhd + nread) % TERBUF_SIZE;
     terminal.size -= nread;
