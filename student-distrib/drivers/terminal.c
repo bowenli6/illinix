@@ -205,6 +205,8 @@ int32_t terminal_open(const int8_t *fname) {
  * @return int32_t : 0.
  */
 int32_t terminal_close(int32_t fd) {
+    cursor_x = 0;
+    cursor_y = 0;
     return 0;
 }
 
