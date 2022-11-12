@@ -48,7 +48,7 @@ static void do_halt(uint32_t ebp, uint32_t esp, uint8_t status) {
                     movl %%edx, %%ebp       \n\
                     movl %%edx, %%esp       \n\
                     movl %%ebx, %%eax       \n\
-                    popl %%ecx              \n\
+                    leave                   \n\
                     ret                     \n\
                   "
                   :
