@@ -16,7 +16,7 @@ static void do_halt(uint32_t ebp, uint32_t esp, uint8_t status);
 static int32_t process_create(void);
 static void process_free(pid_t _pid);
 static int32_t context_switch(process_t *p);
-static int32_t parse_arg(int8_t* command, int8_t *fname);
+static int32_t parse_arg(int8_t *cmd, char *argv[]);
 static void update_tss(pid_t _pid);
 
 
@@ -132,23 +132,27 @@ asmlinkage int32_t sys_execute(const int8_t *cmd) {
     uint32_t esp, ebp;
     process_t *p;
     int32_t errno;
-    int8_t fname[NAMESIZE + 1];
+    int32_t argc;
+    char *argv[MAXARGS];    
     uint32_t EIP_reg;
-    memset(fname, 0, NAMESIZE + 1);
 
     /* parse arguments */
-    if ((errno = parse_arg((int8_t *)cmd, fname)) < 0) 
-        return errno;
+    if ((argc = parse_arg((int8_t *)cmd, argv)) < 0) 
+        return argc;
+
 
     /* create process */
     if ((pid = process_create()) < 0)
         return pid;
 
     p = GETPRO(pid);
+    p->argc = argc;
 
     /* executable check and load program image into user's memory */
-    if ((errno = pro_loader(fname, &EIP_reg, pid)) < 0) {
+    if ((errno = pro_loader(argv[0], &EIP_reg, pid)) < 0) {
         process_free(pid);
+        update_tss(CURRENT->pid);
+        user_mem_map(CURRENT->pid);
         return errno;
     }
 
@@ -215,45 +219,54 @@ pid_t sys_getppid() {
 }
 
 
+
+
 /**
  * @brief store the entire command line witout the leading file name
  * 
- * @return 0  if the program executes a halt system call
+ * @return agrc  if the program executes a halt system call
  * @return < 0 if the command cannot be executed
  */
-static int32_t parse_arg(int8_t *cmd, int8_t *fname) {
-    if (cmd == NULL) {
-        return -1;
-    }
+static int32_t parse_arg(int8_t *cmd, char *argv[]) {
+    char *delim;        /* points to the first space delimiter */
+    int argc;           /* number of arguments */
 
-    /* parse the command into file name and the rest of the command */
+    if (!cmd) return -1;
+
+    /* replace trailing \n with space */
+    cmd[strlen(cmd) - 1] = ' ';
+
+    /* skipping leading spaces */
+    while (*cmd && (*cmd == ' ')) ++cmd;
+
+    /* build the argv list */
+    argc = 0;
+    while ((delim = strchr(cmd, ' '))) {
+        /* copy argument */
+        argv[argc++] = cmd;
+        *delim = '\0';
+        cmd = delim + 1;
+
+        /* skipping leading spaces */
+        while (*cmd && (*cmd == ' ')) ++cmd;
+    }
+    argv[argc] = NULL;
+
+    /* blank line */
+    if (!argc) return -1;
     
-    while (*cmd) {
-
-        if (*cmd == ' ') {
-            *fname = '\0';
-            cmd++;
-            break;
-        }
-
-        if (*cmd == '\n' || *cmd == '\r') {
-            *fname = '\0';
-            cmd++;
-            break;
-        }
-
-        *fname++ = *cmd++;
-    }
-
-    // while (command[i] != '\0') {
-    //     stored_pro[j] = command[i];
-    //     i += 1;
-    //     j += 1;
-    // }
-    // stored_pro[j] = '\0';
-
-    return 0;
+    return argc;
 }
+
+
+// static int32_t copy_args(process_t *p, int32_t argc, char *argv[]) {
+//     int i;
+
+//     for (i = 0; i < argc; ++i) {
+//         p->argv[i]
+//     }
+// }
+
 
 
 /**
@@ -294,6 +307,7 @@ static int32_t process_create(void) {
  * 
  */
 static void process_free(pid_t _pid) {
+    CURRENT->child = NULL;
     task_map[_pid-2] = NULL;
     kill_pid();
     free_kstack(_pid-2);

@@ -6,6 +6,7 @@
 
 
 #define COMMAND_LEN             128
+#define MAXARGS                 10
 #define TASK_COUNT              8               
 
 /* kernel, physical addr */
@@ -25,6 +26,7 @@
 
 typedef struct process {
     volatile long      state;	        /* -1 unrunnable, 0 runnable, >0 stopped */
+    int32_t            argc;            /* number of arguments */
     pid_t              pid;             /* process id number */
     gid_t              gid;             /* process group id*/
     struct process     *parent;         /* parent process addr */
