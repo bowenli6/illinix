@@ -311,3 +311,22 @@ int8_t* strncpy(int8_t* dest, const int8_t* src, uint32_t n) {
 int abs(int32_t a) {
     return (a >= 0)? a : -a;
 }
+
+/**
+ * @brief find the first occurrence of the character c in 
+ * the string s
+ * 
+ * @param s : source string
+ * @param c : character to find
+ * @return char* : a pointer to the first occurrence of the
+ * character c in the string s. NULL if not found.
+ */
+char *strchr(const char *s, int c) {
+    while (*s) {
+        if (*s == c) {
+            return (char *)s;
+        }
+        s++;
+    }
+    return NULL;
+}

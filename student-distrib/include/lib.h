@@ -19,6 +19,7 @@ void* memmove(void* dest, const void* src, uint32_t n);
 int32_t strncmp(const int8_t* s1, const int8_t* s2, uint32_t n);
 int8_t* strcpy(int8_t* dest, const int8_t*src);
 int8_t* strncpy(int8_t* dest, const int8_t*src, uint32_t n);
+char *strchr(const char *s, int c);
 int strcmp(const char *s1, const char *s2);
 
 int abs(int32_t a);

@@ -27,6 +27,7 @@
 typedef struct process {
     volatile long      state;	        /* -1 unrunnable, 0 runnable, >0 stopped */
     int32_t            argc;            /* number of arguments */
+    int8_t             argv[MAXARGS][COMMAND_LEN]; /* user command line argument */
     pid_t              pid;             /* process id number */
     gid_t              gid;             /* process group id*/
     struct process     *parent;         /* parent process addr */

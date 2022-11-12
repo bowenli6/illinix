@@ -16,7 +16,8 @@ static void do_halt(uint32_t ebp, uint32_t esp, uint8_t status);
 static int32_t process_create(void);
 static void process_free(pid_t _pid);
 static int32_t context_switch(process_t *p);
-static int32_t parse_arg(int8_t *cmd, char *argv[]);
+static int32_t parse_arg(int8_t *cmd, char argv[MAXARGS][MAXARGS]);
+static int32_t copy_args(process_t *p, char argv[MAXARGS][MAXARGS]);
 static void update_tss(pid_t _pid);
 
 
@@ -58,36 +59,6 @@ static void do_halt(uint32_t ebp, uint32_t esp, uint8_t status) {
 }
 
 
-/* (bottom) SS, ESP, EFLAGS, CS, EIP (top)
-
- * (1) pop and or are for getting IF in EFLAGS
- * so that intrrupts will be reenabled in user mode.
- * (2) set USER_DS to the GDT entry for user data segment ds.
- * (3) push the addres of 0 in the stack for halt to return
- */
-#define SWITCH(esp0, esp, eip, ret)           \
-do {                                          \
-    asm volatile ("                         \n\
-                    pushl $0f               \n\
-                    movl  %%esp, %0         \n\
-                    pushl $0x2B             \n\
-                    pushl %2                \n\
-                    pushfl                  \n\
-                    popl  %%ebx             \n\
-                    orl   $0x200, %%ebx     \n\
-                    pushl %%ebx             \n\
-                    pushl $0x23             \n\
-                    pushl %3                \n\
-                    iret                    \n\
-                0:                          \n\
-                    movl %%eax, %1          \n\
-                    "                         \
-                    : "=m"(esp0), "=m"(ret)   \
-                    : "rm"(esp), "rm"(eip)      \
-                    : "cc", "memory"          \
-    );                                        \
-} while (0)
-
 /**
  * @brief A system call service routine for exiting a process
  * The calling convation of this function is to use the 
@@ -98,11 +69,11 @@ do {                                          \
  */
 asmlinkage int32_t sys_halt(uint8_t status) {
     /* If this is the shell, return to the shell */
-    uint32_t esp, ret;
+
+    cli();
 
     if (CURRENT->pid == 2) 
         context_switch(CURRENT);
-        // SWITCH(esp, CURRENT->esp, CURRENT->eip, ret);
 
     /* If this is not the shell */
     process_t *curr = CURRENT;
@@ -112,9 +83,12 @@ asmlinkage int32_t sys_halt(uint8_t status) {
     update_tss(parent->pid);
     process_free(curr->pid);
     user_mem_map(parent->pid);
+
+    sti();
+
     do_halt(parent->ebp, parent->esp, status);
 
-    return 0; // never reach here
+    return -1; /* never reach here */
 }
 
 
@@ -128,18 +102,18 @@ asmlinkage int32_t sys_halt(uint8_t status) {
  */
 asmlinkage int32_t sys_execute(const int8_t *cmd) {
     pid_t pid;
-    int32_t ret;
     uint32_t esp, ebp;
     process_t *p;
     int32_t errno;
     int32_t argc;
-    char *argv[MAXARGS];    
+    char argv[MAXARGS][MAXARGS];    
     uint32_t EIP_reg;
+
+    cli();
 
     /* parse arguments */
     if ((argc = parse_arg((int8_t *)cmd, argv)) < 0) 
         return argc;
-
 
     /* create process */
     if ((pid = process_create()) < 0)
@@ -147,6 +121,8 @@ asmlinkage int32_t sys_execute(const int8_t *cmd) {
 
     p = GETPRO(pid);
     p->argc = argc;
+    copy_args(p, argv);
+    
 
     /* executable check and load program image into user's memory */
     if ((errno = pro_loader(argv[0], &EIP_reg, pid)) < 0) {
@@ -163,16 +139,6 @@ asmlinkage int32_t sys_execute(const int8_t *cmd) {
     p->esp = USER_STACK_ADDR;
     p->ebp = USER_STACK_ADDR;
     
-    // /* switch to user mode (ring 3) */
-    // if (curr_pid) {
-    //     curr_pid = p->pid;
-    //     /* save the kernel stack of the current process */
-    //     SWITCH(CURRENT->parent->esp, CURRENT->esp, CURRENT->eip, ret);
-    // } else {
-    //     curr_pid = p->pid;
-    //     SWITCH(esp, CURRENT->esp, CURRENT->eip, ret);
-    // }
-
     if (curr_pid) {
         /* save the kernel stack of the current process */
         asm volatile("movl %%ebp, %0        \n\
@@ -185,11 +151,12 @@ asmlinkage int32_t sys_execute(const int8_t *cmd) {
         CURRENT->ebp = ebp;
     }
 
+    sti();
 
     /* switch to user mode (ring 3) */
     context_switch(p);
 
-    return ret;
+    return -1;  /* never reach here */
 }
 
 /**
@@ -227,14 +194,21 @@ pid_t sys_getppid() {
  * @return agrc  if the program executes a halt system call
  * @return < 0 if the command cannot be executed
  */
-static int32_t parse_arg(int8_t *cmd, char *argv[]) {
-    char *delim;        /* points to the first space delimiter */
-    int argc;           /* number of arguments */
+static int32_t parse_arg(int8_t *cmd, char argv[MAXARGS][MAXARGS]) {
+    char *delim;                    /* points to the first space delimiter */
+    int argc;                       /* number of arguments */
+    int8_t buf[strlen(cmd) + 2];    /* buffer that contains command line */
 
     if (!cmd) return -1;
 
+    strcpy(buf, cmd);
+    cmd = buf;
+
     /* replace trailing \n with space */
-    cmd[strlen(cmd) - 1] = ' ';
+    if ((cmd[strlen(cmd) - 1] == '\n') || (cmd[strlen(cmd) - 1] == '\r'))
+        cmd[strlen(cmd) - 1] = ' ';
+    else
+        cmd[strlen(cmd)] = ' ';
 
     /* skipping leading spaces */
     while (*cmd && (*cmd == ' ')) ++cmd;
@@ -243,14 +217,13 @@ static int32_t parse_arg(int8_t *cmd, char *argv[]) {
     argc = 0;
     while ((delim = strchr(cmd, ' '))) {
         /* copy argument */
-        argv[argc++] = cmd;
         *delim = '\0';
+        strcpy(argv[argc++], cmd);
         cmd = delim + 1;
 
         /* skipping leading spaces */
         while (*cmd && (*cmd == ' ')) ++cmd;
     }
-    argv[argc] = NULL;
 
     /* blank line */
     if (!argc) return -1;
@@ -259,13 +232,19 @@ static int32_t parse_arg(int8_t *cmd, char *argv[]) {
 }
 
 
-// static int32_t copy_args(process_t *p, int32_t argc, char *argv[]) {
-//     int i;
+static int32_t copy_args(process_t *p, char argv[MAXARGS][MAXARGS]) {
+    int i;
 
-//     for (i = 0; i < argc; ++i) {
-//         p->argv[i]
-//     }
-// }
+    if (p->argc > MAXARGS) return -1;
+
+    if (!argv) return -1;
+
+    for (i = 0; i < p->argc; ++i) {
+        strcpy(p->argv[i], argv[i]);
+    }
+
+    return i;
+}
 
 
 
