@@ -12,7 +12,7 @@ process_union *init;    /* Process 1 (init process) */
 process_union *task_map[TASK_COUNT];    /* Currently process 2 (the shell) and 3 */
 pid_t curr_pid;
 
-static void do_halt(uint32_t esp, uint8_t status);
+static void do_halt(uint32_t ebp, uint32_t esp, uint8_t status);
 static int32_t process_create(void);
 static void process_free(pid_t _pid);
 static int32_t context_switch(process_t *p);
@@ -43,14 +43,16 @@ void init_task() {
     (void) sys_execute("shell");
 }
 
-static void do_halt(uint32_t esp, uint8_t status) {
+static void do_halt(uint32_t ebp, uint32_t esp, uint8_t status) {
     asm volatile ("                         \n\
+                    movl %%edx, %%ebp       \n\
                     movl %%edx, %%esp       \n\
                     movl %%ebx, %%eax       \n\
+                    popl %%ecx              \n\
                     ret                     \n\
                   "
                   :
-                  : "d"(esp), "b"(status)
+                  : "d"(ebp), "c"(esp), "b"(status)
                   : "cc", "memory"
     );      
 }
@@ -110,7 +112,7 @@ asmlinkage int32_t sys_halt(uint8_t status) {
     update_tss(parent->pid);
     process_free(curr->pid);
 
-    do_halt(parent->esp, status);
+    do_halt(parent->ebp, parent->esp, status);
 
     return 0; // never reach here
 }
@@ -127,7 +129,7 @@ asmlinkage int32_t sys_halt(uint8_t status) {
 asmlinkage int32_t sys_execute(const int8_t *cmd) {
     pid_t pid;
     int32_t ret;
-    uint32_t esp;
+    uint32_t esp, ebp;
     process_t *p;
     int32_t errno;
     int8_t fname[NAMESIZE + 1];
@@ -169,12 +171,14 @@ asmlinkage int32_t sys_execute(const int8_t *cmd) {
 
     if (curr_pid) {
         /* save the kernel stack of the current process */
-        asm volatile("movl %%esp, %0"
+        asm volatile("movl %%ebp, %0        \n\
+                      movl %%esp, %1"
                         :
-                        : "rm"(esp)               
+                        : "rm"(ebp), "rm"(esp)             
                         : "cc", "memory" 
                     );
         CURRENT->esp = esp;
+        CURRENT->ebp = ebp;
     }
 
 
