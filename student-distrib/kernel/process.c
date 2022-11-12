@@ -111,7 +111,7 @@ asmlinkage int32_t sys_halt(uint8_t status) {
     parent->child = NULL;
     update_tss(parent->pid);
     process_free(curr->pid);
-
+    user_mem_map(parent->pid);
     do_halt(parent->ebp, parent->esp, status);
 
     return 0; // never reach here
