@@ -10,10 +10,9 @@
 
 process_union *init;    /* Process 1 (init process) */
 process_union *task_map[TASK_COUNT];    /* Currently process 2 (the shell) and 3 */
-pid_t pid;
+pid_t curr_pid;
 
-extern void do_halt(uint32_t ebp, uint32_t esp, uint8_t status);
-
+static void do_halt(uint32_t esp, uint8_t status);
 static int32_t process_create(void);
 static void process_free(pid_t _pid);
 static int32_t context_switch(process_t *p);
@@ -40,9 +39,52 @@ void swapper() {
  */
 void init_task() {
     pidmap_init();
+    curr_pid = 0;
     (void) sys_execute("shell");
 }
 
+static void do_halt(uint32_t esp, uint8_t status) {
+    asm volatile ("                         \n\
+                    movl %%edx, %%esp       \n\
+                    movl %%ebx, %%eax       \n\
+                    ret                     \n\
+                  "
+                  :
+                  : "d"(esp), "b"(status)
+                  : "cc", "memory"
+    );      
+}
+
+
+/* (bottom) SS, ESP, EFLAGS, CS, EIP (top)
+
+ * (1) pop and or are for getting IF in EFLAGS
+ * so that intrrupts will be reenabled in user mode.
+ * (2) set USER_DS to the GDT entry for user data segment ds.
+ * (3) push the addres of 0 in the stack for halt to return
+ */
+#define SWITCH(esp0, esp, eip, ret)           \
+do {                                          \
+    asm volatile ("                         \n\
+                    pushl $0f               \n\
+                    movl  %%esp, %0         \n\
+                    pushl $0x2B             \n\
+                    pushl %2                \n\
+                    pushfl                  \n\
+                    popl  %%ebx             \n\
+                    orl   $0x200, %%ebx     \n\
+                    pushl %%ebx             \n\
+                    pushl $0x23             \n\
+                    pushl %3                \n\
+                    iret                    \n\
+                0:                          \n\
+                    movl %%eax, %1          \n\
+                    "                         \
+                    : "=m"(esp0), "=m"(ret)   \
+                    : "rm"(esp), "rm"(eip)      \
+                    : "cc", "memory"          \
+    );                                        \
+} while (0)
 
 /**
  * @brief A system call service routine for exiting a process
@@ -54,17 +96,21 @@ void init_task() {
  */
 asmlinkage int32_t sys_halt(uint8_t status) {
     /* If this is the shell, return to the shell */
-    if (pid == 2) 
+    uint32_t esp, ret;
+
+    if (CURRENT->pid == 2) 
         context_switch(CURRENT);
+        // SWITCH(esp, CURRENT->esp, CURRENT->eip, ret);
 
     /* If this is not the shell */
     process_t *curr = CURRENT;
     process_t *parent = CURRENT->parent;
+    curr_pid = parent->pid;
     parent->child = NULL;
     update_tss(parent->pid);
     process_free(curr->pid);
 
-    do_halt(parent->ebp_, parent->esp_, status);
+    do_halt(parent->esp, status);
 
     return 0; // never reach here
 }
@@ -79,38 +125,63 @@ asmlinkage int32_t sys_halt(uint8_t status) {
  * @return int32_t : positive or 0 denote success, negative values denote an error condition
  */
 asmlinkage int32_t sys_execute(const int8_t *cmd) {
+    pid_t pid;
+    int32_t ret;
+    uint32_t esp;
+    process_t *p;
     int32_t errno;
     int8_t fname[NAMESIZE + 1];
     uint32_t EIP_reg;
     memset(fname, 0, NAMESIZE + 1);
+
     /* parse arguments */
     if ((errno = parse_arg((int8_t *)cmd, fname)) < 0) 
         return errno;
 
     /* create process */
-    if ((errno = process_create()) < 0)
-        return errno;
+    if ((pid = process_create()) < 0)
+        return pid;
+
+    p = GETPRO(pid);
 
     /* executable check and load program image into user's memory */
-    if ((errno = pro_loader(fname, &EIP_reg)) < 0) {
+    if ((errno = pro_loader(fname, &EIP_reg, pid)) < 0) {
         process_free(pid);
-        pid = kill_pid();
         return errno;
     }
 
     /* init file array */
-    fd_init();
+    fd_init(pid);
 
-    CURRENT->eip = EIP_reg;
-    CURRENT->esp = USER_STACK_ADDR;
+    p->eip = EIP_reg;
+    p->esp = USER_STACK_ADDR;
+    p->ebp = USER_STACK_ADDR;
+    
+    // /* switch to user mode (ring 3) */
+    // if (curr_pid) {
+    //     curr_pid = p->pid;
+    //     /* save the kernel stack of the current process */
+    //     SWITCH(CURRENT->parent->esp, CURRENT->esp, CURRENT->eip, ret);
+    // } else {
+    //     curr_pid = p->pid;
+    //     SWITCH(esp, CURRENT->esp, CURRENT->eip, ret);
+    // }
 
-    asm("movl %%esp, %0" : "=r"(CURRENT->esp_));
-    asm("movl %%ebp, %0" : "=r"(CURRENT->ebp_));
+    if (curr_pid) {
+        /* save the kernel stack of the current process */
+        asm volatile("movl %%esp, %0"
+                        :
+                        : "rm"(esp)               
+                        : "cc", "memory" 
+                    );
+        CURRENT->esp = esp;
+    }
+
 
     /* switch to user mode (ring 3) */
-    context_switch(CURRENT);
+    context_switch(p);
 
-    return 0;
+    return ret;
 }
 
 /**
@@ -148,7 +219,7 @@ pid_t sys_getppid() {
  */
 static int32_t parse_arg(int8_t *cmd, int8_t *fname) {
     if (cmd == NULL) {
-        return -EINVAL;
+        return -1;
     }
 
     /* parse the command into file name and the rest of the command */
@@ -187,25 +258,30 @@ static int32_t parse_arg(int8_t *cmd, int8_t *fname) {
  * @return int32_t : 0
  */
 static int32_t process_create(void) {
+    pid_t pid;
+    process_t *p;
+
     if ((pid = alloc_pid()) < 0) 
         return pid;
 
     task_map[pid-2] = (process_union *)alloc_kstack(pid-2);
+
+    p = GETPRO(pid);
     
     /* setup current pid */
-    CURRENT->pid = pid;
+    p->pid = pid;
 
     /* setup the kernel stack info */
 
     /* set the parent pointer */
     if (pid == 2) {
-        CURRENT->parent = NULL;
+        p->parent = NULL;
     } else {
-        CURRENT->parent = &task_map[0]->process;
-        task_map[0]->process.child = CURRENT;
+        p->parent = CURRENT;
+        CURRENT->child = p;
     }
 
-    return 0;
+    return pid;
 }
 
 
@@ -216,8 +292,11 @@ static int32_t process_create(void) {
 static void process_free(pid_t _pid) {
     task_map[_pid-2] = NULL;
     kill_pid();
-    // user_mem_unmap(_pid);
+    free_kstack(_pid-2);
+    user_mem_unmap(_pid);
 }
+
+
 
 
 /**
@@ -226,13 +305,10 @@ static void process_free(pid_t _pid) {
  * @return int32_t : 0 
  */
 static int32_t context_switch(process_t *p) {
-    /* (bottom) SS(handle by iret), DS, ESP, EFLAGS, CS, EIP (top) */
-    /* popl and or are for getting esp, and set IF in EFLAGS
-     * so that intrrupts will be reenabled in user mode. */
     
     update_tss(p->pid);
 
-    sti();
+    curr_pid = p->pid;
 
     asm volatile ("                         \n\
                     andl  $0xFF, %%eax      \n\
@@ -246,6 +322,7 @@ static int32_t context_switch(process_t *p) {
                     pushl %%ecx             \n\
                     pushl %%edx             \n\
                     iret                    \n\
+                    0:                      \n\
                   "
                   :
                   : "a"(USER_DS), "b"(p->esp), "c"(USER_CS), "d"(p->eip)
@@ -256,6 +333,6 @@ static int32_t context_switch(process_t *p) {
 
 static void update_tss(pid_t _pid) {
     tss.ss0 = KERNEL_DS;
-    tss.esp0 = KERNEL_STACK_BEGIN - (_pid - 1) * KERNEL_STACK_SZ - 0x4;
+    tss.esp0 = KERNEL_STACK_BEGIN - (_pid - 2) * KERNEL_STACK_SZ - 0x4;
 }
 

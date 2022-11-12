@@ -8,7 +8,7 @@ ES       = 0x20
 ORIG_EAX = 0x24
 EIP      = 0x30
 INTR     = 0x24
-NCALL    = 6
+NCALL    = 10
 USER_DS  = 0x002B
 
 syscall_table:
@@ -103,6 +103,7 @@ error_code:
 
 
 ret_from_exception:
+    pushl   $256
     jmp     sys_halt                # abort 
 
 # Exception handlers
@@ -298,13 +299,12 @@ syscall_handler:
 	movl %edx, %es
     cmpl  $NCALL, %eax                      # validity check performed on the system call number.
     jb    nobadsys
-    movl  $(-ENOSYS), EAX(%esp)             # set the error number.
+    movl  $-1, EAX(%esp)                    # set the error number.
     jmp   resume_userspace                  # jump back to user mode.
 nobadsys:
     call  *syscall_table(, %eax, 4)         # perform the system call.
     movl  %eax, EAX(%esp)		            # store the return value
 syscall_exit:
-	#RESTORE_ALL                             # return from the syscall
     popl %ebx
 	popl %ecx
 	popl %edx
@@ -321,17 +321,3 @@ resume_userspace:
     # TODO: Check for recheduling request, not implmented yet.
     jmp   syscall_exit
 
-
-.globl do_halt
-do_halt:
-    pushl %ebp 
-    movl  %esp, %ebp 
-    xorl  %ebp, %ebp
-    movl  16(%ebp), %ebx 
-    movl  %ebx, %eax
-    movl  12(%ebp), %ebx
-    movl  %ebx, %esp
-    movl  8(%ebp),  %ebx
-    movl  %ebx, %ebp
-    leave
-    ret

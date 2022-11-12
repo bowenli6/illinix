@@ -2,8 +2,8 @@
 #include <drivers/terminal.h>
 #include <drivers/rtc.h>
 #include <drivers/fs.h>
-#include <pro/process.h>
 #include <boot/syscall.h>
+#include <pro/process.h>
 #include <errno.h>
 #include <lib.h>
 #include <io.h>
@@ -43,24 +43,26 @@ static file_op rtc_op = {
 
 /* Local functions used for opening a file. */
 
-static int32_t __open(int32_t fd, const int8_t *fname, file_type_t type, file_op *op);
+static int32_t __open(int32_t fd, const int8_t *fname, file_type_t type, file_op *op, process_t *p);
 
 /**
  * @brief Initialize the virtual file system.
+ * @param p init the fd for this process
  * 
  * @return int32_t : 0 on success, otherwise on failure.
  */
-int32_t fd_init() {
+int32_t fd_init(pid_t pid) {
     int i;
+    process_t *p = GETPRO(pid);
 
-    CURRENT->fds.count = 0;
-    CURRENT->fds.max_fd = OPEN_MAX;
+    p->fds.count = 0;
+    p->fds.max_fd = OPEN_MAX;
 
     for (i = 0; i < OPEN_MAX; ++i) {
-        CURRENT->fds.fd[i].f_count = 0;
-        CURRENT->fds.fd[i].f_flags = UNUSED;
+        p->fds.fd[i].f_count = 0;
+        p->fds.fd[i].f_flags = UNUSED;
     }
-    return (__open(0, "stdin", TERMINAL, &terminal_op)) + (__open(1, "stdout", TERMINAL, &terminal_op));
+    return (__open(0, "stdin", TERMINAL, &terminal_op, p)) + (__open(1, "stdout", TERMINAL, &terminal_op, p));
 }
 
 /**
@@ -77,7 +79,7 @@ int32_t file_open(const int8_t *fname) {
     /* Call read_dentry_by_name to get a new dentry */
     if (!(fd = read_dentry_by_name(fname, &dentry))) { 
         /* Initialize the current file object. */
-        fd = file_init(2, &file, &dentry, &f_op); 
+        fd = file_init(2, &file, &dentry, &f_op, CURRENT->pid); 
 
         /* Copy the file object into the vfs fd. */
         memcpy((void*)&(CURRENT->fds.fd[fd]), (void*)&file, sizeof(file_t));
@@ -146,7 +148,7 @@ int32_t file_write(int32_t fd, const void *buf, int32_t nbytes) {
  * @return int32_t : A file descriptor on success, -1 on failure.
  */
 int32_t directory_open(const int8_t *fname) {
-    return __open(2, fname, DIRECTORY, &dir_op);
+    return __open(2, fname, DIRECTORY, &dir_op, CURRENT);
 }
 
 
@@ -205,19 +207,20 @@ int32_t directory_write(int32_t fd, const void *buf, int32_t nbytes) {
  * @param fname : A file name.
  * @param op : A file opeartion list.
  * @param type : The file type.
+ * @param p : the current process
  * @return int32_t : The file descriptor on success, -1 on failure.
  */
-static int32_t __open(int32_t fd, const int8_t *fname, file_type_t type, file_op *op) {
+static int32_t __open(int32_t fd, const int8_t *fname, file_type_t type, file_op *op, process_t *p) {
     file_t file;
     dentry_t dentry; 
     memset((void*)&dentry, 0, sizeof(dentry));
     memcpy((void*)(&dentry.fname), (void*)fname, NAMESIZE);
     dentry.inode = 0;   /* ignored here. */
     dentry.type = type;
-    if ((fd = file_init(fd, &file, &dentry, op)) < 0) {
+    if ((fd = file_init(fd, &file, &dentry, op, p->pid)) < 0) {
         printf("%s file object allocation error.\n", fname);
         return -1;
     }
-    memcpy((void*)&(CURRENT->fds.fd[fd]), (void*)&file, sizeof(file_t));
+    memcpy((void*)&(p->fds.fd[fd]), (void*)&file, sizeof(file_t));
     return fd;
 }

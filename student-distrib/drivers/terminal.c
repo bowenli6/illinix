@@ -24,6 +24,7 @@ static void terminal_init() {
     terminal.capslock = 0;              /* CapsLock is not pressed. */
     terminal.shift = 0;                 /* Shift is not pressed. */
     terminal.ctrl = 0;                  /* Ctrl is not pressed. */
+    terminal.alt = 0;                   /* alt key is not pressed */
     terminal.bufhd = 0;                 /* 0 characters read. */
     terminal.buftl = 0;                 /* 0 characters read. */
     terminal.size = 0;                  /* No character yet. */
@@ -49,6 +50,8 @@ void key_press(uint32_t scancode) {
     case RSHIFT:
         terminal.shift = 1;
         return;
+    case LALT:
+        terminal.alt = 1;
     case BACKSPACE:
         backspace(scancode);
         return;

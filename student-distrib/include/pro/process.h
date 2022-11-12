@@ -6,7 +6,7 @@
 
 
 #define COMMAND_LEN             128
-#define TASK_COUNT              2               /* For cp3 we only need to support two tasks */
+#define TASK_COUNT              8               
 
 /* kernel, physical addr */
 #define KERNEL_STACK_BEGIN       0x800000        /* The pyphisical addr begin at the end of 8MB; it should go up wards*/
@@ -23,18 +23,14 @@
 #define USER_STACK_ADDR         (0x8400000 - 0x4)
 #define PROGRAM_IMG_BEGIN       0x08048000      /* The program img begin */
 
-typedef uint32_t pid_t;
-typedef uint32_t gid_t;
-
 typedef struct process {
     volatile long      state;	        /* -1 unrunnable, 0 runnable, >0 stopped */
     pid_t              pid;             /* process id number */
     gid_t              gid;             /* process group id*/
     struct process     *parent;         /* parent process addr */
     struct process     *child;          /* child process addr */
-    uint32_t           esp_;
-    uint32_t           ebp_;
     uint32_t           esp;
+    uint32_t           ebp;
     uint32_t           eip;
     files              fds;                  
 } process_t;
@@ -46,11 +42,11 @@ typedef union {
     uint32_t stack[2048];
 } process_union;
 
-
+extern pid_t curr_pid;
 extern process_union *task_map[TASK_COUNT];
-extern pid_t pid;
 
-#define CURRENT (&task_map[pid-2]->process)
+#define CURRENT (&task_map[curr_pid-2]->process)
+#define GETPRO(pid) (&task_map[(pid)-2]->process)
 
 void swapper();
 void init_task();

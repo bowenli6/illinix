@@ -13,12 +13,13 @@
  * @param op : A file operation list that will be included in the file object.
  * @return int32_t : A file descriptor on success, -1 on failure.
  */
-int32_t file_init(int32_t fd, file_t *file, dentry_t *dentry, file_op *op) {
+int32_t file_init(int32_t fd, file_t *file, dentry_t *dentry, file_op *op, pid_t pid) {
     int i;
+    process_t *p = GETPRO(pid);
 
     for (i = fd; i < OPEN_MAX; ++i) {
         /* If there is an unused file object. */
-        if (CURRENT->fds.fd[fd].f_flags == UNUSED) {
+        if (p->fds.fd[fd].f_flags == UNUSED) {
             /* Copy data to the new file object. */
             memcpy((void*)(&(file->f_dentry)), (void*)dentry, sizeof(dentry_t));
             file->f_op = *op;
@@ -28,6 +29,5 @@ int32_t file_init(int32_t fd, file_t *file, dentry_t *dentry, file_op *op) {
             return i;   /* Return the file descriptor. */
         }
     }
-    puts("ERROR: The file descriptors limit has been reached.\n");
     return -1;
 }

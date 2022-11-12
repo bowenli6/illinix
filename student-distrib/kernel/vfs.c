@@ -30,7 +30,7 @@ asmlinkage int32_t sys_open(const int8_t *filename) {
    // if ((errno = copy_from_user((void *)kbuf, (void *)filename, 
    //                            strlen(filename))) <= 0)
    if (*filename == '.') return directory_open(filename);
-   if (!strcmp(filename, "rtc")) rtc_open(filename);
+   if (!strcmp(filename, "rtc")) RTC_open(filename);
    return file_open(filename);
 }
 

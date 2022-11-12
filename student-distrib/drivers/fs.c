@@ -180,16 +180,20 @@ uint32_t get_size(uint32_t index) {
  * @brief Load program image into user vitural address space
  * 
  * @param fname file name of the program
+ * @param p the process to load program for
  * @return int32_t : positive or 0 denote success, negative values denote an error condition
  */
-int32_t pro_loader(int8_t *fname, uint32_t *EIP) {
+int32_t pro_loader(int8_t *fname, uint32_t *EIP, pid_t pid) {
     int i;
     int32_t errno;
     uint32_t inode;
     inode_t file;
     uint8_t header[40];
     uint8_t eip_buf[4];
+    process_t *p;
     uint8_t magic_number[4] = { 0x7f, 0x45, 0x4c, 0x46 };
+
+    p = GETPRO(pid);
 
     /* check if the file is a user-level executable file */
     if ((inode = validate_fname(fname)) < 0)
@@ -212,10 +216,10 @@ int32_t pro_loader(int8_t *fname, uint32_t *EIP) {
     *EIP = *(uint32_t*)eip_buf;
 
     /* map user virtual memory to process pid's physical memory */
-    user_mem_map(CURRENT->pid);
+    user_mem_map(pid);
 
     if ((errno = read_data(inode, 0, (uint8_t *)PROGRAM_IMG_BEGIN, file.size)) < 0) {
-        user_mem_unmap(CURRENT->pid);
+        user_mem_unmap(pid);
         return errno;
     }
     

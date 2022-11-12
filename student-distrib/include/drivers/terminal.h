@@ -9,6 +9,7 @@ typedef struct {
     uint8_t capslock;                   /* 0 if capslock is not pressed, 1 otherwise. */
     uint8_t shift;                      /* 0 if Lshift and Rshift are not pressed, 1 otherwise. */
     uint8_t ctrl;                       /* 0 if Lctrl and Rctrl are not pressed, 1 otherwise. */
+    uint8_t alt;                        /* 0 if Lalt and Ralt are not pressed, 1 otherwise. */
     uint8_t bufhd;                      /* The top position of the buffer. */
     uint8_t buftl;                      /* The bottom position of the buffer. */
     uint8_t size;                       /* The current size of the buffer. */

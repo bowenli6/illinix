@@ -79,7 +79,7 @@ int32_t RTC_close(int32_t fd) {
  * @return int32_t : 0 on success, -1 otherwise.
  * 
 */
-int32_t RTC_read(int32_t fd, const void* buffer, int32_t nbytes) {
+int32_t RTC_read(int32_t fd, void* buffer, int32_t nbytes) {
     /* wait on interrupt generation */
     while(!global_interrupt_flag);
     global_interrupt_flag = 0;

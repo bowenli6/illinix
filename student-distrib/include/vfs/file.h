@@ -3,7 +3,6 @@
 
 #include <types.h>
 #include <drivers/fs.h>
-// #include <pro/process.h>
 
 #define INUSED      1                      /* A file is inused. */
 #define UNUSED      0                      /* A file is unused. */
@@ -35,6 +34,6 @@ typedef struct {
 
 
 
-int32_t file_init(int32_t fd, file_t *file, dentry_t *dentry, file_op *op);
+int32_t file_init(int32_t fd, file_t *file, dentry_t *dentry, file_op *op, pid_t pid);
 
 #endif /* _FILE_H */

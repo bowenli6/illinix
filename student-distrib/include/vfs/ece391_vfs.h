@@ -7,7 +7,7 @@
 
 #include <vfs/file.h>
 
-int32_t fd_init();
+int32_t fd_init(pid_t pid);
 int32_t file_open(const int8_t *fname);
 int32_t file_close(int32_t fd);
 int32_t file_read(int32_t fd, void *buf, int32_t nbytes);
