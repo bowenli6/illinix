@@ -6,7 +6,8 @@
 #include <lib.h>
 #include <drivers/fs.h>
 #include <access.h>
-#include <errno.h>  
+#include <errno.h> 
+#include <boot/page.h>
 
 process_union *init;    /* Process 1 (init process) */
 process_union *task_map[TASK_COUNT];    /* Currently process 2 (the shell) and 3 */
@@ -161,6 +162,24 @@ asmlinkage int32_t sys_execute(const int8_t *cmd) {
 
     return -1;  /* never reach here */
 }
+
+
+/**
+ * @brief 
+ * 
+ * @param screen_start 
+ * @return asmlinkage 
+ */
+asmlinkage int32_t sys_vidmap(uint8_t **screen_start) {
+    int32_t errno;
+    if(((uint32_t)screen_start) < VIR_MEM_BEGIN || ((uint32_t)screen_start) > (VIR_MEM_BEGIN + PAGE_SIZE_4MB)) {
+        return -1;
+    }
+    *screen_start = (uint8_t*) (VIR_VID_MEM + VIDEO);
+    
+    return 0;
+}
+
 
 
 asmlinkage int32_t sys_getargs(uint8_t *buf, int32_t nbytes) {

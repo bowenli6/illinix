@@ -9,6 +9,7 @@
 
 //static int pde_alloc_index = 2;
 //pd_descriptor_t pdd[ENTRY_NUM];
+
 pte_t* _walk(pagedir_t pd, uint32_t va, int alloc);
 
 void enable_paging()
@@ -66,10 +67,20 @@ void page_init()
     {
         /* only video memory is initialized as present */
         if(i == (VIDEO >> PDE_OFFSET_4KB) ) {
-            page_table[i] = page_table[i] | PTE_PRESENT | PTE_RW | ADDR_TO_PTE(VIDEO);
+            page_table[i] = page_table[i] | PTE_PRESENT | PTE_RW | ADDR_TO_PTE(VIDEO); 
         }
         else {
-            page_table[i] = 0 | PTE_RW;
+            page_table[i] = 0 | PTE_RW;  
+        }
+    }
+
+    page_directory[VIR_VID_MEM / PAGE_SIZE_4MB] = PTE_PRESENT | PTE_RW | PTE_US | ADDR_TO_PTE((int)vidmap_table);
+    for(i = 0; i < ENTRY_NUM; i++) {
+        if(i == (VIDEO >> PDE_OFFSET_4KB)) {
+            vidmap_table[i] = PTE_PRESENT | PTE_RW | PTE_US | ADDR_TO_PTE(VIDEO);
+        }
+        else {
+            vidmap_table[i] = 0;
         }
     }
 

@@ -9,6 +9,7 @@
 #define MAX_PAGES 16
 #define RESERVED_PAGES 3
 #define KERNEL_INDEX 1
+#define VIR_VID_MEM 0x8400000
 
 #define PTE_PRESENT 0x1
 #define PTE_RW 0x2
