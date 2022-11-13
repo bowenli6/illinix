@@ -106,7 +106,7 @@ int32_t read_data(uint32_t inode, uint32_t offset, uint8_t *buf, uint32_t length
     
     file = &fs.inodes[inode];            /* Get the file inode. */
         
-    if (offset >= file->size) return -1;
+    if (offset >= file->size) return 0;
     
 
     /* The index of bytes start to read. */

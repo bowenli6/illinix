@@ -19,7 +19,7 @@ int32_t file_init(int32_t fd, file_t *file, dentry_t *dentry, file_op *op, pid_t
 
     for (i = fd; i < OPEN_MAX; ++i) {
         /* If there is an unused file object. */
-        if (p->fds.fd[fd].f_flags == UNUSED) {
+        if (p->fds.fd[i].f_flags == UNUSED) {
             /* Copy data to the new file object. */
             memcpy((void*)(&(file->f_dentry)), (void*)dentry, sizeof(dentry_t));
             file->f_op = *op;

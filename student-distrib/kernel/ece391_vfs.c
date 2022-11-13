@@ -119,7 +119,6 @@ int32_t file_read(int32_t fd, void *buf, int32_t nbytes) {
     int32_t nread;
     file_t *file = &(CURRENT->fds.fd[fd]);
     if (file->f_flags == UNUSED) {
-        puts("ERROR: File does not exist.\n");
         return -1;
     }
 
@@ -174,7 +173,6 @@ int32_t directory_close(int32_t fd) {
 int32_t directory_read(int32_t fd, void *buf, int32_t nbytes) {
     int32_t nread;
     if (CURRENT->fds.fd[fd].f_flags == UNUSED) {
-        puts("ERROR: File does not exist.\n");
         return -1;
     }
 
@@ -218,7 +216,6 @@ static int32_t __open(int32_t fd, const int8_t *fname, file_type_t type, file_op
     dentry.inode = 0;   /* ignored here. */
     dentry.type = type;
     if ((fd = file_init(fd, &file, &dentry, op, p->pid)) < 0) {
-        printf("%s file object allocation error.\n", fname);
         return -1;
     }
     memcpy((void*)&(p->fds.fd[fd]), (void*)&file, sizeof(file_t));

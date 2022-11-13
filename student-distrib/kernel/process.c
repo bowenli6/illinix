@@ -162,6 +162,20 @@ asmlinkage int32_t sys_execute(const int8_t *cmd) {
     return -1;  /* never reach here */
 }
 
+
+asmlinkage int32_t sys_getargs(uint8_t *buf, int32_t nbytes) {
+    /* no arguments */
+    if (CURRENT->argc == 1) 
+        return -1;
+
+    /* buf is NULL */
+    if (!buf)
+        return -1;
+
+    strncpy((char*)buf, CURRENT->argv[1], nbytes);
+    return 0;
+}
+
 /**
  * @brief returns the process ID (PID) of the calling process
  * 
@@ -322,7 +336,6 @@ static int32_t context_switch(process_t *p) {
                     pushl %%ecx             \n\
                     pushl %%edx             \n\
                     iret                    \n\
-                    0:                      \n\
                   "
                   :
                   : "a"(USER_DS), "b"(p->esp), "c"(USER_CS), "d"(p->eip)
