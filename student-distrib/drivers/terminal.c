@@ -63,6 +63,7 @@ void key_press(uint32_t scancode) {
     case L:
         if (terminal.ctrl) {                    /* If ctrl is hold and CTRL-L is pressed. */
             clear(); 
+            puts("391OS> ");
         } else {
             if (terminal.shift) {                   
                 in(scancode, 1 - (terminal.capslock & isletter(scancode)));
@@ -116,6 +117,7 @@ void key_release(uint32_t scancode) {
 static void in(uint32_t scancode, uint8_t caps) {
     if (scancode >= KEYBOARD_SIZE) return;          /* Should not print. */
     uint8_t character = scancodes[scancode][caps];  /* Get character. */
+    if (character == '\r') character = '\n';
     if (character) {
         putc(character);
         if (terminal.size  == TERBUF_SIZE)   

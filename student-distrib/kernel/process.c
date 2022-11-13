@@ -72,8 +72,11 @@ asmlinkage int32_t sys_halt(uint8_t status) {
 
     cli();
 
-    if (CURRENT->pid == 2) 
-        context_switch(CURRENT);
+    if (CURRENT->pid == 2) {
+        process_free(CURRENT->pid);
+        init_task();
+    }
+        
 
     /* If this is not the shell */
     process_t *curr = CURRENT;

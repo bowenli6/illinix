@@ -120,6 +120,53 @@ Process
 
 
 5.  Problem:    Process switch failed
-    Reason:     
+    Reason:     Fail to switch back to parent when halt
+    Time used:  2 days
+    Solution:   Store parent esp and ebp before context switch and restore after child halts.
+
+6.  Problem:    invalid command page fault
+    Reason:     Did not remap the user space to the parent
+    Time used:  1 day
+    Solution:   Remap and reset tss esp0 and ss0
+
+Terminal 
+7.  Problem:    Backspace will remove the printed characters
+    Reason:     Did not check if the buffer size is empty 
+    Time used:  1 hour
+    Solution:   Only perform backspace when terminal buffer is empty
+
+8.  Problem:    CTRL-L will clear all of the screen
+    Reason:     Did not redraw 391OS >
+    Time used:  5 min
+    Solution:   Redraw after clear when press CTRL-L
+----------------------------------------------------------------------------------------------------
+Checkpoint4:
+
+Process
+1.  Problem:    Mutiple Shell cannot exit
+    Reason:     My computer interprets new line character as \r
+    Time used:  30 min
+    Solution:   change \r to \n when terminal_read to adjust shell program
+
+2.  Problem:    Init shell problem exit page fault
+    Reason:     Did not restart the init shell properly
+    Time used:  10 min
+    Solution:   Free the init shell process and restart the init process
+
+3.  Problem:    command line arguments parsing error 
+    Reason:     more than one leading spaces should be ignored
+    Time used:  30 min 
+    Solution:   Use a while loop to skip leading zeros
+
+4.  Problem:    store command arguments error
+    Reason:     local char pointers will be lost after the function returns and stack frame cleared.
+    Time used:  20 min 
+    Solution:   Store the command arguments locally in array and later store it in the PCB
+
+5.  Problem:    
+    Reason:
     Time used:
     Solution:
+
+----------------------------------------------------------------------------------------------------
+Checkpoint5:
