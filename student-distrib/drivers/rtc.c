@@ -76,8 +76,7 @@ int32_t RTC_open(const int8_t* filename) {
  * @return int32_t : 0 on success, -1 otherwise.
 */
 int32_t RTC_close(int32_t fd) {
-    /* do nothing */
-    return 0;                   
+    return file_close(fd);
 }
 
 /**

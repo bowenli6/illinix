@@ -1,4 +1,5 @@
 #include <drivers/terminal.h>
+#include <vfs/ece391_vfs.h>
 #include <lib.h>
 #include <io.h>
 
@@ -198,10 +199,10 @@ int32_t terminal_open(const int8_t *fname) {
  * @brief Clears any terminal specific variables. (do nothing for now.)
  * 
  * @param fd : 0 or 1.
- * @return int32_t : 0.
+ * @return int32_t : -1.
  */
 int32_t terminal_close(int32_t fd) {
-    return 0;
+    return -1;
 }
 
 
@@ -218,6 +219,8 @@ int32_t terminal_read(int32_t fd, void *buf, int32_t nbytes) {
     uint32_t intr_flag;
     int32_t nread;
     uint8_t start = 0;
+    if (fd != stdin)
+        return -1;
 
     if (nbytes < 0) 
         return -1;
@@ -281,10 +284,11 @@ int32_t terminal_read(int32_t fd, void *buf, int32_t nbytes) {
  */
 int32_t terminal_write(int32_t fd, const void *buf, int32_t nbytes) {
     uint32_t intr_flag;
-    if (!buf) {
-        puts("buf has NULL address.\n");
+    if (!buf)
         return -1;
-    }
+
+    if (fd != stdout)
+        return -1;
     
     /* Critical section begins. */
     cli_and_save(intr_flag);
