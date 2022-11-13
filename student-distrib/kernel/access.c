@@ -6,20 +6,20 @@
 #include <lib.h>
 
 
-static int32_t validate_addr(void *addr);
+// static int32_t validate_addr(void *addr);
 
 
-/**
- * @brief Copies a block of arbitrary size from user space.
- * 
- * Side effect: The pointer from is an untrusted pointer 
- * (a pointer that may be invalid in the current virtual address mapping)
- * 
- * @param to : Target address from user space
- * @param from : Source address from kernel space
- * @param n : Number of bytes to transfer
- * @return int32_t : number of bytes denote success, 0 or negative values denote an error condition
- */
+// /**
+//  * @brief Copies a block of arbitrary size from user space.
+//  * 
+//  * Side effect: The pointer from is an untrusted pointer 
+//  * (a pointer that may be invalid in the current virtual address mapping)
+//  * 
+//  * @param to : Target address from user space
+//  * @param from : Source address from kernel space
+//  * @param n : Number of bytes to transfer
+//  * @return int32_t : number of bytes denote success, 0 or negative values denote an error condition
+//  */
 // int32_t copy_from_user(void *to, const void *from, uint32_t n) {
 //     int errno;
 //     process_t *process;
@@ -35,17 +35,17 @@ static int32_t validate_addr(void *addr);
 // }
 
 
-/**
- * @brief Copies a block of arbitrary size to user space.
- * 
- * Side effect: The pointer to is an untrusted pointer 
- * (a pointer that may be invalid in the current virtual address mapping)
- * 
- * @param to : Target address from kernel space
- * @param from : Source address from user space
- * @param n : Number of bytes to transfer
- * @return int32_t : number of bytes denote success, 0 or negative values denote an error condition
-//  */
+// /**
+//  * @brief Copies a block of arbitrary size to user space.
+//  * 
+//  * Side effect: The pointer to is an untrusted pointer 
+//  * (a pointer that may be invalid in the current virtual address mapping)
+//  * 
+//  * @param to : Target address from kernel space
+//  * @param from : Source address from user space
+//  * @param n : Number of bytes to transfer
+//  * @return int32_t : number of bytes denote success, 0 or negative values denote an error condition
+// //  */
 // int32_t copy_to_user(void *to, const void *from, uint32_t n) {
 //     int errno;
 //     process_t *process;
@@ -67,7 +67,7 @@ static int32_t validate_addr(void *addr);
  * @param addr : A pointer points to the space to check
  * @return int32_t : positive or 0 denote success, negative values denote an error condition
  */
-static int32_t validate_addr(void *addr) {
+// static int32_t validate_addr(void *addr) {
    /* There are two possible ways to perform this check: 
     * (Perfer the 2nd one if you can! The first type of checking is quite time
     * consuming because it must be executed for each address parameter included
@@ -90,8 +90,8 @@ static int32_t validate_addr(void *addr) {
 //        return 0;
        
 //    return -EFAULT;
-    return 0;
-}
+    // return 0;
+// }
 
 
 /**

@@ -1,6 +1,7 @@
 #include <io.h>
 #include <lib.h>
 #include <boot/syscall.h>
+#include <drivers/terminal.h>
 
 int screen_x = 0;
 int screen_y = 0;

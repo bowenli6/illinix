@@ -140,9 +140,12 @@ static void in(uint32_t scancode, uint8_t caps) {
 static void out(const void *buf, int32_t nbytes) {
     /* The method of outputting data will be changed when connected with VGA. */
     int i;
+    char c;
     
-    for (i = 0; i < nbytes; ++i)
-        putc(((char*)buf)[i]);   /* output to the screen. */
+    for (i = 0; i < nbytes; ++i) {
+        c = ((char*)buf)[i];
+        putc(c);   /* output to the screen. */
+    }
 }
 
 
@@ -164,7 +167,6 @@ static void out_tab(uint32_t n) {
 static void backspace() {
     if (!terminal.size) {  
         /* No way to backspace. */
-        back();
         return;
     } else {    
         /* Clear the most recent character. */
