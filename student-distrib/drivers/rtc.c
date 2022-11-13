@@ -1,5 +1,9 @@
 #include <drivers/rtc.h>
 #include <boot/i8259.h>
+#include <vfs/file.h>
+#include <vfs/ece391_vfs.h>
+#include <pro/process.h>
+#include <drivers/fs.h>
 #include <lib.h>
 #include <io.h>
 
@@ -11,6 +15,13 @@ volatile int global_interrupt_flag;
 static void set_RTC_freq(int32_t frequency);
 static char log2_of(int32_t frequency);
 
+/* RTC operation. */
+static file_op rtc_op = {
+    .open = RTC_open,
+    .close = RTC_close,
+    .read = RTC_read,
+    .write = RTC_write
+};
 
 /**
  * @brief Initialize RTC and enable RTC interrupt.
@@ -55,7 +66,7 @@ int32_t RTC_open(const int8_t* filename) {
     /* initialize the RTC and set initial frequency to 2 as instructed */
     RTC_init();
     set_RTC_freq(2);
-    return 0;
+    return __open(2, filename, RTC, &rtc_op, CURRENT->pid);
 }
 
 /**

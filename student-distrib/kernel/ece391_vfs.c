@@ -32,18 +32,6 @@ static file_op terminal_op = {
     .write = terminal_write
 };
 
-/* RTC operation. */
-static file_op rtc_op = {
-    .open = RTC_open,
-    .close = RTC_close,
-    .read = RTC_read,
-    .write = RTC_write
-};
-
-
-/* Local functions used for opening a file. */
-
-static int32_t __open(int32_t fd, const int8_t *fname, file_type_t type, file_op *op, process_t *p);
 
 /**
  * @brief Initialize the virtual file system.
@@ -62,7 +50,7 @@ int32_t fd_init(pid_t pid) {
         p->fds.fd[i].f_count = 0;
         p->fds.fd[i].f_flags = UNUSED;
     }
-    return (__open(0, "stdin", TERMINAL, &terminal_op, p)) + (__open(1, "stdout", TERMINAL, &terminal_op, p));
+    return (__open(0, "stdin", TERMINAL, &terminal_op, pid)) + (__open(1, "stdout", TERMINAL, &terminal_op, pid));
 }
 
 /**
@@ -147,7 +135,7 @@ int32_t file_write(int32_t fd, const void *buf, int32_t nbytes) {
  * @return int32_t : A file descriptor on success, -1 on failure.
  */
 int32_t directory_open(const int8_t *fname) {
-    return __open(2, fname, DIRECTORY, &dir_op, CURRENT);
+    return __open(2, fname, DIRECTORY, &dir_op, CURRENT->pid);
 }
 
 
@@ -208,9 +196,10 @@ int32_t directory_write(int32_t fd, const void *buf, int32_t nbytes) {
  * @param p : the current process
  * @return int32_t : The file descriptor on success, -1 on failure.
  */
-static int32_t __open(int32_t fd, const int8_t *fname, file_type_t type, file_op *op, process_t *p) {
+int32_t __open(int32_t fd, const int8_t *fname, file_type_t type, file_op *op, pid_t pid) {
     file_t file;
     dentry_t dentry; 
+    process_t *p = GETPRO(pid);
     memset((void*)&dentry, 0, sizeof(dentry));
     memcpy((void*)(&dentry.fname), (void*)fname, NAMESIZE);
     dentry.inode = 0;   /* ignored here. */

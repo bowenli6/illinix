@@ -16,6 +16,7 @@ int32_t directory_open(const int8_t *fname);
 int32_t directory_close(int32_t fd);
 int32_t directory_read(int32_t fd, void *buf, int32_t nbytes);
 int32_t directory_write(int32_t fd, const void *buf, int32_t nbytes);
+int32_t __open(int32_t fd, const int8_t *fname, file_type_t type, file_op *op, pid_t pid);
 
 
 /* Interactions between a process and a filesystem */

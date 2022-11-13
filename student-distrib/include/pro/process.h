@@ -18,7 +18,6 @@
 #define  FIRST_USR_BEGIN        0x800000        /* The first user addr begin at 8MB (to 12 MB) */
 #define  SECOND_USR_BEGIN       0xC00000        /* The first user addr begin at 12MB (to 16 MB) */
 
-
 /* user-level, virtual addr */
 #define VIR_MEM_BEGIN           0x08000000      /* The mem begins at 128MB */
 #define USER_STACK_ADDR         (0x8400000 - 0x4)

@@ -29,8 +29,10 @@ asmlinkage int32_t sys_open(const int8_t *filename) {
    /* copy data from user space to kernel space */
    // if ((errno = copy_from_user((void *)kbuf, (void *)filename, 
    //                            strlen(filename))) <= 0)
-   if (*filename == '.') return directory_open(filename);
-   if (!strcmp(filename, "rtc")) RTC_open(filename);
+   if (*filename == '.') 
+      return directory_open(filename);
+   if (!strcmp(filename, "rtc")) 
+      return RTC_open(filename);
    return file_open(filename);
 }
 
