@@ -52,6 +52,8 @@ void free_uvmdir(pagedir_t pd, int size);
 int vmalloc(pagedir_t pd, int oldsize, int newsize, int flags);
 void vmdealloc(pagedir_t pd, int oldsize, int newsize);
 
+int32_t do_vidmap(uint8_t **screen_start);
+
 typedef struct pg_descriptor_t {
     uint32_t flags;
     int _count;

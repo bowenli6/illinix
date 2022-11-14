@@ -163,10 +163,13 @@ Process
     Time used:  20 min 
     Solution:   Store the command arguments locally in array and later store it in the PCB
 
-5.  Problem:    
-    Reason:
-    Time used:
-    Solution:
+5.  Problem:    syserr test failed 
+    Reason:     terminal and rtc: read/write/close wrong
+    Time used:  2 hour
+    Solution:   (1) terminal should never be able to close
+                (2) terminal should only allow fd 0 to read
+                (3) terminal should only allow fd 1 to write 
+                (4) rtc should open a file to set its f_op
 
 ----------------------------------------------------------------------------------------------------
 Checkpoint5:

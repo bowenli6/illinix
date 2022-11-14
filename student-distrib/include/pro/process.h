@@ -52,5 +52,7 @@ extern process_union *task_map[TASK_COUNT];
 
 void swapper();
 void init_task();
+void do_halt(uint32_t status);
+int32_t do_execute(const int8_t *cmd);
 
 #endif /* _PROCESS_H_ */

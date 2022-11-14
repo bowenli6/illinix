@@ -1,6 +1,5 @@
 #include <boot/x86_desc.h>
 #include <boot/page.h>
-#include <boot/syscall.h>
 #include <lib.h>
 
 /**
@@ -93,17 +92,14 @@ void page_init()
 }
 
 
+
 /**
- * @brief A system call service routine for mapping the text-mode video memory into user 
- * space at a pre-set virtual address.
- * 
- * The calling convation of this function is to use the 
- * arguments from the stack
+ * @brief map the text-mode video memory into user space at a pre-set virtual address.
  * 
  * @param screen_start : starting screen address
  * @return int32_t : positive or 0 denote success, negative values denote an error condition
  */
-asmlinkage int32_t sys_vidmap(uint8_t **screen_start) {
+int32_t do_vidmap(uint8_t **screen_start) {
     if(((uint32_t)screen_start) < VIR_MEM_BEGIN || ((uint32_t)screen_start) > (VIR_MEM_BEGIN + PAGE_SIZE_4MB)) {
         return -1;
     }

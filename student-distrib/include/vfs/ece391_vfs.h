@@ -17,7 +17,10 @@ int32_t directory_close(int32_t fd);
 int32_t directory_read(int32_t fd, void *buf, int32_t nbytes);
 int32_t directory_write(int32_t fd, const void *buf, int32_t nbytes);
 int32_t __open(int32_t fd, const int8_t *fname, file_type_t type, file_op *op, pid_t pid);
-
+int32_t do_open(const int8_t *filename);
+int32_t do_close(int32_t fd);
+int32_t do_read(int32_t fd, void *buf, uint32_t nbytes);
+int32_t do_write(int32_t fd, const void *buf, uint32_t nbytes);
 
 /* Interactions between a process and a filesystem */
 typedef struct {

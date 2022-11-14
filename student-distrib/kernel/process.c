@@ -1,6 +1,5 @@
 #include <pro/process.h>
 #include <pro/sched.h>
-#include <boot/syscall.h>
 #include <boot/x86_desc.h>
 #include <pro/pid.h>
 #include <lib.h>
@@ -10,12 +9,14 @@
 
 process_union *init;    /* Process 1 (init process) */
 process_union *task_map[TASK_COUNT];    /* Currently process 2 (the shell) and 3 */
-pid_t curr_pid;
+pid_t curr_pid;         /* current pid*/
 
-static void do_halt(uint32_t ebp, uint32_t esp, uint8_t status);
+
+/* local helper functions */
+
 static int32_t process_create(void);
 static void process_free(pid_t _pid);
-static int32_t context_switch(process_t *p);
+static void context_switch(process_t *p);
 static int32_t parse_arg(int8_t *cmd, char argv[MAXARGS][MAXARGS]);
 static int32_t copy_args(process_t *p, char argv[MAXARGS][MAXARGS]);
 static void update_tss(pid_t _pid);
@@ -41,44 +42,22 @@ void swapper() {
 void init_task() {
     pidmap_init();
     curr_pid = 0;
-    (void) sys_execute("shell");
-}
-
-static void do_halt(uint32_t ebp, uint32_t esp, uint8_t status) {
-    asm volatile ("                         \n\
-                    movl %%edx, %%ebp       \n\
-                    movl %%edx, %%esp       \n\
-                    movl %%ebx, %%eax       \n\
-                    leave                   \n\
-                    ret                     \n\
-                  "
-                  :
-                  : "d"(ebp), "c"(esp), "b"(status)
-                  : "cc", "memory"
-    );      
+    (void) do_execute("shell");
 }
 
 
 /**
- * @brief A system call service routine for exiting a process
- * The calling convation of this function is to use the 
- * arguments from the stack
+ * @brief set ebp and esp to parent kernel stack and jump into parent's process
  * 
- * @param status : 
- * @return int32_t : positive or 0 denote success, negative values denote an error condition
+ * @param status : the status of the halt syscall
  */
-asmlinkage int32_t sys_halt(uint8_t status) {
+void do_halt(uint32_t status) {
     /* If this is the shell, return to the shell */
-
-    cli();
-
     if (CURRENT->pid == 2) {
         process_free(CURRENT->pid);
         init_task();
     }
-        
 
-    /* If this is not the shell */
     process_t *curr = CURRENT;
     process_t *parent = CURRENT->parent;
     curr_pid = parent->pid;
@@ -88,22 +67,26 @@ asmlinkage int32_t sys_halt(uint8_t status) {
     user_mem_map(parent->pid);
 
     sti();
-
-    do_halt(parent->ebp, parent->esp, status);
-
-    return -1; /* never reach here */
+    asm volatile ("                         \n\
+                    movl %%edx, %%ebp       \n\
+                    movl %%edx, %%esp       \n\
+                    movl %%ebx, %%eax       \n\
+                    leave                   \n\
+                    ret                     \n\
+                  "
+                  :
+                  : "d"(parent->ebp), "c"(parent->esp), "b"(status)
+                  : "cc", "memory"
+    );      
 }
 
 
 /**
- * @brief A system call service routine for creating a process
- * The calling convation of this function is to use the 
- * arguments from the stack
+ * @brief create a new process to execute a program
  * 
- * @param cmd : A string contains the command of the process
- * @return int32_t : positive or 0 denote success, negative values denote an error condition
+ * @param cmd : the program name with arguments
  */
-asmlinkage int32_t sys_execute(const int8_t *cmd) {
+int32_t do_execute(const int8_t *cmd) {
     pid_t pid;
     uint32_t esp, ebp;
     process_t *p;
@@ -111,8 +94,6 @@ asmlinkage int32_t sys_execute(const int8_t *cmd) {
     int32_t argc;
     char argv[MAXARGS][MAXARGS];    
     uint32_t EIP_reg;
-
-    cli();
 
     /* parse arguments */
     if ((argc = parse_arg((int8_t *)cmd, argv)) < 0) 
@@ -122,10 +103,15 @@ asmlinkage int32_t sys_execute(const int8_t *cmd) {
     if ((pid = process_create()) < 0)
         return pid;
 
+    /* get process and set its arguments */
     p = GETPRO(pid);
     p->argc = argc;
-    copy_args(p, argv);
-    
+    if ((errno = copy_args(p, argv)) < 0) {
+        process_free(pid);
+        update_tss(CURRENT->pid);
+        user_mem_map(CURRENT->pid);
+        return errno; 
+    }    
 
     /* executable check and load program image into user's memory */
     if ((errno = pro_loader(argv[0], &EIP_reg, pid)) < 0) {
@@ -138,10 +124,11 @@ asmlinkage int32_t sys_execute(const int8_t *cmd) {
     /* init file array */
     fd_init(pid);
 
+    /* store registers */
     p->eip = EIP_reg;
     p->esp = USER_STACK_ADDR;
     p->ebp = USER_STACK_ADDR;
-    
+
     if (curr_pid) {
         /* save the kernel stack of the current process */
         asm volatile("movl %%ebp, %0        \n\
@@ -154,29 +141,12 @@ asmlinkage int32_t sys_execute(const int8_t *cmd) {
         CURRENT->ebp = ebp;
     }
 
-    sti();
-
     /* switch to user mode (ring 3) */
     context_switch(p);
 
-    return -1;  /* never reach here */
+    return 0;   /* never reach here */
 }
 
-
-
-
-asmlinkage int32_t sys_getargs(uint8_t *buf, int32_t nbytes) {
-    /* no arguments */
-    if (CURRENT->argc == 1) 
-        return -1;
-
-    /* buf is NULL */
-    if (!buf)
-        return -1;
-
-    strncpy((char*)buf, CURRENT->argv[1], nbytes);
-    return 0;
-}
 
 /**
  * @brief returns the process ID (PID) of the calling process
@@ -184,7 +154,7 @@ asmlinkage int32_t sys_getargs(uint8_t *buf, int32_t nbytes) {
  * @return pid_t : The process ID of the calling process
  */
 pid_t sys_getpid() {
-    
+    // TODO
     return 0;
 }
 
@@ -205,12 +175,13 @@ pid_t sys_getppid() {
 }
 
 
-
-
 /**
- * @brief store the entire command line witout the leading file name
+ * @brief parse the command line arguments 
  * 
- * @return agrc  if the program executes a halt system call
+ * @param cmd : command line
+ * @param argv : array of strings to be set to the arguments
+ * 
+ * @return number of argumnets (including file name)
  * @return < 0 if the command cannot be executed
  */
 static int32_t parse_arg(int8_t *cmd, char argv[MAXARGS][MAXARGS]) {
@@ -251,6 +222,13 @@ static int32_t parse_arg(int8_t *cmd, char argv[MAXARGS][MAXARGS]) {
 }
 
 
+/**
+ * @brief copy the argv into p->agrv
+ * 
+ * @param p : process
+ * @param argv : arguments list
+ * @return int32_t : number of arguments copied, or < 0 if cannot copy
+ */
 static int32_t copy_args(process_t *p, char argv[MAXARGS][MAXARGS]) {
     int i;
 
@@ -318,13 +296,20 @@ static void process_free(pid_t _pid) {
 /**
  * @brief Perform a context switch to ring 3 (user mode)
  * 
- * @return int32_t : 0 
+ * (bottom) SS, ESP, EFLAGS, CS, EIP (top)
+ * (1) pop and or are for getting IF in EFLAGS
+ * so that intrrupts will be enabled in user mode.
+ * (2) set USER_DS to the GDT entry for user data segment ds.
+ * (3) push the addres of 0 in the stack for halt to return
+ * 
  */
-static int32_t context_switch(process_t *p) {
+static void context_switch(process_t *p) {
     
     update_tss(p->pid);
 
     curr_pid = p->pid;
+
+    sti();
 
     asm volatile ("                         \n\
                     andl  $0xFF, %%eax      \n\
@@ -343,9 +328,14 @@ static int32_t context_switch(process_t *p) {
                   : "a"(USER_DS), "b"(p->esp), "c"(USER_CS), "d"(p->eip)
                   : "memory"
     );      
-    return 0;
 }
 
+
+/**
+ * @brief update tss entry for ss0 and esp0
+ * 
+ * @param _pid : process id
+ */
 static void update_tss(pid_t _pid) {
     tss.ss0 = KERNEL_DS;
     tss.esp0 = KERNEL_STACK_BEGIN - (_pid - 2) * KERNEL_STACK_SZ - 0x4;

@@ -26,7 +26,7 @@ syscall_table:
 
 .text
 
-# Save alll the CPU registers that may be used by the exception handler on the stack.
+# Save all the CPU registers that may be used by the exception handler on the stack.
 #define SAVE_ALL \
 	cld; \
 	pushl %es; \
@@ -99,12 +99,13 @@ error_code:
     # disable intrrupts
     cli
     call    *%edi                   # Invokes the do_handler function.
+    sti 
 	jmp     ret_from_exception      # returns from the exception.
 
 
 ret_from_exception:
     pushl   $256
-    jmp     sys_halt                # abort 
+    call    do_halt                # abort 
 
 # Exception handlers
 
@@ -280,7 +281,7 @@ rtc_handler:
 
 
 
-# System calls
+# System calls linkage
 .globl syscall_handler
 syscall_handler:
     pushl %eax                              # save the system call number.
