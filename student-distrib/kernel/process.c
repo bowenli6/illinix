@@ -17,8 +17,8 @@ pid_t curr_pid;         /* current pid*/
 static int32_t process_create(void);
 static void process_free(pid_t _pid);
 static void context_switch(process_t *p);
-static int32_t parse_arg(int8_t *cmd, char argv[MAXARGS][MAXARGS]);
-static int32_t copy_args(process_t *p, char argv[MAXARGS][MAXARGS]);
+static int32_t parse_arg(int8_t *cmd, char argv[MAXARGS][COMMAND_LEN]);
+static int32_t copy_args(process_t *p, char argv[MAXARGS][COMMAND_LEN]);
 static void update_tss(pid_t _pid);
 
 
@@ -92,7 +92,7 @@ int32_t do_execute(const int8_t *cmd) {
     process_t *p;
     int32_t errno;
     int32_t argc;
-    char argv[MAXARGS][MAXARGS];    
+    char argv[MAXARGS][COMMAND_LEN];    
     uint32_t EIP_reg;
 
     /* parse arguments */
@@ -184,7 +184,7 @@ pid_t sys_getppid() {
  * @return number of argumnets (including file name)
  * @return < 0 if the command cannot be executed
  */
-static int32_t parse_arg(int8_t *cmd, char argv[MAXARGS][MAXARGS]) {
+static int32_t parse_arg(int8_t *cmd, char argv[MAXARGS][COMMAND_LEN]) {
     char *delim;                    /* points to the first space delimiter */
     int argc;                       /* number of arguments */
     int8_t buf[strlen(cmd) + 2];    /* buffer that contains command line */
@@ -229,7 +229,7 @@ static int32_t parse_arg(int8_t *cmd, char argv[MAXARGS][MAXARGS]) {
  * @param argv : arguments list
  * @return int32_t : number of arguments copied, or < 0 if cannot copy
  */
-static int32_t copy_args(process_t *p, char argv[MAXARGS][MAXARGS]) {
+static int32_t copy_args(process_t *p, char argv[MAXARGS][COMMAND_LEN]) {
     int i;
 
     if (p->argc > MAXARGS) return -1;
