@@ -5,7 +5,7 @@
 #include <vfs/ece391_vfs.h>
 
 
-#define COMMAND_LEN             128
+#define COMMAND_LEN             33
 #define MAXARGS                 10
 #define TASK_COUNT              8               
 
