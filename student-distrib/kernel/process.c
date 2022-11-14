@@ -47,7 +47,8 @@ void init_task() {
 
 
 /**
- * @brief set ebp and esp to parent kernel stack and jump into parent's process
+ * @brief set ebp to parent kernel stack and jump into parent's process
+ * (ebp stores the address of esp and eip on stack)
  * 
  * @param status : the status of the halt syscall
  */
@@ -69,14 +70,13 @@ void do_halt(uint32_t status) {
     sti();
     asm volatile ("                         \n\
                     movl %%edx, %%ebp       \n\
-                    movl %%edx, %%esp       \n\
                     movl %%ebx, %%eax       \n\
                     leave                   \n\
                     ret                     \n\
                   "
                   :
-                  : "d"(parent->ebp), "c"(parent->esp), "b"(status)
-                  : "cc", "memory"
+                  : "d"(parent->ebp), "b"(status)
+                  : "memory"
     );      
 }
 
@@ -88,7 +88,7 @@ void do_halt(uint32_t status) {
  */
 int32_t do_execute(const int8_t *cmd) {
     pid_t pid;
-    uint32_t esp, ebp;
+    uint32_t ebp;
     process_t *p;
     int32_t errno;
     int32_t argc;
@@ -131,13 +131,11 @@ int32_t do_execute(const int8_t *cmd) {
 
     if (curr_pid) {
         /* save the kernel stack of the current process */
-        asm volatile("movl %%ebp, %0        \n\
-                      movl %%esp, %1"
-                        :
-                        : "rm"(ebp), "rm"(esp)             
-                        : "cc", "memory" 
+        asm volatile("movl %%ebp, %0"
+                    :
+                    : "rm"(ebp)             
+                    : "memory" 
                     );
-        CURRENT->esp = esp;
         CURRENT->ebp = ebp;
     }
 

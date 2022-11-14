@@ -157,7 +157,7 @@ Process
     Reason:     more than one leading spaces should be ignored
     Time used:  30 min 
     Solution:   Use a while loop to skip leading zeros
-
+    
 4.  Problem:    store command arguments error
     Reason:     local char pointers will be lost after the function returns and stack frame cleared.
     Time used:  20 min 

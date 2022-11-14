@@ -63,8 +63,11 @@ void key_press(uint32_t scancode) {
         out_tab(TAB_SPACE);
     case L:
         if (terminal.ctrl) {                    /* If ctrl is hold and CTRL-L is pressed. */
+            char buf[terminal.size];
             clear(); 
             puts("391OS> ");
+            bufcpy((void*)buf, (void*)terminal.buffer, terminal.size, terminal.bufhd);
+            out(buf, terminal.size);
         } else {
             if (terminal.shift) {                   
                 in(scancode, 1 - (terminal.capslock & isletter(scancode)));
