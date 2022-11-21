@@ -28,13 +28,7 @@
 #define USER_STACK_ADDR         (0x8400000 - 0x4)
 #define PROGRAM_IMG_BEGIN       0x08048000      /* The program img begin */
 
-typedef enum {
-    UNRUNNABLE,
-    RUNNABLE,
-    RUNNING,
-    STOPPED,
-    SLEEPING
-} pro_state;
+typedef enum { UNUSED, RUNNABLE, RUNNING, STOPPED, SLEEPING } pro_state;
 
 typedef struct {
     uint32_t eax;
@@ -65,6 +59,7 @@ typedef struct thread {
     uint32_t           eip;
     files              fds;             /* opened file descritors */
     uint8_t            kthread;         /* 1 if this thread is belong to the kernel */
+    uint32_t           time_slice;      
 } thread_t;
 
 
@@ -84,12 +79,14 @@ typedef union {
 
 extern pid_t curr_pid;
 extern thread_t *tasks[NTASK];
+extern thread_t *sched;
 extern thread_t *init;
 extern console_t *console;
 
-#define GETPRO(pid) (tasks[(pid)-TASKSTART])
 
-#define CURRENT GETPRO(curr_pid)
+#define GETPRO(pid) (tasks[(pid)-TASKSTART])
+#define CURRENT (GETPRO(curr_pid))
+
 
 void swapper(void);
 void init_task(void);

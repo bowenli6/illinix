@@ -25,8 +25,8 @@
 
 extern const char scancodes[KEYBOARD_SIZE][2];
 
-void keyboard_init();
-void do_keyboard();
+void keyboard_init(void);
+void do_keyboard(void);
 
 
 #endif /* _KEYBOARD_H */

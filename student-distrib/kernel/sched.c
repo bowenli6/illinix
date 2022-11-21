@@ -4,19 +4,16 @@
 #include <lib.h>
 
 
-thread_t *sched;
-
 /**
  * @brief init the scheduler (process 0)
  * 
  */
 void sched_init(void) {
     /* allocate memory spaces for kernel threads */
-    process_t *swapper = alloc_kstack(0);
-    process_t *initp = alloc_kstack(1);
-
+    process_t *swapperp = (process_t *)alloc_kstack(0);
+    process_t *initp = (process_t *) alloc_kstack(1);
     /* set up process 0 */
-    sched = &swapper->thread;
+    sched = &swapperp->thread;
     sched->state = RUNNABLE;
     sched->parent = NULL;
     sched->child = init;
@@ -28,9 +25,6 @@ void sched_init(void) {
     init->parent = sched;
     init->child = NULL;
     init->kthread = 1;   
-
-    /* copy the current hardware context to sched */
-    save_context(sched->context);
 
     /* jump to the task of process 0 */
     swapper();
@@ -68,7 +62,7 @@ int32_t schedule(void) {
 
     /* no task can be scheduled 
      * return, pause, and wait for 
-     * awaking by a time interrupt */
+     * awaking by a timer interrupt */
     return 0;
 }
 

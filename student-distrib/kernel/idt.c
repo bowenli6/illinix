@@ -100,6 +100,7 @@ void trap_init() {
  * from device drivers.
  */
 void intr_init() {
+    set_intr_gate(TIMER_INTR, &timer_handler);
     set_intr_gate(KEYBOARD_INTR, &keyboard_handler);
     set_intr_gate(RTC_INTR, &rtc_handler);
 }

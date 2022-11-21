@@ -8,6 +8,7 @@
 #include <errno.h> 
 
 
+thread_t *sched;                /* process 0 (scheduler) */
 thread_t *init;                 /* process 1 (init process) */
 thread_t *tasks[NTASK];         /* list of user processes (pid starting from 2 to PID_SIZE) */
 console_t *console;             /* the console */
