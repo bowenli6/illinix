@@ -4,8 +4,8 @@
 #include <types.h>
 #include <drivers/fs.h>
 
-#define INUSED      1                      /* A file is inused. */
-#define UNUSED      0                      /* A file is unused. */
+#define INUSE      1                      /* A file is inused. */
+#define UNUSE      0                      /* A file is unused. */
 #define MAXREAD     0xfffff
 
 typedef struct {

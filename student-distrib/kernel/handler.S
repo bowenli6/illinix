@@ -234,31 +234,15 @@ simd_coprocessor_error_handler:
 
 # Interrupt handlers
 
-interrupt_handler: 
-# Save the registers that might be used by the do_handler.
-    popl    %es
-    pushl   %ds
-	pushl   %eax
-	pushl   %ebp
-	pushl   %edi
-	pushl   %esi
-	pushl   %edx
-	pushl   %ecx
-	pushl   %ebx
-    movl    INTR(%esp), %eax
-    call    *%eax
-    popl    %ebx
-    popl    %ecx
-    popl    %edx
-    popl    %esi
-    popl    %edi
-    popl    %ebp
-    popl    %eax
-    popl    %ds
-    popl    %es
-    addl    $4, %esp
-    iret
 
+.globl timer_handler
+timer_handler:
+    pushfl  
+    pushal
+    call    do_timer
+    popal
+    popfl
+    iret
 
 .globl keyboard_handler
 keyboard_handler:
@@ -268,6 +252,7 @@ keyboard_handler:
     popal
     popfl
     iret
+
 
 
 .globl rtc_handler

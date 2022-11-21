@@ -27,7 +27,7 @@ const char scancodes[KEYBOARD_SIZE][2] =
 /**
  * @brief Initialize the keyboard and enable the interrput.
  */
-void keyboard_init() {
+void keyboard_init(void) {
     enable_irq(KEYBOARD_IRQ);
 }
 
@@ -35,7 +35,7 @@ void keyboard_init() {
 /**
  * @brief Interrupt handler for the keyboard device.
  */
-void do_keyboard() {
+void do_keyboard(void) {
     uint32_t intr_flag;
     uint32_t scancode = inb(KEYBOARD_PORT);      /* Read one byte from stdin. */
     send_eoi(KEYBOARD_IRQ);                     /* Send End of interrupt to the PIC. */
