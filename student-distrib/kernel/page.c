@@ -2,11 +2,6 @@
 #include <boot/page.h>
 #include <lib.h>
 
-/**
- * @brief Turn on paging related registers.
- *
- */
-
 #define VIR_MEM_BEGIN           0x08000000      /* The mem begins at 128MB */
 
 //static int pde_alloc_index = 2;
@@ -14,6 +9,11 @@
 
 pte_t* _walk(pagedir_t pd, uint32_t va, int alloc);
 
+
+/**
+ * @brief Turn on paging related registers.
+ *
+ */
 void enable_paging()
 {
     /* set CR3 to directory base address */

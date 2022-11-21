@@ -15,13 +15,14 @@ typedef struct {
     uint8_t size;                       /* The current size of the buffer. */
     uint8_t buffer[TERBUF_SIZE];        /* Line buffer input. */
     uint8_t exit;                       /* A flag for stdin, 1 if \n is detected. */
+    pid_t pid;                          /* the process id holds the terminal (shell) */
 } terminal_t;
 
 
-extern terminal_t terminal;
 
 void key_press(uint32_t scancode);
 void key_release(uint32_t scancode);
+terminal_t * terminal_create(pid_t pid);
 int32_t terminal_open(const int8_t *fname);
 int32_t terminal_close(int32_t fd);
 int32_t terminal_read(int32_t fd, void *buf, int32_t nbytes);
