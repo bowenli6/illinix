@@ -50,6 +50,8 @@ int32_t fd_init(pid_t pid) {
         p->fds.fd[i].f_count = 0;
         p->fds.fd[i].f_flags = UNUSED;
     }
+
+    terminal_init(pid);
     return (__open(0, "stdin", TERMINAL, &terminal_op, pid)) + (__open(1, "stdout", TERMINAL, &terminal_op, pid));
 }
 
