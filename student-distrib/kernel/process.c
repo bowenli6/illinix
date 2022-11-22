@@ -10,20 +10,18 @@
 
 thread_t *sched;                /* process 0 (scheduler) */
 thread_t *init;                 /* process 1 (init process) */
-thread_t *tasks[NTASK];         /* list of user processes (pid starting from 2 to PID_SIZE) */
 console_t *console;             /* the console */
-pid_t curr_pid;                 /* current pid */
+uint32_t ntask;                 /* current number of tasks created (does not count sched and init) */
 
 
 /* local helper functions */
+static int32_t __exec(thread_t *current, thread_t **new, const int8_t *cmd, uint8_t kthread);
+static thread_t *process_create(thread_t *current, uint8_t kthread);
+static void process_free(thread_t *current, pid_t pid);
+static int32_t parse_arg(int8_t *cmd, int8_t *argv[]);
+static int32_t copy_args(thread_t *t, int8_t *argv[]);
 static void console_init(void);
-static int32_t process_create(uint8_t kthread);
-static void process_free(pid_t _pid);
-static int32_t parse_arg(int8_t *cmd, char argv[MAXARGS][COMMAND_LEN]);
-static int32_t copy_args(thread_t *t, char argv[MAXARGS][COMMAND_LEN]);
 static void update_tss(pid_t _pid);
-static int32_t __exec(const int8_t *cmd, uint8_t kthread);
-static thread_t *get_task(pid_t pid);
 
 
 /**
@@ -38,25 +36,30 @@ void swapper(void) {
 
 
 /**
- * @brief create a user process wit pid 2 (the shell)
+ * @brief the task of the system process 1
  * 
- * the task of the init process
- * 
- * shell process will be created by fork in the future
  */
 void init_task(void) {
-    cli();
-    init->state = RUNNING;
+    /* only execute once during system boot */
     pidmap_init();
     console_init();
+    ntask = 0;
     
-    /* typing user name and password */
+    /* checking user name and password */
     // TODO
 
-    init->state = RUNNABLE;
-    save_context(init->context);
-    /* adopt orphan processes */
-    // TODO
+    /* the real task of the init process
+     * scheduled actively by process 0 */
+    while (1) {
+        /* init start running */
+
+        /* adopt orphan processes */
+        // TODO
+
+        /* yield the CPU to process 0 again */
+        init->state = RUNNABLE;
+        context_switch(init->context, sched->context);
+    }
 }
 
 
@@ -64,23 +67,25 @@ void init_task(void) {
  * @brief set ebp to parent kernel stack and jump into parent's process
  * (ebp stores the address of esp and eip on stack)
  * 
- * @param status : the status of the halt syscall
+ * @param status : the status of the exit syscall
  */
-void do_halt(uint32_t status) {
-    /* If this is the shell, return to the shell */
-    if (CURRENT->pid == 2) {
-        process_free(CURRENT->pid);
-        init_task();
+void do_exit(uint32_t status) {
+    thread_t *t;
+    GETPRO(t);
+
+    /* check if the current process is running a system thread */
+    if (t->kthread) {
+        // TODO
     }
 
-    thread_t *curr = CURRENT;
-    thread_t *parent = CURRENT->parent;
-    curr_pid = parent->pid;
+    /* free the current task */
+    thread_t *parent = t->parent;
     parent->child = NULL;
-    update_tss(parent->pid);
-    process_free(curr->pid);
-    user_mem_map(parent->pid);
+    process_free(parent, t->pid);
 
+    ntask--;
+
+    /* switch to its parent's stack */
     sti();
     asm volatile ("                         \n\
                     movl %%edx, %%ebp       \n\
@@ -102,25 +107,30 @@ void do_halt(uint32_t status) {
  * @return int32_t : positive or 0 denote success, negative values denote an error condition
  */
 int32_t do_execute(const int8_t *cmd) {
-    thread_t *t;   
-    uint32_t ebp;
+    thread_t **new; 
+    thread_t *current, *child;  
     int32_t errno;
 
-    if ((errno = __exec(cmd, 0)) < 0)
-        return errno;
+    GETPRO(current);
+    new = kmalloc(sizeof(thread_t *));
 
-    if (!t->kthread) {
-        /* save the kernel stack of the current process */
-        asm volatile("movl %%ebp, %0"
-                    :
-                    : "rm"(ebp)             
-                    : "memory" 
-                    );
-        CURRENT->context->ebp = ebp;
+    /* call _exec to create the new thread and execute it
+     * (only return here when error occurs) */
+    if ((errno = __exec(current, new, cmd, 0)) < 0) {
+        kfree(new);
+        return errno;
     }
 
+    if (!(*new)->kthread) {
+        /* save the kernel stack of the current process */
+        save_context((*new)->context);
+    }
+
+    child = *new;
+    kfree(new);
+
     /* switch to user mode (ring 3) */
-    switch_to_user(t);
+    switch_to_user(child);
 
     return 0;   /* never reach here */
 }
@@ -129,39 +139,38 @@ int32_t do_execute(const int8_t *cmd) {
 /**
  * @brief lower operation for executing a process
  * 
+ * @param t: the new thread 
  * @param cmd : command line arguments
  * @param kthread : 1 if it is kernel thread, 0 otherwie
  * @return int32_t : positive or 0 denote success, negative values denote an error condition
  */
-static int32_t __exec(const int8_t *cmd, uint8_t kthread) {
+static int32_t __exec(thread_t *current, thread_t **new, const int8_t *cmd, uint8_t kthread) {
     pid_t pid;
-    thread_t *t;
     int32_t errno;
     int32_t argc;
-    char argv[MAXARGS][COMMAND_LEN];    
     uint32_t EIP_reg;
     terminal_t *terminal;
+    int8_t **argv = kmalloc(MAXARGS * ARGSIZE);
 
     /* parse arguments */
-    if ((argc = parse_arg((int8_t *)cmd, argv)) < 0) 
+    if ((argc = parse_arg((int8_t *)cmd, argv)) < 0)
         return argc;
 
     /* create process */
-    if ((pid = process_create(kthread)) < 0)
-        return pid;
+    if (!(*new = process_create(current, kthread)))
+        return -1;
 
     /* get process and set its arguments */
-    t = GETPRO(pid);
-    t->argc = argc;
-    if ((errno = copy_args(t, argv)) < 0) {
-        process_free(pid);
-       
+    (*new)->argc = argc;
+
+    if ((errno = copy_args(*new, argv)) < 0) {
+        process_free(current, pid);
         return errno; 
     }    
 
     /* executable check and load program image into user's memory */
     if ((errno = pro_loader(argv[0], &EIP_reg, pid)) < 0) {
-        process_free(pid);
+        process_free(current, pid);
         return errno;
     }
 
@@ -169,12 +178,12 @@ static int32_t __exec(const int8_t *cmd, uint8_t kthread) {
     if (!strcmp(argv[0], SHELL)) {
 
         if (console->size == console->max) {
-            process_free(pid);
+            process_free(current, pid);
             return -1;
         }
 
-        if (!(terminal = terminal_create(pid))) {
-            process_free(pid);
+        if (!(terminal = terminal_create(*new))) {
+            process_free(current, pid);
             return -1;
         }
 
@@ -182,12 +191,15 @@ static int32_t __exec(const int8_t *cmd, uint8_t kthread) {
     }
 
     /* init file array */
-    fd_init(pid);
+    fd_init(*new);
 
     /* store registers */
-    t->usreip = EIP_reg;
-    t->usresp = USER_STACK_ADDR;
-    
+    (*new)->usreip = EIP_reg;
+    (*new)->usresp = USER_STACK_ADDR;
+
+    /* increment number of tasks */
+    ntask++;
+
     return 0;
 }
 
@@ -225,10 +237,9 @@ pid_t sys_getppid() {
  * @param cmd : command line
  * @param argv : array of strings to be set to the arguments
  * 
- * @return number of argumnets (including file name)
- * @return < 0 if the command cannot be executed
+ * @return int32_t : positive or 0 denote success, negative values denote an error condition
  */
-static int32_t parse_arg(int8_t *cmd, char argv[MAXARGS][COMMAND_LEN]) {
+static int32_t parse_arg(int8_t *cmd, int8_t *argv[]) {
     char *delim;                    /* points to the first space delimiter */
     int argc;                       /* number of arguments */
     int8_t buf[strlen(cmd) + 2];    /* buffer that contains command line */
@@ -273,7 +284,7 @@ static int32_t parse_arg(int8_t *cmd, char argv[MAXARGS][COMMAND_LEN]) {
  * @param argv : arguments list
  * @return int32_t : number of arguments copied, or < 0 if cannot copy
  */
-static int32_t copy_args(thread_t *t, char argv[MAXARGS][COMMAND_LEN]) {
+static int32_t copy_args(thread_t *t, int8_t *argv[]) {
     int i;
 
     if (t->argc > MAXARGS) return -1;
@@ -292,42 +303,33 @@ static int32_t copy_args(thread_t *t, char argv[MAXARGS][COMMAND_LEN]) {
 /**
  * @brief Create a process_t for a new process
  * 
- * @return int32_t : 0
+ * @param current : the current thread
+ * @param child : the thread to be created
+ * @param kthread : is the thread a kernel thread?
+ * @return int32_t : positive or 0 denote success, negative values denote an error condition
  */
-static int32_t process_create(uint8_t kthread) {
+static thread_t *process_create(thread_t *current, uint8_t kthread) {
     pid_t pid;
     process_t *p;
     thread_t *t;
 
     if ((pid = alloc_pid()) < 0) 
-        return pid;
+        return NULL;
 
-    /* process overflow */
-    if (pid >= NTASK + TASKSTART) 
-        return -1;
-
-    p = (process_t *)alloc_kstack(pid-2);
-    tasks[pid-TASKSTART] = &p->thread;
-
-    t = GETPRO(pid);
+    p = (process_t *)alloc_kstack(pid);
+    t = &p->thread;
     
     /* setup current pid */
     t->pid = pid;
 
-    /* setup the kernel stack info */
-
     /* set the parent pointer */
-    if (kthread) {
-        t->parent = init;
-    } else {
-        t->parent = CURRENT;
-        CURRENT->child = p;
-    }
-
+    t->parent = current;
+    current->child = t;
+    
     /* not a kernel thread */
     t->kthread = kthread;
 
-    return pid;
+    return t;
 }
 
 
@@ -335,14 +337,12 @@ static int32_t process_create(uint8_t kthread) {
  * @brief Free a existing process_t
  * 
  */
-static void process_free(pid_t pid) {
-    CURRENT->child = NULL;
-    tasks[pid-TASKSTART] = NULL;
-    kill_pid();
-    free_kstack(pid-TASKSTART);
+static void process_free(thread_t *current, pid_t pid) {
+    kill_pid(pid);
+    free_kstack(pid);
     user_mem_unmap(pid);
-    update_tss(CURRENT->pid);
-    user_mem_map(CURRENT->pid);
+    update_tss(current->pid);
+    user_mem_map(current->pid);
 }
 
 
@@ -361,8 +361,6 @@ static void process_free(pid_t pid) {
 void switch_to_user(thread_t *p) {
     
     update_tss(p->pid);
-
-    curr_pid = p->pid;
 
     sti();
 
@@ -398,7 +396,7 @@ static void update_tss(pid_t pid) {
 
 
 /**
- * @brief Get the esp0 of the process
+ * @brief get the esp0 of the process
  * 
  * @param pid : process id
  * @return uint32_t kernel esp
@@ -416,21 +414,9 @@ static void console_init(void) {
     int num_shell = 3;
 
     /* create console */
-    console = (console_t *)kmalloc(sizeof(console));
+    console = (console_t *)kmalloc(sizeof(console));    /* never be freed */
 
     /* init three shells */
     while (num_shell--)
-        (void)__exec(SHELL, 1);
-}
-
-
-/**
- * @brief Get the task has process id = pid
- * USE FOR DEBUG ONLY
- * 
- * @param pid : process id
- * @return thread_t : thread object
- */
-static thread_t *get_task(pid_t pid) {
-    return tasks[pid-TASKSTART];
+        (void)__exec(init, SHELL, 1);
 }

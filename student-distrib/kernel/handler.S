@@ -13,7 +13,7 @@ USER_DS  = 0x002B
 
 syscall_table:
     .long sys_restart   /* Used for restarting */
-	.long sys_halt
+	.long sys_exit
 	.long sys_execute
 	.long sys_read
 	.long sys_write
@@ -104,8 +104,11 @@ error_code:
 
 
 ret_from_exception:
+    jmp     abort
+
+abort:
     pushl   $256
-    call    do_halt                # abort 
+    call    do_exit
 
 # Exception handlers
 
