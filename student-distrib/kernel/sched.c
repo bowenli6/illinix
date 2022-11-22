@@ -90,7 +90,7 @@ int32_t schedule(void) {
     /* avoid deadlock by ensuring that devices can interrupt */
     sti();
 
-    /* degrade the current process */
+    /* push the current process into a lower staircase level */
     degrade(t);
 
     /* check if the task is real time */
@@ -108,7 +108,11 @@ int32_t schedule(void) {
 }
 
 
-
+/**
+ * @brief  push the process into a lower staircase level
+ * 
+ * @param t : thread 
+ */
 static void degrade(thread_t *t) {
     uint8_t level = t->level;
 
@@ -143,13 +147,13 @@ static void degrade(thread_t *t) {
 
 
 /**
- * @brief Get the task object
+ * @brief pick the new task to run
  * 
- * @param prio 
- * @return thread_t* 
+ * @param prio : priority
+ * @return thread_t* : thread pointer
  */
 static thread_t *get_task(uint8_t prio) {
-    return runqueue->staircase[prio].next;
+    return (thread_t *)(runqueue->staircase[prio].next);
 }
 
 
