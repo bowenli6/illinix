@@ -1,5 +1,6 @@
 #include <drivers/terminal.h>
 #include <vfs/ece391_vfs.h>
+#include <pro/process.h>
 #include <lib.h>
 #include <io.h>
 
@@ -21,20 +22,24 @@ static int isletter(uint32_t scancode);
  * @brief create and initialize the terminal.
  * 
  */
-terminal_t *terminal_create(pid_t pid) {
+terminal_t *terminal_create(thread_t *shell) {
+    if (!shell) return NULL;
+
     /* create a new terminal */
-    //TODO with kmalloc
+    terminal_t *terminal = kmalloc(sizeof(terminal_t));
 
     /* init terminal state */
-    terminal.capslock = 0;              /* CapsLock is not pressed. */
-    terminal.shift = 0;                 /* Shift is not pressed. */
-    terminal.ctrl = 0;                  /* Ctrl is not pressed. */
-    terminal.alt = 0;                   /* alt key is not pressed */
-    terminal.bufhd = 0;                 /* 0 characters read. */
-    terminal.buftl = 0;                 /* 0 characters read. */
-    terminal.size = 0;                  /* No character yet. */
-    terminal.exit = 0;                  /* \n is not read. */
-    memset((void*)terminal.buffer, 0, TERBUF_SIZE);
+    terminal->capslock = 0;                     /* capsLock is not pressed. */
+    terminal->shift = 0;                        /* shift is not pressed. */
+    terminal->ctrl = 0;                         /* ctrl is not pressed. */
+    terminal->alt = 0;                          /* alt key is not pressed */
+    terminal->bufhd = 0;                        /* 0 characters read. */
+    terminal->buftl = 0;                        /* 0 characters read. */
+    terminal->size = 0;                         /* No character yet. */
+    terminal->exit = 0;                         /* \n is not read. */
+    terminal->buffer = kmalloc(TERBUF_SIZE);    /* create buffer */
+    terminal->shell = shell;                    /* store shells for this terminal */
+    memset((void*)terminal->buffer, 0, TERBUF_SIZE);
 }
 
 
@@ -43,8 +48,9 @@ terminal_t *terminal_create(pid_t pid) {
  * 
  */
 void terminal_free(terminal_t *terminal) {
-    /* free the terminal */
-    
+    if (!terminal) return;
+    kfree(terminal->buffer);
+    kfree(terminal);
 }
 
 

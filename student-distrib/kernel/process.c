@@ -12,7 +12,7 @@ thread_t *sched;                /* process 0 (scheduler) */
 thread_t *init;                 /* process 1 (init process) */
 console_t *console;             /* the console */
 uint32_t ntask;                 /* current number of tasks created (does not count sched and init) */
-
+list_head *task_head;           /* the head of the task list */
 
 /* local helper functions */
 static int32_t __exec(thread_t *current, thread_t **new, const int8_t *cmd, uint8_t kthread);
@@ -20,6 +20,7 @@ static thread_t *process_create(thread_t *current, uint8_t kthread);
 static void process_free(thread_t *current, pid_t pid);
 static int32_t parse_arg(int8_t *cmd, int8_t *argv[]);
 static int32_t copy_args(thread_t *t, int8_t *argv[]);
+static void switch_to_user(thread_t *p);
 static void console_init(void);
 static void update_tss(pid_t _pid);
 
@@ -123,7 +124,7 @@ int32_t do_execute(const int8_t *cmd) {
 
     if (!(*new)->kthread) {
         /* save the kernel stack of the current process */
-        save_context((*new)->context);
+        save_context(current->context);
     }
 
     child = *new;
@@ -209,25 +210,10 @@ static int32_t __exec(thread_t *current, thread_t **new, const int8_t *cmd, uint
  * 
  * @return pid_t : The process ID of the calling process
  */
-pid_t sys_getpid() {
-    // TODO
-    return 0;
-}
-
-
-/**
- * @brief returns the process ID of the parent of the calling process.
- * This will be either the ID of the process that created this process us‐
- * ing fork(), or, if that process has already terminated, the ID  of  the
- * process  to which this process has been reparented (either init(1) or a
- * "subreaper" process defined via the prctl(2) PR_SET_CHILD_SUBREAPER op‐
- * eration).
- * 
- * @return pid_t : process ID of the parent of the calling process
- */
-pid_t sys_getppid() {
-    // TODO
-    return 0;
+pid_t do_getpid(void) {
+    thread_t *t;
+    GETPRO(t);
+    return t->pid;
 }
 
 
@@ -414,7 +400,8 @@ static void update_tss(pid_t pid) {
  * @return uint32_t kernel esp
  */
 uint32_t get_esp0(pid_t pid) {
-    return KERNEL_STACK_BEGIN - pid * KERNEL_STACK_SZ - 0x4;
+    // return KERNEL_STACK_BEGIN - pid * KERNEL_STACK_SZ - 0x4;
+    return 0; // TODO
 }
 
 
@@ -423,12 +410,18 @@ uint32_t get_esp0(pid_t pid) {
  * 
  */
 static void console_init(void) {
-    int num_shell = 3;
+    int i;
+    const int num_shell = 3;
+    thread_t **new = kmalloc(sizeof(thread_t *));
 
     /* create console */
-    console = (console_t *)kmalloc(sizeof(console));    /* never be freed */
+    console = kmalloc(sizeof(console));    /* never be freed */
 
     /* init three shells */
-    while (num_shell--)
-        (void)__exec(init, SHELL, 1);
+    for (i = 0; i < num_shell; ++i) {
+        (void)__exec(init, new, SHELL, 1);
+        console->terminals[i]->shell = *new;
+    }
+
+    kfree(new);
 }
