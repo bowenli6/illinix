@@ -94,3 +94,82 @@ File System:
 ----------------------------------------------------------------------------------------------------
 Checkpoint3:
 
+System calls Linkage
+1.  Problem:    Page fault calling fputs 
+    Reason:     (1) Access sys_open instead of sys_write
+                (2) Forget to init file descriptor array for each process
+    Time used:  1 hour
+    Solution:   change the jump table offset or add a reset sys_reset at the beginning of the jump table.
+                init processes' file descriptor array
+
+2.  Problem:    syscall handler cannot return back to user mode (ring 3)
+    Reason:     does not iret properly 
+    Time used:  10 min 
+    Solution:   pop and iret
+
+3.  Problem:    Cannot read from sys_read
+    Reason:     use unimplment function copy from user 
+    Time used:  20 min
+    Solution:   Discard the call to copy from user since we have direct mapping this time 
+
+Process 
+4.  Problem:    Shell stopped after typing a error command
+    Reason:     Forget to kill the error process and resume shell process 
+    Time used:  1 hour
+    Solution:   when a error occur, context switch to shell
+
+
+5.  Problem:    Process switch failed
+    Reason:     Fail to switch back to parent when halt
+    Time used:  2 days
+    Solution:   Store parent esp and ebp before context switch and restore after child halts.
+
+6.  Problem:    invalid command page fault
+    Reason:     Did not remap the user space to the parent
+    Time used:  1 day
+    Solution:   Remap and reset tss esp0 and ss0
+
+Terminal 
+7.  Problem:    Backspace will remove the printed characters
+    Reason:     Did not check if the buffer size is empty 
+    Time used:  1 hour
+    Solution:   Only perform backspace when terminal buffer is empty
+
+8.  Problem:    CTRL-L will clear all of the screen
+    Reason:     Did not redraw 391OS >
+    Time used:  5 min
+    Solution:   Redraw after clear when press CTRL-L
+----------------------------------------------------------------------------------------------------
+Checkpoint4:
+
+Process
+1.  Problem:    Mutiple Shell cannot exit
+    Reason:     My computer interprets new line character as \r
+    Time used:  30 min
+    Solution:   change \r to \n when terminal_read to adjust shell program
+
+2.  Problem:    Init shell problem exit page fault
+    Reason:     Did not restart the init shell properly
+    Time used:  10 min
+    Solution:   Free the init shell process and restart the init process
+
+3.  Problem:    command line arguments parsing error 
+    Reason:     more than one leading spaces should be ignored
+    Time used:  30 min 
+    Solution:   Use a while loop to skip leading zeros
+    
+4.  Problem:    store command arguments error
+    Reason:     local char pointers will be lost after the function returns and stack frame cleared.
+    Time used:  20 min 
+    Solution:   Store the command arguments locally in array and later store it in the PCB
+
+5.  Problem:    syserr test failed 
+    Reason:     terminal and rtc: read/write/close wrong
+    Time used:  2 hour
+    Solution:   (1) terminal should never be able to close
+                (2) terminal should only allow fd 0 to read
+                (3) terminal should only allow fd 1 to write 
+                (4) rtc should open a file to set its f_op
+
+----------------------------------------------------------------------------------------------------
+Checkpoint5:

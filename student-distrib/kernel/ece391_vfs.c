@@ -2,6 +2,9 @@
 #include <drivers/terminal.h>
 #include <drivers/rtc.h>
 #include <drivers/fs.h>
+#include <boot/syscall.h>
+#include <pro/process.h>
+#include <errno.h>
 #include <lib.h>
 #include <io.h>
 
@@ -29,33 +32,25 @@ static file_op terminal_op = {
     .write = terminal_write
 };
 
-// /* RTC operation. */
-// static file_op rtc_op = {
-//     .open = RTC_open,
-//     .close = RTC_close,
-//     .read = RTC_read,
-//     .write = RTC_write
-// };
-
-
-/* Local functions used for opening a file. */
-
-static int32_t __open(int32_t fd, const int8_t *fname, file_type_t type, file_op *op);
-
-ece391_vfs_t vfs;   /* Stores the virtual file system. */
 
 /**
  * @brief Initialize the virtual file system.
+ * @param p init the fd for this process
  * 
  * @return int32_t : 0 on success, otherwise on failure.
  */
-int32_t vfs_init() {
+int32_t fd_init(pid_t pid) {
     int i;
+    process_t *p = GETPRO(pid);
+
+    p->fds.count = 0;
+    p->fds.max_fd = OPEN_MAX;
+
     for (i = 0; i < OPEN_MAX; ++i) {
-        vfs.fd[i].f_count = 0;
-        vfs.fd[i].f_flags = UNUSED;
+        p->fds.fd[i].f_count = 0;
+        p->fds.fd[i].f_flags = UNUSED;
     }
-    return (__open(0, "stdin", TERMINAL, &terminal_op)) + (__open(1, "stdout", TERMINAL, &terminal_op));
+    return (__open(0, "stdin", TERMINAL, &terminal_op, pid)) + (__open(1, "stdout", TERMINAL, &terminal_op, pid));
 }
 
 /**
@@ -72,10 +67,10 @@ int32_t file_open(const int8_t *fname) {
     /* Call read_dentry_by_name to get a new dentry */
     if (!(fd = read_dentry_by_name(fname, &dentry))) { 
         /* Initialize the current file object. */
-        fd = file_init(2, &file, &dentry, &f_op); 
+        fd = file_init(2, &file, &dentry, &f_op, CURRENT->pid); 
 
         /* Copy the file object into the vfs fd. */
-        memcpy((void*)&(vfs.fd[fd]), (void*)&file, sizeof(file_t));
+        memcpy((void*)&(CURRENT->fds.fd[fd]), (void*)&file, sizeof(file_t));
     }
     return fd;
 }
@@ -88,14 +83,13 @@ int32_t file_open(const int8_t *fname) {
  * @return int32_t 0 on success, -1 on failure.
  */
 int32_t file_close(int32_t fd) {
-    if (vfs.fd[fd].f_flags == UNUSED) {
-        puts("ERROR: File has already been closed.\n");
+    if (!CURRENT->fds.fd[fd].f_count) {
         return -1;
     }
 
     /* Close the file. */
-    vfs.fd[fd].f_count--; 
-    vfs.fd[fd].f_flags = UNUSED;
+    CURRENT->fds.fd[fd].f_count--; 
+    CURRENT->fds.fd[fd].f_flags = UNUSED;
     return 0;
 }
 
@@ -111,9 +105,8 @@ int32_t file_close(int32_t fd) {
  */
 int32_t file_read(int32_t fd, void *buf, int32_t nbytes) {
     int32_t nread;
-    file_t *file = &(vfs.fd[fd]);
+    file_t *file = &(CURRENT->fds.fd[fd]);
     if (file->f_flags == UNUSED) {
-        puts("ERROR: File does not exist.\n");
         return -1;
     }
 
@@ -142,7 +135,7 @@ int32_t file_write(int32_t fd, const void *buf, int32_t nbytes) {
  * @return int32_t : A file descriptor on success, -1 on failure.
  */
 int32_t directory_open(const int8_t *fname) {
-    return __open(2, fname, DIRECTORY, &dir_op);
+    return __open(2, fname, DIRECTORY, &dir_op, CURRENT->pid);
 }
 
 
@@ -167,18 +160,17 @@ int32_t directory_close(int32_t fd) {
  */
 int32_t directory_read(int32_t fd, void *buf, int32_t nbytes) {
     int32_t nread;
-    if (vfs.fd[fd].f_flags == UNUSED) {
-        puts("ERROR: File does not exist.\n");
+    if (CURRENT->fds.fd[fd].f_flags == UNUSED) {
         return -1;
     }
 
-    if (vfs.fd[fd].f_pos >= fs.boot->n_dir) 
+    if (CURRENT->fds.fd[fd].f_pos >= fs.boot->n_dir) 
         return 0;
     if (nbytes > NAMESIZE)
         nread = NAMESIZE;
     else
         nread = nbytes;
-    memcpy(buf, (void*)(fs.boot->dirs[vfs.fd[fd].f_pos++].fname), nread);
+    memcpy(buf, (void*)(fs.boot->dirs[CURRENT->fds.fd[fd].f_pos++].fname), nread);
     return nread;
 }
 
@@ -201,19 +193,20 @@ int32_t directory_write(int32_t fd, const void *buf, int32_t nbytes) {
  * @param fname : A file name.
  * @param op : A file opeartion list.
  * @param type : The file type.
+ * @param p : the current process
  * @return int32_t : The file descriptor on success, -1 on failure.
  */
-static int32_t __open(int32_t fd, const int8_t *fname, file_type_t type, file_op *op) {
+int32_t __open(int32_t fd, const int8_t *fname, file_type_t type, file_op *op, pid_t pid) {
     file_t file;
     dentry_t dentry; 
+    process_t *p = GETPRO(pid);
     memset((void*)&dentry, 0, sizeof(dentry));
     memcpy((void*)(&dentry.fname), (void*)fname, NAMESIZE);
     dentry.inode = 0;   /* ignored here. */
     dentry.type = type;
-    if ((fd = file_init(fd, &file, &dentry, op)) < 0) {
-        printf("%s file object allocation error.\n", fname);
+    if ((fd = file_init(fd, &file, &dentry, op, p->pid)) < 0) {
         return -1;
     }
-    memcpy((void*)(&vfs.fd[fd]), (void*)&file, sizeof(file_t));
+    memcpy((void*)&(p->fds.fd[fd]), (void*)&file, sizeof(file_t));
     return fd;
 }

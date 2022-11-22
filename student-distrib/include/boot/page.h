@@ -6,9 +6,8 @@
 #define VIDEO               0xB8000
 #define CR4_EXTENSION_FLAG  0x10
 #define CR0_PAGE_FLAG       0x80000000
-#define MAX_PAGES 16
-#define RESERVED_PAGES 3
 #define KERNEL_INDEX 1
+#define VIR_VID_MEM 0x8400000
 
 #define PTE_PRESENT 0x1
 #define PTE_RW 0x2
@@ -50,6 +49,8 @@ void free_uvmdir(pagedir_t pd, int size);
 
 int vmalloc(pagedir_t pd, int oldsize, int newsize, int flags);
 void vmdealloc(pagedir_t pd, int oldsize, int newsize);
+
+int32_t do_vidmap(uint8_t **screen_start);
 
 typedef struct pg_descriptor_t {
     uint32_t flags;

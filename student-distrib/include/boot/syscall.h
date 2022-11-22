@@ -1,47 +1,43 @@
 #ifndef _SYSCALL_H
 #define _SYSCALL_H
 
+#include <types.h>
+
 #define SYSCALL 0x80
+#define asmlinkage __attribute__((regparm(0)))
 
 void syscall_handler();
 
-
 /* Required by ECE391. */
-
-// int32_t halt(uint8_t status);
-// int32_t execute(const uint8_t *cmd);
-// int32_t open(const uint8_t *filename);
-// int32_t close(int32_t fd);
-// int32_t read(int32_t fd, void *buf, uint32_t nbytes);
-// int32_t write(int32_t fd, const void *buf, uint32_t nbytes);
-// int32_t getargs(uint8_t *buf, int32_t nbytes);
-// int32_t vidmap(uint8_t **screen_start);
-// int32_t set_handler(int32_t signum, void *handler_addr);
-// int32_t sigreturn(void);
-
+asmlinkage int32_t sys_halt(uint8_t status);
+asmlinkage int32_t sys_execute(const int8_t *cmd);
+asmlinkage int32_t sys_open(const int8_t *filename);
+asmlinkage int32_t sys_close(int32_t fd);
+asmlinkage int32_t sys_read(int32_t fd, void *buf, uint32_t nbytes);
+asmlinkage int32_t sys_write(int32_t fd, const void *buf, uint32_t nbytes);
+asmlinkage int32_t sys_getargs(uint8_t *buf, int32_t nbytes);
+asmlinkage int32_t sys_vidmap(uint8_t **screen_start);
+asmlinkage int32_t sys_set_handler(int32_t signum, void *handler_addr);
+asmlinkage int32_t sys_sigreturn(void);
 
 
-// /* --------------------------------Process-------------------------------- */
+/* Extra Credit */
 
+asmlinkage int32_t sys_restart(void);
 
-// /* process creation */
-// pid_t fork(void);
-// int exec(const char *file, char *const argv[], char *const envp[]);
+/* --------------------------------Process-------------------------------- */
 
-// /* termination */
-// pid_t wait(int *wstatus);
-// pid_t waitpid(pid_t pid, int *wstatus, int options);
-
-// /* identity */
-// pid_t getpid(void);
-// pid_t getppid(void);
-// uid_t getuid(void);
-// gid_t getgid(void);
-
-// /* control */
-// int kill(pid_t pid, int sig);
-// sighandler_t signal(int signum, sighandler_t handler);
-// unsigned int alarm(unsigned int seconds);
+// asmlinkage int32_t sys_fork(void);
+// asmlinkage int32_t sys_exit(uint8_t status);
+// asmlinkage int32_t sys_exec(const char *file, char *const argv[], char *const envp[]);
+// asmlinkage int32_t waitpid(pid_t pid, int *wstatus, int options);
+// asmlinkage int32_t getpid(void);
+// asmlinkage int32_t getppid(void);
+// asmlinkage int32_t getuid(void);
+// asmlinkage int32_t getgid(void);
+// asmlinkage int32_t kill(pid_t pid, int sig);
+// asmlinkage int32_t signal(int signum, sighandler_t handler);
+// asmlinkage int32_t alarm(unsigned int seconds);
 
 
 // /* -----------------------------Virtual Memory----------------------------- */
@@ -89,6 +85,5 @@ void syscall_handler();
 
 // /* devices control */
 // int ioctl(int fd, unsigned long request, ...);
-
 
 #endif /* _SYSCALL_H */

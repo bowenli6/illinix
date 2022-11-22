@@ -225,6 +225,8 @@ typedef uint32_t pte_t;
 
 pde_t page_directory[ENTRY_NUM] __attribute__((aligned (PAGE_SIZE)));
 pte_t page_table[ENTRY_NUM] __attribute__((aligned (PAGE_SIZE)));
+pte_t vidmap_table[ENTRY_NUM] __attribute__((aligned (PAGE_SIZE)));
+
 
 
 #endif /* ASM */

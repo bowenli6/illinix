@@ -1,4 +1,5 @@
 #include <drivers/terminal.h>
+#include <vfs/ece391_vfs.h>
 #include <lib.h>
 #include <io.h>
 
@@ -24,6 +25,7 @@ static void terminal_init() {
     terminal.capslock = 0;              /* CapsLock is not pressed. */
     terminal.shift = 0;                 /* Shift is not pressed. */
     terminal.ctrl = 0;                  /* Ctrl is not pressed. */
+    terminal.alt = 0;                   /* alt key is not pressed */
     terminal.bufhd = 0;                 /* 0 characters read. */
     terminal.buftl = 0;                 /* 0 characters read. */
     terminal.size = 0;                  /* No character yet. */
@@ -49,6 +51,8 @@ void key_press(uint32_t scancode) {
     case RSHIFT:
         terminal.shift = 1;
         return;
+    case LALT:
+        terminal.alt = 1;
     case BACKSPACE:
         backspace(scancode);
         return;
@@ -59,7 +63,11 @@ void key_press(uint32_t scancode) {
         out_tab(TAB_SPACE);
     case L:
         if (terminal.ctrl) {                    /* If ctrl is hold and CTRL-L is pressed. */
+            char buf[terminal.size];
             clear(); 
+            puts("391OS> ");
+            bufcpy((void*)buf, (void*)terminal.buffer, terminal.size, terminal.bufhd);
+            out(buf, terminal.size);
         } else {
             if (terminal.shift) {                   
                 in(scancode, 1 - (terminal.capslock & isletter(scancode)));
@@ -113,6 +121,7 @@ void key_release(uint32_t scancode) {
 static void in(uint32_t scancode, uint8_t caps) {
     if (scancode >= KEYBOARD_SIZE) return;          /* Should not print. */
     uint8_t character = scancodes[scancode][caps];  /* Get character. */
+    if (character == '\r') character = '\n';
     if (character) {
         putc(character);
         if (terminal.size  == TERBUF_SIZE)   
@@ -137,9 +146,12 @@ static void in(uint32_t scancode, uint8_t caps) {
 static void out(const void *buf, int32_t nbytes) {
     /* The method of outputting data will be changed when connected with VGA. */
     int i;
+    char c;
     
-    for (i = 0; i < nbytes; ++i)
-        putc(((char*)buf)[i]);   /* output to the screen. */
+    for (i = 0; i < nbytes; ++i) {
+        c = ((char*)buf)[i];
+        putc(c);   /* output to the screen. */
+    }
 }
 
 
@@ -161,7 +173,6 @@ static void out_tab(uint32_t n) {
 static void backspace() {
     if (!terminal.size) {  
         /* No way to backspace. */
-        back();
         return;
     } else {    
         /* Clear the most recent character. */
@@ -191,10 +202,10 @@ int32_t terminal_open(const int8_t *fname) {
  * @brief Clears any terminal specific variables. (do nothing for now.)
  * 
  * @param fd : 0 or 1.
- * @return int32_t : 0.
+ * @return int32_t : -1.
  */
 int32_t terminal_close(int32_t fd) {
-    return 0;
+    return -1;
 }
 
 
@@ -211,6 +222,8 @@ int32_t terminal_read(int32_t fd, void *buf, int32_t nbytes) {
     uint32_t intr_flag;
     int32_t nread;
     uint8_t start = 0;
+    if (fd != stdin)
+        return -1;
 
     if (nbytes < 0) 
         return -1;
@@ -274,10 +287,11 @@ int32_t terminal_read(int32_t fd, void *buf, int32_t nbytes) {
  */
 int32_t terminal_write(int32_t fd, const void *buf, int32_t nbytes) {
     uint32_t intr_flag;
-    if (!buf) {
-        puts("buf has NULL address.\n");
+    if (!buf)
         return -1;
-    }
+
+    if (fd != stdout)
+        return -1;
     
     /* Critical section begins. */
     cli_and_save(intr_flag);

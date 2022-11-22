@@ -1,9 +1,16 @@
 #include <drivers/fs.h>
+#include <pro/process.h>
+#include <access.h>
+#include <errno.h>
 #include <lib.h>
-#include <io.h>
 
 
 fs_t fs;        /* Stores the file system. */
+
+
+static int32_t validate_inode(uint32_t inode);
+static int32_t validate_fname(int8_t *fname);
+
 
 /**
  * @brief Initialize the file system.
@@ -30,7 +37,6 @@ void fs_init(uint32_t start_addr) {
  */
 int32_t read_dentry_by_name(const int8_t *fname, dentry_t *dentry) {
     if (!dentry) {
-        puts("ERROR: dentry is undefined.\n");
         return -1;
     }
     int i;    
@@ -59,12 +65,10 @@ int32_t read_dentry_by_name(const int8_t *fname, dentry_t *dentry) {
  */
 int32_t read_dentry_by_index(uint32_t index, dentry_t *dentry) {
     if (!dentry) {
-        puts("ERROR: dentry is undefined.\n");
         return -1;
     }
 
     if ((index >= FILES_MAX) || (index >= fs.boot->n_dir)) {
-        puts("ERROR: index is out of bounds.\n");
         return -1;
     }
 
@@ -87,31 +91,23 @@ int32_t read_dentry_by_index(uint32_t index, dentry_t *dentry) {
  *                    number of bytes read on success.
  */
 int32_t read_data(uint32_t inode, uint32_t offset, uint8_t *buf, uint32_t length) {
-    int phy_pos;                    /* The physical position of the file to read. */
     virtual_pos vir_pos;            /* The virtual position of the file to read*/
+    int phy_pos;                    /* The physical position of the file to read. */
     int nread_needed;               /* Number of bytes need to read. */
     int nread_each;                 /* Number of bytes read each time. */
     int nb_left;                    /* Number of bytes left in the data block. */
-    inode_t file;                   /* The file inode. */
+    inode_t *file;                  /* The file inode. */
     int8_t *data_ptr;               /* The actuall data address to read within a data block. */
+    int32_t errno;
 
-    if (inode >= fs.boot->n_inode) {
-        puts("ERROR: invalid inode, no such inode exists in the file system.\n");
-        return -1;
-    }
+    if ((errno = validate_inode(inode)) < 0) return errno;
 
-    if (!buf) {
-        puts("ERROR: buf is undefined.\n");
-        return -1;
-    }
+    if (!buf) return -1;
     
-    file = fs.inodes[inode];            /* Get the file inode. */
+    file = &fs.inodes[inode];            /* Get the file inode. */
         
-    if (offset >= file.size) {
-        puts("ERROR: offset is out of bounds. ");
-        return -1;
-    }
-
+    if (offset >= file->size) return 0;
+    
 
     /* The index of bytes start to read. */
     phy_pos = offset; 
@@ -120,16 +116,16 @@ int32_t read_data(uint32_t inode, uint32_t offset, uint8_t *buf, uint32_t length
     vir_pos.nblock = phy_pos / BLOCK_SIZE;      
 
     /* The index of the starting data block we need to read. */
-    vir_pos.iblock = file.data_block[vir_pos.nblock];
+    vir_pos.iblock = file->data_block[vir_pos.nblock];
 
     /* The data block object of the starting data block we need to read. */
-    vir_pos.datab = fs.data_block_addr[vir_pos.iblock];
+    vir_pos.datab = &fs.data_block_addr[vir_pos.iblock];
 
     /* The index of the data we want to read. */
     vir_pos.idx = phy_pos % BLOCK_SIZE;
 
     /* The number of bytes left in this file. */
-    nb_left = file.size - (vir_pos.nblock * BLOCK_SIZE) - vir_pos.idx;
+    nb_left = file->size - (vir_pos.nblock * BLOCK_SIZE) - vir_pos.idx;
 
     if (length >= nb_left) {
         nread_needed = nb_left;
@@ -140,7 +136,7 @@ int32_t read_data(uint32_t inode, uint32_t offset, uint8_t *buf, uint32_t length
 
     while (nread_needed) {
         nread_each = BLOCK_SIZE - vir_pos.idx; 
-        data_ptr = &(vir_pos.datab.data[vir_pos.idx]);
+        data_ptr = &(vir_pos.datab->data[vir_pos.idx]);
         if (nread_each >= nread_needed) {
             /* Numebr of bytes need to read is less than the remaining data size within the block. */
             memcpy((void*)buf, (void*)data_ptr, nread_needed);
@@ -153,12 +149,11 @@ int32_t read_data(uint32_t inode, uint32_t offset, uint8_t *buf, uint32_t length
             nb_left -= nread_each;
             nread_needed -= nread_each;
             /* Update vir_pos to the next data block used by the file inode. */
-            vir_pos.iblock = file.data_block[++vir_pos.nblock];
+            vir_pos.iblock = file->data_block[++vir_pos.nblock];
             if (vir_pos.iblock >= fs.boot->n_datab) {
-                puts("ERROR: invalid data block found.\n");
                 return -1;
             }
-            vir_pos.datab = fs.data_block_addr[vir_pos.iblock];
+            vir_pos.datab = &fs.data_block_addr[vir_pos.iblock];
             vir_pos.idx = 0;    /* Start from beginning of the new data block. */
         }
     }
@@ -178,4 +173,83 @@ uint32_t get_size(uint32_t index) {
     if (dentry.type < 2) 
         return 0;
     return fs.inodes[dentry.inode].size;
+}
+
+
+/**
+ * @brief Load program image into user vitural address space
+ * 
+ * @param fname file name of the program
+ * @param p the process to load program for
+ * @return int32_t : positive or 0 denote success, negative values denote an error condition
+ */
+int32_t pro_loader(int8_t *fname, uint32_t *EIP, pid_t pid) {
+    int i;
+    int32_t errno;
+    uint32_t inode;
+    inode_t file;
+    uint8_t header[40];
+    uint8_t eip_buf[4];
+    process_t *p;
+    uint8_t magic_number[4] = { 0x7f, 0x45, 0x4c, 0x46 };
+
+    p = GETPRO(pid);
+
+    /* check if the file is a user-level executable file */
+    if ((inode = validate_fname(fname)) < 0)
+        return inode;
+    
+    /* get the file inode */
+    file = fs.inodes[inode];            /* Get the file inode. */
+
+    /* read header from the program image */
+    if ((errno = read_data(inode, 0, header, 40)) < 0)
+        return errno;
+
+    /* check magic number */
+    for (i = 0; i < 4; ++i) {
+        if (header[i] != magic_number[i])
+            return -1;
+        eip_buf[i] = header[i + 24];
+    }
+
+    *EIP = *(uint32_t*)eip_buf;
+
+    /* map user virtual memory to process pid's physical memory */
+    user_mem_map(pid);
+
+    if ((errno = read_data(inode, 0, (uint8_t *)PROGRAM_IMG_BEGIN, file.size)) < 0) {
+        user_mem_unmap(pid);
+        return errno;
+    }
+    
+    return 0;
+}
+
+/**
+ * @brief Validate the input file name
+ * 
+ * @param inode : A file name of the file
+ * @return int32_t : positive or 0 denote success, negative values denote an error condition
+ */
+static int32_t validate_fname(int8_t *fname) {
+    int32_t errno;
+    dentry_t dentry;
+    
+    if ((errno = read_dentry_by_name(fname, &dentry)) < 0) 
+        return errno;
+    
+    return dentry.inode;
+}
+
+/**
+ * @brief Validate the input file inode
+ * 
+ * @param inode : inode of the file
+ * @return int32_t : positive or 0 denote success, negative values denote an error condition
+ */
+static int32_t validate_inode(uint32_t inode) {
+    if (inode >= fs.boot->n_inode)
+        return -1;
+    return 0;
 }

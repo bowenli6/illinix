@@ -54,7 +54,7 @@ typedef struct {
     int idx;                            /* The index we want to start at a given data block. */
     int nblock;                         /* The nth block to read. (NOT data block index) */
     uint32_t iblock;                    /* The index of the data_block. */
-    data_block datab;                   /* The data block used by the offset. */
+    data_block *datab;                  /* The data block used by the offset. */
 } virtual_pos;
 
 
@@ -72,5 +72,6 @@ int32_t read_dentry_by_name(const int8_t *fname, dentry_t *dentry);
 int32_t read_dentry_by_index(uint32_t index, dentry_t *dentry);
 int32_t read_data(uint32_t inode, uint32_t offset, uint8_t *buf, uint32_t length);
 uint32_t get_size(uint32_t index);
+int32_t pro_loader(int8_t *fname, uint32_t *EIP, pid_t pid);
 
 #endif /* _FS_H */

@@ -12,9 +12,12 @@
 #include <drivers/rtc.h>
 #include <drivers/fs.h>
 #include <vfs/ece391_vfs.h>
+#include <pro/process.h>
 #include <debug.h>
 #include <lib.h>
 #include <io.h>
+#include <access.h>
+#include <kmalloc.h>
 
 #include <tests/tests.h>
 
@@ -162,16 +165,16 @@ void entry(unsigned long magic, unsigned long addr) {
     /* File System */
     module_t *mod = (module_t *)mbi->mods_addr;
     fs_init(mod->mod_start);        /* Initialize the file system driver. */ 
-    vfs_init();                     /* Initialize the virtual file system. */
-
 
     /* Virtual Memory */
+    kmalloc_init();
     page_init();                    /* Initialize page tables. */
-
+    
     /* Devices */
     keyboard_init();                /* Initialize the Keyboard driver. */
     RTC_init();                     /* Initialize the RTC driver. */
 
+    /* Process */
 
     /* Enable interrupts */
     printf("Enabling Interrupts\n");
@@ -180,12 +183,9 @@ void entry(unsigned long magic, unsigned long addr) {
     /* This is an test for share gitlab. */
 #ifdef RUN_TESTS
     /* Run tests */
-    //launch_tests();
+    launch_tests();
+    
 #endif
-
-    /* Execute the first program ("shell") ... */
-    // shell();    
-
-    /* Spin (nicely, so we don't chew up cycles) */
-    asm volatile (".1: hlt; jmp .1;");
+    //clear();
+    //swapper();  /* process 0 starts schedule tasks for users */
 }

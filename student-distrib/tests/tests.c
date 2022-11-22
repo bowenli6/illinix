@@ -5,6 +5,7 @@
 #include <drivers/rtc.h>
 #include <tests/tests.h>
 #include <vfs/ece391_vfs.h>
+#include <boot/syscall.h>
 
 	
 #define PASS 1
@@ -88,22 +89,23 @@ void inline syscall() {
  * 
  * @return int test result
  */
-/*int page_status_test() {
-	TEST_HEADER;
-	int i, result = PASS;
+// int page_status_test() {
+// 	TEST_HEADER;
+// 	int i, result = PASS;
 
-	result = ( page_directory[0].KB.present == 1 ) & ( page_directory[1].MB.present == 1 );
-	for(i = 2; i < ENTRY_NUM; i++) 
-		result &= page_directory[i].MB.present == 0;
-	if(result == PASS) printf("Page directory entries status test passed.\n");
+// 	/* page directory status test */
+// 	result = ( page_directory[0].KB.present == 1 ) & ( page_directory[1].MB.present == 1 );
+// 	for(i = 2; i < ENTRY_NUM; i++) 
+// 		result &= page_directory[i].MB.present == 0;
+// 	if(result == PASS) printf("Page directory entries status test passed.\n");
 
+// 	/* page table status test */
+// 	for(i = 0; i < ENTRY_NUM; i++) 
+// 		result &= (i == VIDEO_INDEX) ? page_table[i].present : !page_table[i].present;
+// 	if(result == PASS) printf("Page table entries status test passed.\n");
+// 	return result;
+// }
 
-	for(i = 0; i < ENTRY_NUM; i++) 
-		result &= (i == VIDEO_INDEX) ? page_table[i].present : !page_table[i].present;
-	if(result == PASS) printf("Page table entries status test passed.\n");
-	return result;
-}
-*/
 /**
  * @brief This function will dereference an available
  * address and return PASS.
@@ -122,7 +124,7 @@ int page_access_test() {
 	printf("Video memory dereferenced successfully.\n");
 
 	/* dereference 4MB-8MB memory */
-	temp_pt = (int*) MB_4;
+	temp_pt = (int*) (MB_4 * 2 + 8);
 	temp_v = *temp_pt;
 	printf("4MB memory dereferenced successfully.\n");
 
@@ -425,7 +427,6 @@ void test_file_read() {
 			printf("The number of bytes we read is : %d\n", nread);
 			size -= nread;
 			printf("The Remaining number of bytes in the file is : %d\n", size);
-			printf("The file position is now :%d\n", vfs.fd[fd].f_pos);
 			puts("Please type s to see the file: \n");
 			while (strncmp(buf, "s", 1)) {
 				memset((void*)buf, 0, 10);
@@ -507,14 +508,86 @@ void test_checkpoint2() {
 
 
 /* Checkpoint 3 tests */
+
+// int test_shell() {
+// 	int32_t cnt, rval;
+// 	const int32_t BUFSIZE = 1024;
+//     int8_t buf[BUFSIZE];
+// 	int errno;
+
+//     if ((errno = fputs(stdout, "Starting illinix Shell\n")) < 0) {
+// 		fputs(stdout, "Error occurs\n");
+// 	}
+
+//     while (1) {
+//         fputs (stdout, "illinix> ");
+// 		if (-1 == (cnt = sys_read (0, buf, BUFSIZE-1))) {
+// 			fputs (1, "read from keyboard failed\n");
+// 			return 3;
+// 		}
+// 		if (cnt > 0 && '\n' == buf[cnt - 1])
+// 			cnt--;
+// 		buf[cnt] = '\0';
+// 		if (0 == strncmp (buf, "exit", 4))
+// 			return 0;
+// 		if ('\0' == buf[0])
+// 			continue;
+		// rval = sys_execute (buf);
+		// if (-1 == rval)
+		// 	fputs (1, "no such command\n");
+		// else if (256 == rval)
+		// 	fputs (1, "program terminated by exception\n");
+		// else if (0 != rval)
+		// 	fputs (1, "program terminated abnormally\n");
+// 	}
+// }
+
+int testprint () {
+	fputs(1, "Hello World!\n");
+    // fputs (1, "Hello, if this ran, the program was correct. Yay!\n");
+    return 0;
+}
+
+
+
+
+int test_checkpoint3() {
+	// testprint();
+	// test_file_read();
+	char fname[32];
+	int nread;
+	terminal_open(0);
+	nread = terminal_read(0, (void *)fname, 32);
+	printf("%d\n", nread);
+	printf("The filename is: %s\n", fname);
+	return 0;
+}
+
 /* Checkpoint 4 tests */
 /* Checkpoint 5 tests */
 
+void test_kmalloc() {
+	int temp;
+    printf("kmalloc 4MB: %x\n", (uint32_t)kmalloc(PAGE_SIZE_4MB));
+    printf("kmalloc 123: %x\n", temp = (uint32_t)kmalloc(123));
+    printf("kfree 123\n");
+    kfree((void*)temp);
+    printf("kmalloc 8KB: %x\n", (uint32_t)kmalloc(PAGE_SIZE*2));
+    printf("kmalloc 1MB: %x\n", (uint32_t)kmalloc(PAGE_SIZE_4MB/4));
+    printf("kmalloc 4MB: %x\n", (uint32_t)kmalloc(PAGE_SIZE_4MB));
+    printf("kmalloc 513: %x\n", (uint32_t)kmalloc(513));
+    printf("kmalloc 1024: %x\n", (uint32_t)kmalloc(1024));
+    printf("kmalloc 2048: %x\n", (uint32_t)kmalloc(1024));
+    printf("kmalloc 4KB: %x\n", (uint32_t)kmalloc(PAGE_SIZE));
+}
 
 /* Test suite entry point */
 void launch_tests() {
 	printf("--------------------------------- Test begins ---------------------------------\n");
 	// test_checkpoint1();
-	test_checkpoint2();
+	// test_checkpoint2();
+	//page_access_test();
+	//test_checkpoint3();
+	test_kmalloc();
 	printf("---------------------------------- Test Ends ----------------------------------\n");
 }

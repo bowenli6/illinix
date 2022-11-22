@@ -1,5 +1,9 @@
 #include <drivers/rtc.h>
 #include <boot/i8259.h>
+#include <vfs/file.h>
+#include <vfs/ece391_vfs.h>
+#include <pro/process.h>
+#include <drivers/fs.h>
 #include <lib.h>
 #include <io.h>
 
@@ -11,6 +15,13 @@ volatile int global_interrupt_flag;
 static void set_RTC_freq(int32_t frequency);
 static char log2_of(int32_t frequency);
 
+/* RTC operation. */
+static file_op rtc_op = {
+    .open = RTC_open,
+    .close = RTC_close,
+    .read = RTC_read,
+    .write = RTC_write
+};
 
 /**
  * @brief Initialize RTC and enable RTC interrupt.
@@ -55,7 +66,7 @@ int32_t RTC_open(const int8_t* filename) {
     /* initialize the RTC and set initial frequency to 2 as instructed */
     RTC_init();
     set_RTC_freq(2);
-    return 0;
+    return __open(2, filename, RTC, &rtc_op, CURRENT->pid);
 }
 
 /**
@@ -65,8 +76,7 @@ int32_t RTC_open(const int8_t* filename) {
  * @return int32_t : 0 on success, -1 otherwise.
 */
 int32_t RTC_close(int32_t fd) {
-    /* do nothing */
-    return 0;                   
+    return file_close(fd);
 }
 
 /**
@@ -79,7 +89,7 @@ int32_t RTC_close(int32_t fd) {
  * @return int32_t : 0 on success, -1 otherwise.
  * 
 */
-int32_t RTC_read(int32_t fd, const void* buffer, int32_t nbytes) {
+int32_t RTC_read(int32_t fd, void* buffer, int32_t nbytes) {
     /* wait on interrupt generation */
     while(!global_interrupt_flag);
     global_interrupt_flag = 0;

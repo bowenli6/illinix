@@ -253,6 +253,27 @@ int32_t strncmp(const int8_t* s1, const int8_t* s2, uint32_t n) {
     return 0;
 }
 
+
+/**
+ * @brief compares the two strings s1 and s2.  
+ * 
+ * @param s1 : first source string
+ * @param s2 : second source string
+ * @return int : result of the comparison
+ *               0, if the s1 and s2 are equal
+ *               a negative value if s1 is less than s2
+ *               a positive value if s1 is greater than s2
+ */
+int strcmp(const char *s1, const char *s2) {
+    int i;
+    for (i = 0; s1[i] && s2[i]; ++i) {
+        if (s1[i] != s2[i]) {
+            return s1[i] - s2[i];
+        }
+    }
+    return 0;
+}
+
 /* int8_t* strcpy(int8_t* dest, const int8_t* src)
  * Inputs:      int8_t* dest = destination string of copy
  *         const int8_t* src = source string of copy
@@ -289,4 +310,23 @@ int8_t* strncpy(int8_t* dest, const int8_t* src, uint32_t n) {
 
 int abs(int32_t a) {
     return (a >= 0)? a : -a;
+}
+
+/**
+ * @brief find the first occurrence of the character c in 
+ * the string s
+ * 
+ * @param s : source string
+ * @param c : character to find
+ * @return char* : a pointer to the first occurrence of the
+ * character c in the string s. NULL if not found.
+ */
+char *strchr(const char *s, int c) {
+    while (*s) {
+        if (*s == c) {
+            return (char *)s;
+        }
+        s++;
+    }
+    return NULL;
 }

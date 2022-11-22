@@ -1,13 +1,64 @@
+#include <errno.h>
 
 .data
 
 # Constants for accessing the fields of the stack
+EAX      = 0x18
 ES       = 0x20
 ORIG_EAX = 0x24
 EIP      = 0x30
 INTR     = 0x24
+NCALL    = 10
+USER_DS  = 0x002B
+
+syscall_table:
+    .long sys_restart   /* Used for restarting */
+	.long sys_halt
+	.long sys_execute
+	.long sys_read
+	.long sys_write
+	.long sys_open
+    .long sys_close
+    .long sys_getargs
+    .long sys_vidmap
+    .long sys_set_handler
+    .long sys_sigreturn
 
 .text
+
+# Save all the CPU registers that may be used by the exception handler on the stack.
+#define SAVE_ALL \
+	cld; \
+	pushl %es; \
+	pushl %ds; \
+	pushl %eax; \
+	pushl %ebp; \
+	pushl %edi; \
+	pushl %esi; \
+	pushl %edx; \
+	pushl %ecx; \
+	pushl %ebx; \
+	movl $USER_DS, %edx; \
+	movl %edx, %ds; \
+	movl %edx, %es;
+
+
+#define RESTORE_INT_REGS \
+	popl %ebx;	\
+	popl %ecx;	\
+	popl %edx;	\
+	popl %esi;	\
+	popl %edi;	\
+	popl %ebp;	\
+	popl %eax
+
+
+#define RESTORE_ALL	\
+    RESTORE_INT_REGS
+    popl %ds;	    \
+	popl %es;	    \
+	addl $4, %esp;	\
+	iret;		    
 
 error_code:
     # Save the registers that might be used by the do_handler.
@@ -48,26 +99,13 @@ error_code:
     # disable intrrupts
     cli
     call    *%edi                   # Invokes the do_handler function.
+    sti 
 	jmp     ret_from_exception      # returns from the exception.
 
 
 ret_from_exception:
-    jmp     ret_from_exception      # Dead loop for testing now.
-
-restore_all:
-    popl    %ebx
-    popl    %ecx
-    popl    %edx
-    popl    %esi                # restore the registers and flgas.
-    popl    %edi
-    popl    %ebp
-    popl    %eax
-    popl    %ds
-    popl    %es
-    addl    $4, %esp
-    sti                         # enable interrupts
-    iret                        # return from the exceptions to the previous stats.
-
+    pushl   $256
+    call    do_halt                # abort 
 
 # Exception handlers
 
@@ -194,7 +232,6 @@ simd_coprocessor_error_handler:
 
 
 
-
 # Interrupt handlers
 
 interrupt_handler: 
@@ -244,13 +281,40 @@ rtc_handler:
 
 
 
-# System calls
+# System calls linkage
 .globl syscall_handler
 syscall_handler:
-    pushfl  
-    pushal
-    call    do_syscall
-    popal
-    popfl
-    iret
+    pushl %eax                              # save the system call number.
+	pushl %es
+	pushl %ds
+	pushl %eax
+	pushl %ebp
+	pushl %edi
+	pushl %esi
+	pushl %edx
+	pushl %ecx
+	pushl %ebx
+    cmpl  $NCALL, %eax                      # validity check performed on the system call number.
+    jb    nobadsys
+    movl  $-1, EAX(%esp)                    # set the error number.
+    jmp   resume_userspace                  # jump back to user mode.
+nobadsys:
+    call  *syscall_table(, %eax, 4)         # perform the system call.
+    movl  %eax, EAX(%esp)		            # store the return value
+syscall_exit:
+    popl %ebx
+	popl %ecx
+	popl %edx
+	popl %esi
+	popl %edi
+	popl %ebp
+	popl %eax
+    popl %ds
+	popl %es
+	addl $4, %esp
+	iret;		    
+
+resume_userspace:
+    # TODO: Check for recheduling request, not implmented yet.
+    jmp   syscall_exit
 

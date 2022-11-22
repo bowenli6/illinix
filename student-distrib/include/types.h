@@ -21,6 +21,9 @@ typedef unsigned short uint16_t;
 typedef char int8_t;
 typedef unsigned char uint8_t;
 
+typedef uint32_t pid_t;
+typedef uint32_t gid_t;
+
 #endif /* ASM */
 
 #endif /* _TYPES_H */

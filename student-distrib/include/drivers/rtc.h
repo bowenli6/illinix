@@ -33,7 +33,7 @@ int32_t RTC_close(int32_t fd);
  *        int32_t nbytes -- number of bytes, should be 4
  * Output: 0 on success, -1 otherwise
 */
-int32_t RTC_read(int32_t fd, const void* buffer, int32_t nbytes);
+int32_t RTC_read(int32_t fd, void* buffer, int32_t nbytes);
 
 /*
  * RTC_write(int32_t fd, const void* buffer, int32_t nbytes)
