@@ -50,16 +50,17 @@ typedef struct {
 typedef struct thread {
     volatile pro_state state;	        /* process state */
     int32_t            argc;            /* number of arguments */
-    int8_t             argv[MAXARGS][COMMAND_LEN]; /* user command line argument */
+    int8_t             **argv;          /* user command line argument */
     pid_t              pid;             /* process id number */
     gid_t              gid;             /* process group id*/
     struct thread     *parent;          /* parent process addr */
     struct thread     *child;           /* child process addr */
     context_t         *context;         /* hardware context */
-    uint32_t           eip;
+    uint32_t           usreip;          /* user eip */
+    uint32_t           usresp;          /* user esp */
     files              fds;             /* opened file descritors */
     uint8_t            kthread;         /* 1 if this thread is belong to the kernel */
-    uint32_t           time_slice;      
+    uint32_t           timeslices;      
 } thread_t;
 
 
