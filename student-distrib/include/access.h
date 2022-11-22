@@ -13,7 +13,7 @@ do {                                    \
     asm volatile ("                   \n\
             movl %1, %%ecx            \n\
             andl %%esp, %%ecx         \n\
-            movl %%ecx, %0            \n\
+            movl (%%ecx), %0          \n\
             "                           \
             : "=r"(p)                   \
             : "r" (PROMASK)             \

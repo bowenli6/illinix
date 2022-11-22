@@ -19,7 +19,8 @@ do {                                    \
 } while (0)
 
 int main(void) {
-    void *p;
-    GETPRO(p);
+    // void *p;
+    // GETPRO(p);
+    printf("%d\n", __builtin_clz(0));
     return 0;
 }   

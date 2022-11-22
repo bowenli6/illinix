@@ -3,7 +3,7 @@
 
 #include <drivers/keyboard.h>
 
-#define TERBUF_SIZE 128
+#define TERBUF_SIZE 128                 /* max buffer size */
 
 typedef struct {
     uint8_t capslock;                   /* 0 if capslock is not pressed, 1 otherwise. */
@@ -13,16 +13,17 @@ typedef struct {
     uint8_t bufhd;                      /* The top position of the buffer. */
     uint8_t buftl;                      /* The bottom position of the buffer. */
     uint8_t size;                       /* The current size of the buffer. */
-    uint8_t buffer[TERBUF_SIZE];        /* Line buffer input. */
+    uint8_t *buffer;                    /* Line buffer input. */
     uint8_t exit;                       /* A flag for stdin, 1 if \n is detected. */
-    pid_t pid;                          /* the process id holds the terminal (shell) */
+    thread_t *shell;                    /* the shell associated with this terminal */
 } terminal_t;
 
 
 
 void key_press(uint32_t scancode);
 void key_release(uint32_t scancode);
-terminal_t * terminal_create(pid_t pid);
+terminal_t *terminal_create(thread_t *shell);
+void terminal_free(terminal_t *terminal);
 int32_t terminal_open(const int8_t *fname);
 int32_t terminal_close(int32_t fd);
 int32_t terminal_read(int32_t fd, void *buf, int32_t nbytes);

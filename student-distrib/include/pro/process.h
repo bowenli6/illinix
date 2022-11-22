@@ -4,6 +4,7 @@
 #include <vfs/ece391_vfs.h>
 #include <drivers/terminal.h>
 #include <access.h>
+#include <list.h>
 
 
 #define ARGSIZE         33              /* max size of a command argument*/           
@@ -36,7 +37,11 @@ typedef struct {
 
 /* define a thread that run as a process */
 typedef struct thread {
+    list_head          task;            /* a list of all tasks  */
     volatile pro_state state;	        /* process state */
+    uint8_t            prio;            /* priority of the process */
+    uint8_t            level;           /* current level of staircase */
+    uint32_t           epoch;           /* how many times does this process degrade though the lowest level*/
     int32_t            argc;            /* number of arguments */
     int8_t             **argv;          /* user command line argument */
     pid_t              pid;             /* process id number */
@@ -47,11 +52,14 @@ typedef struct thread {
     uint32_t           usresp;          /* user esp */
     files              *fds;            /* opened file descritors */
     uint8_t            kthread;         /* 1 if this thread is belong to the kernel */
-    uint32_t           timeslices;      /* time slices that the process can run */     
+    uint32_t           time_slice;      /* current time slices that the process can run */   
+    uint32_t           time_slice_base; /* base time slices that the process can run */   
+
+    terminal_t         *terminal;       /* terminal for this thread (shell only) */
 } thread_t;
 
 
-/* */
+/* array of terminals for each shells */
 typedef struct {
     terminal_t **terminals;
     uint32_t max;
@@ -68,13 +76,15 @@ typedef union {
 
 extern thread_t *sched;
 extern thread_t *init;
-
+extern list_head *task_head;  
 
 void swapper(void);
 void init_task(void);
+
 void do_exit(uint32_t status);
 int32_t do_execute(const int8_t *cmd);
-void switch_to_user(thread_t *p);
+pid_t do_getpid(void);
+
 uint32_t get_esp0(pid_t pid);
 void save_context(context_t *context);
 void context_switch(context_t *from, context_t *to);
