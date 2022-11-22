@@ -185,9 +185,8 @@ static int32_t __exec(const int8_t *cmd, uint8_t kthread) {
     fd_init(pid);
 
     /* store registers */
-    t->eip = EIP_reg;
-    t->context->esp = USER_STACK_ADDR;
-    t->context->ebp = USER_STACK_ADDR;
+    t->usreip = EIP_reg;
+    t->usresp = USER_STACK_ADDR;
     
     return 0;
 }
@@ -381,7 +380,7 @@ void switch_to_user(thread_t *p) {
                     iret                    \n\
                   "
                   :
-                  : "a"(USER_DS), "b"(p->context->esp), "c"(USER_CS), "d"(p->eip)
+                  : "a"(USER_DS), "b"(p->usresp), "c"(USER_CS), "d"(p->usreip)
                   : "memory"
     );      
 }

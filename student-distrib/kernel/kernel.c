@@ -11,6 +11,7 @@
 #include <drivers/terminal.h>
 #include <drivers/rtc.h>
 #include <drivers/fs.h>
+#include <drivers/time.h>
 #include <vfs/ece391_vfs.h>
 #include <pro/process.h>
 #include <pro/sched.h>
@@ -166,6 +167,7 @@ void entry(unsigned long magic, unsigned long addr) {
     /* Devices */
     keyboard_init();                /* Initialize the Keyboard driver. */
     RTC_init();                     /* Initialize the RTC driver. */
+    PIT_init();                     /* Initialize the PIT driver */
 
 
     /* Enable interrupts */

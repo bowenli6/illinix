@@ -2,7 +2,7 @@
 
 .data 
 
-# Constants for accessing the fields of the conext_t
+# Constants for accessing the fields of the context_t
 EAX = 0
 EBX = 4
 ECX = 8

@@ -1,21 +1,32 @@
 #include <drivers/time.h>
-#include <pro/process.h>
-#include <pro/sched.h>
+#include <boot/i8259.h>
+#include <lib.h>
+#include <io.h>
 
+/**
+ * @brief init PIT (Programmable Interval Timer)
+ * 
+ */
+void PIT_init(void) {
+    outb(0x36, CMD_REG);                /* binary, mode 2, LSB/MSB, ch 0 */
+    outb(LATCH & 0xff, TIMER_CHANNEL);  /* LSB */
+    outb(LATCH >> 8, TIMER_CHANNEL);
+    enable_irq(TIMER_IRQ);
+}
 
 /**
  * @brief timer interrupt handler
  * 
  */
 void do_timer(void) {
-    cli();
+    uint32_t intr_flag;
+    send_eoi(TIMER_IRQ);                     /* Send End of interrupt to the PIC. */
 
-    /* check if the current thread has remaining time slice */
-    if ((--CURRENT->time_slice) > 0) {
-        sti();
-        return;
-    }
+    /* Critical section begins. */
+    cli_and_save(intr_flag);  
 
-    /* invoke process 0 when the time slice is zero */
-    context_switch(CURRENT->context, sched->context);
+    /* TODO */
+
+    /* Critical section ends. */
+    restore_flags(intr_flag);
 }
