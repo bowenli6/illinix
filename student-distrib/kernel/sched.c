@@ -10,8 +10,9 @@
  */
 void sched_init(void) {
     /* allocate memory spaces for kernel threads */
-    process_t *swapperp = (process_t *)alloc_kstack(0);
+    process_t *swapperp = (process_t *) alloc_kstack(0);
     process_t *initp = (process_t *) alloc_kstack(1);
+
     /* set up process 0 */
     sched = &swapperp->thread;
     sched->state = RUNNABLE;
@@ -21,12 +22,12 @@ void sched_init(void) {
 
     /* set up process 1 */
     init = &initp->thread;
-    init->state = RUNNING;  
+    init->state = RUNNABLE;  
     init->parent = sched;
     init->child = NULL;
     init->kthread = 1;   
 
-    /* jump to the task of process 0 */
+    /* start to running the task of process 0 */
     swapper();
 }
 

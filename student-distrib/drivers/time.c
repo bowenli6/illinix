@@ -10,7 +10,7 @@
 void PIT_init(void) {
     outb(0x36, CMD_REG);                /* binary, mode 2, LSB/MSB, ch 0 */
     outb(LATCH & 0xff, TIMER_CHANNEL);  /* LSB */
-    outb(LATCH >> 8, TIMER_CHANNEL);
+    outb(LATCH >> 8, TIMER_CHANNEL);    /* MSB */
     enable_irq(TIMER_IRQ);
 }
 
