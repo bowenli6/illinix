@@ -21,7 +21,7 @@
 #define ACT_CONTINUE    5
 #define ACT_CATCH       6
         
-
+typedef int32_t (*default_action)(void);
 
 typedef struct signal {
     uint8_t curr_sig;                                                           /* signal index we are using */
@@ -30,7 +30,7 @@ typedef struct signal {
     int32_t *exe_sig_act[SIG_COUNT];                                            /* use signal as index, and corrosponding value indicates the handler */
 } signal_struct_t;  
 
-int32_t *default_action[SIG_COUNT];
+default_action default_arr[SIG_COUNT];
 
 extern int32_t sig_init();
 
