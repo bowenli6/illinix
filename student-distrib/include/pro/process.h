@@ -4,6 +4,7 @@
 #include <types.h>
 #include <vfs/ece391_vfs.h>
 #include <drivers/terminal.h>
+#include <boot/signal.h>
 
 
 #define COMMAND_LEN     33
@@ -65,6 +66,7 @@ typedef struct thread {
     uint32_t           eip;
     files              fds;             /* opened file descritors */
     uint8_t            kthread;         /* 1 if this thread is belong to the kernel */
+    signal_struct_t    *sig; 
 } thread_t;
 
 
