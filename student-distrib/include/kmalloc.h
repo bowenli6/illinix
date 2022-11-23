@@ -59,6 +59,7 @@ void free_page(void* p, int order);
 void page_alloc_init(void);
 void* page_alloc(void);
 void page_free(void* p);
+int buddy_size(int order);
 
 void slab_init(void);
 void* slab_alloc(int size);

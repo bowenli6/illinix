@@ -6,6 +6,7 @@
 #include <tests/tests.h>
 #include <vfs/ece391_vfs.h>
 #include <boot/syscall.h>
+#include <kmalloc.h>
 
 	
 #define PASS 1
@@ -567,11 +568,13 @@ int test_checkpoint3() {
 /* Checkpoint 5 tests */
 
 void test_kmalloc() {
-	int temp;
-    printf("kmalloc 4MB: %x\n", (uint32_t)kmalloc(PAGE_SIZE_4MB));
+	int temp, t2;
+    printf("kmalloc 4MB: %x\n", t2 = (uint32_t)kmalloc(PAGE_SIZE_4MB));
     printf("kmalloc 123: %x\n", temp = (uint32_t)kmalloc(123));
-    printf("kfree 123\n");
     kfree((void*)temp);
+	printf("kfree 123\n");
+    free_page((void*)t2, 10);
+	printf("kfree 4MB\n");
     printf("kmalloc 8KB: %x\n", (uint32_t)kmalloc(PAGE_SIZE*2));
     printf("kmalloc 1MB: %x\n", (uint32_t)kmalloc(PAGE_SIZE_4MB/4));
     printf("kmalloc 4MB: %x\n", (uint32_t)kmalloc(PAGE_SIZE_4MB));
