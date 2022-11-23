@@ -4,6 +4,7 @@
 #include <boot/x86_desc.h>
 #include <boot/page.h>
 #include <lib.h>
+#include <kmalloc.h>
 
 
 // static int32_t validate_addr(void *addr);
@@ -122,9 +123,9 @@ void user_mem_unmap(pid_t pid) {
  * @param pid process id (start at 2)
  * @return void* pointer to the process kernel stack
  */
-void *alloc_kstack(pid_t pid) {
-    uint32_t pt = PAGE_SIZE_4MB * (KERNEL_INDEX + 1) - PAGE_SIZE * 2 * (pid + 2);
-    return (void*)pt;
+void *alloc_kstack() {
+    return get_page(1);
+    //return (void*)pt;
 }
 
 /**
@@ -132,7 +133,8 @@ void *alloc_kstack(pid_t pid) {
  * 
  * @param pid process id (start at 2)
  */
-void free_kstack(pid_t pid) {
+void free_kstack(void* pt) {
+    free_page(pt, 1);
     //uint32_t pt = PAGE_SIZE_4MB * (KERNEL_INDEX + 1) - PAGE_SIZE * 2 * (pid + 2);
     //memset((char*)pt, 0, PAGE_SIZE *2);
 }

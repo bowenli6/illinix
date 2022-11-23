@@ -116,3 +116,134 @@ int32_t do_vidmap(uint8_t **screen_start) {
 }
 
 
+
+
+
+/*
+pte_t* 
+_walk(pagedir_t pd, uint32_t va, int alloc)
+{
+    pde_t* pde = &pd[va >> 22];
+    int tempaddr;
+    if(!((*pde) & PTE_PRESENT)) {
+        if(!alloc) 
+            return 0;
+        else {
+            if(tempaddr = (uint32_t)page_alloc() == 0) 
+                return 0;
+            *pde |= PTE_PRESENT | ADDR_TO_PTE(tempaddr);
+        }
+    }
+
+    pagetable_t pagetable = PTE_ADDR(*pde) << 12;
+
+    return &pagetable[ (va >> 12) & 0x3FF ];
+}
+
+int 
+_mmap(pagedir_t pd, uint32_t va, uint32_t pa, int size, int flags)
+{
+    pte_t* pte;
+    int i, walk_addr, length;
+
+    walk_addr = va & 0xFFFFF000;
+    length = ( size / PAGE_SIZE ) + 1;
+
+    for( i = 0; i < length; i++ ){
+
+        if(pte = _walk(pd, walk_addr, 1) == 0) 
+            return -1;
+        if((*pte) & PTE_PRESENT) 
+            panic("remmap!"); 
+
+        pte[0] = pte[0] | ( ADDR_TO_PTE(pa) + i * PAGE_SIZE ) | flags;
+        walk_addr += PAGE_SIZE;
+    }
+    
+    return 0;
+}
+
+int
+_freemap(pagedir_t pd, uint32_t va, int size)
+{
+    pte_t* pte;
+    uint32_t a;
+
+    for(a = va; a <= va + size; a++) {
+
+        if(pte = _walk(pd, a, 0) == 0) 
+            panic("free a empty pointer");
+        if(!((*pte) & PTE_PRESENT))
+            panic("free invalid memory");
+
+        kfree(PTE_ADDR(*pte) << 12);
+        *pte = 0;
+    }
+}
+
+void 
+kmmap(uint32_t va, uint32_t pa, int size, int flags)
+{
+    if(_mmap(page_directory, va, pa, size, flags) != 0) 
+        panic("kernel mmap error");
+}
+
+
+pagedir_t 
+create_uvmdir()
+{
+    pagedir_t npd;
+    if( npd = (pagedir_t) page_alloc() == 0 ) 
+        return 0;
+    memset(npd, 0, PAGE_SIZE);
+    return npd;
+}
+
+
+int 
+vmalloc(pagedir_t pd, int oldsize, int newsize, int flags)
+{
+    uint32_t startva, endva, va, pa;
+
+    startva = ADDR_TO_PTE(oldsize) + PAGE_SIZE;
+    endva = ADDR_TO_PTE(newsize);
+
+    for(va = startva; va <= endva; va += PAGE_SIZE) {
+        pa = page_alloc();
+        if(pa == 0) 
+            return -1;
+        memset(pa, 0, PAGE_SIZE);
+        if(_mmap(pd, va, pa, PAGE_SIZE, flags | PTE_RW | PTE_US) == -1) 
+            return -1; 
+    }
+
+    return 0;
+}
+
+
+void 
+vmdealloc(pagedir_t pd, int oldsize, int newsize)
+{
+    uint32_t startva, endva, va, pa;
+    startva = ADDR_TO_PTE(newsize) + PAGE_SIZE;
+    endva = ADDR_TO_PTE(oldsize);
+
+    _freemap(pd, va, (startva - endva) / PAGE_SIZE);
+
+    return;
+}
+
+
+void free_uvmdir(pagedir_t pd, int size)
+{
+    int i;
+    _freemap(pd, 0, size / PAGE_SIZE);
+    for(i = 0; i < ENTRY_NUM; i++) {
+        if((pd[i] & PTE_PRESENT) && (pd[i] & PTE_US)) {
+            kfree(ADDR_TO_PTE(pd[i]));
+        }
+    }
+    kfree(pd);
+    return;
+}
+*/

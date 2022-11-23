@@ -255,7 +255,7 @@ static int32_t process_create(void) {
     if ((pid = alloc_pid()) < 0) 
         return pid;
 
-    task_map[pid-2] = (process_union *)alloc_kstack(pid-2);
+    task_map[pid-2] = (process_union *)alloc_kstack();
 
     p = GETPRO(pid);
     
@@ -282,9 +282,9 @@ static int32_t process_create(void) {
  */
 static void process_free(pid_t _pid) {
     CURRENT->child = NULL;
+    free_kstack(task_map[_pid-2]);
     task_map[_pid-2] = NULL;
     kill_pid();
-    free_kstack(_pid-2);
     user_mem_unmap(_pid);
 }
 
