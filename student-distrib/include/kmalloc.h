@@ -3,8 +3,8 @@
 
 #define RESERVED_PAGES 2
 #define USER_START_ADDR 0x80000000
-#define MAX_PAGES 14
-#define SLAB_PAGES 2
+#define MAX_PAGES 12
+#define SLAB_PAGES 4
 #define MAX_ORDER 11
 
 #define SLAB_SIZE 0x200

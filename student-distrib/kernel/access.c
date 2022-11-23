@@ -102,7 +102,7 @@
  */
 void user_mem_map(pid_t pid) {
     page_directory[VIR_MEM_BEGIN >> PDE_OFFSET_4MB] = PTE_PRESENT | PTE_RW
-         | PTE_US | PDE_MB | INDEX_TO_DIR(pid);
+         | PTE_US | PDE_MB | INDEX_TO_DIR(pid + 14);
     flush_tlb();
 }
 

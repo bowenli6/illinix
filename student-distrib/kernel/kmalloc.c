@@ -77,16 +77,16 @@ void* kmalloc(int size)
     if(size > PAGE_SIZE_4MB)
         return NULL;
 
-    if((size + sizeof(slab_t)) < PAGE_SIZE) {
+    //if((size + sizeof(slab_t)) < PAGE_SIZE) {
         return slab_alloc(size);
-    } else {
-        size = (size + PAGE_SIZE - 1) / PAGE_SIZE;
-        while(temp < size) {
-            temp *= 2;
-            order ++;
-        }
-        return get_page(order);
-    }
+    // } else {
+    //     size = (size + PAGE_SIZE - 1) / PAGE_SIZE;
+    //     while(temp < size) {
+    //         temp *= 2;
+    //         order ++;
+    //     }
+    //     return get_page(order);
+    // }
 }
 
 int buddy_size(int order) {
