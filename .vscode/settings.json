@@ -1,5 +1,8 @@
 {
     "files.associations": {
-        "signal.h": "c"
+        "signal.h": "c",
+        "interrupt.h": "c",
+        "syscall.h": "c",
+        "process.h": "c"
     }
 }
