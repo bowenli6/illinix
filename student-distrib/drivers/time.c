@@ -38,7 +38,7 @@ void do_timer(void) {
     runqueue->clock += TICKUNIT;
     send_eoi(TIMER_IRQ);      
 
-    /* Critical section begins. */
+    /* critical section begins. */
     cli_and_save(intr_flag);  
 
     /* update sys_time */
@@ -48,6 +48,6 @@ void do_timer(void) {
     if (update_curr(&current->sched_info))
         schedule();
 
-    /* Critical section ends. */
+    /* critical section ends. */
     restore_flags(intr_flag);
 }
