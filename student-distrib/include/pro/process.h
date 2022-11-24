@@ -4,6 +4,7 @@
 #include <vfs/ece391_vfs.h>
 #include <drivers/terminal.h>
 #include <access.h>
+#include <pro/sched.h>
 #include <list.h>
 
 
@@ -39,9 +40,6 @@ typedef struct {
 typedef struct thread {
     list_head          task;            /* a list of all tasks  */
     volatile pro_state state;	        /* process state */
-    uint8_t            prio;            /* priority of the process */
-    uint8_t            level;           /* current level of staircase */
-    uint32_t           epoch;           /* how many times does this process degrade though the lowest level*/
     int32_t            argc;            /* number of arguments */
     int8_t             **argv;          /* user command line argument */
     pid_t              pid;             /* process id number */
@@ -52,10 +50,8 @@ typedef struct thread {
     uint32_t           usresp;          /* user esp */
     files              *fds;            /* opened file descritors */
     uint8_t            kthread;         /* 1 if this thread is belong to the kernel */
-    uint32_t           time_slice;      /* current time slices that the process can run */   
-    uint32_t           time_slice_base; /* base time slices that the process can run */   
-
     terminal_t         *terminal;       /* terminal for this thread (shell only) */
+    sched_t            sched_info;      /* info used for scheduler */
 } thread_t;
 
 
