@@ -8,11 +8,12 @@
 #include <errno.h> 
 
 
-thread_t *sched;                /* process 0 (scheduler) */
+thread_t *idle;                 /* process 0 (idle process) */
 thread_t *init;                 /* process 1 (init process) */
 console_t *console;             /* the console */
 uint32_t ntask;                 /* current number of tasks created (does not count sched and init) */
 list_head *task_head;           /* the head of the task list */
+list_head *wait_queue;          /* list of sleeping tasks */
 
 /* local helper functions */
 static int32_t __exec(thread_t *current, thread_t **new, const int8_t *cmd, uint8_t kthread);
@@ -27,7 +28,7 @@ static void update_tss(pid_t _pid);
 
 /**
  * @brief the task of the system process 0
- * working as a scheduler 
+ * 
  */
 void swapper(void) { 
     pause();    
@@ -43,21 +44,16 @@ void init_task(void) {
     pidmap_init();
     console_init();
     ntask = 0;
-    
-    /* checking user name and password */
-    // TODO
 
     /* the real task of the init process
      * scheduled actively by process 0 */
     while (1) {
         /* init start running */
 
-        /* adopt orphan processes */
-        // TODO
+        // DO SOMETHING HERE IN THE FUTURE..
 
-        /* yield the CPU to process 0 again */
-        init->state = RUNNABLE;
-        context_switch(init->context, sched->context);
+        /* yield the CPU */
+        schedule();
     }
 }
 
@@ -125,6 +121,7 @@ int32_t do_execute(const int8_t *cmd) {
         save_context(current->context);
     }
 
+    
     child = *new;
     kfree(new);
 
@@ -172,25 +169,32 @@ static int32_t __exec(thread_t *current, thread_t **new, const int8_t *cmd, uint
         process_free(current, pid);
         return errno;
     }
+    
 
     /* create terminals if the program is shell */
     if (!strcmp(argv[0], SHELL)) {
+        (*new)->sched_info.nice = -5;
 
         if (console->size == console->max) {
-            process_free(current, pid);
+            process_free(*new, pid);
             return -1;
         }
 
         if (!(terminal = terminal_create(*new))) {
-            process_free(current, pid);
+            process_free(*new, pid);
             return -1;
         }
 
         console->terminals[console->size++] = terminal;
+    } else {
+        (*new)->sched_info.nice = 0;
     }
 
     /* init file array */
     fd_init(*new);
+
+    /* set up sched info */
+    set_sched_task(&(*new)->sched_info);
 
     /* store registers */
     (*new)->usreip = EIP_reg;

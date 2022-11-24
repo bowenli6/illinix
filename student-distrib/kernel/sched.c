@@ -3,20 +3,6 @@
 #include <access.h>
 #include <lib.h>
 
-
-#define LOWESTPRI   139
-#define HIGHESTPRI  0
-#define MIN_TIMESLICE 10    /* 10 ms */
-#define BITMAP_SIZE 32
-#define QUANTUM(p)  ((p) < 120 ? ((140 - (p)) * 20) : ((140 - (p)) * 5))
-#define REALTIME(p) ((p) < 100)
-#define NORMAL(p)   (!(REALTIME(p)))
-#define SET_BIT(number, n)      ((number) |= 1UL << (n))
-#define CLEAR_BIT(number, n)    ((number) &= ~(1UL << (n)))
-#define CHANGE_BIT(number, n)   ((number) ^= 1UL << (n))
-
-
-
 /*
  * Nice levels are multiplicative, with a gentle 10% change for every
  * nice level changed. I.e. when a CPU-bound task goes from nice 0 to
@@ -68,12 +54,16 @@ cfs_rq *runqueue;
 
 /* local helper functions */
 
-static int8_t nice_to_index(int8_t nice);
+static inline int8_t nice_to_index(int8_t nice);
 static thread_t *pick_next_task(sched_t *curr);
-static void enqueue_task(sched_t *curr, int8_t wakeup);
+static void place_entity(sched_t *s, int8_t new_task);
 static inline thread_t *task_of(sched_t *s);
 static inline sched_t *sched_of(rb_tree *node);
-static void set_load_weight(thread_t *p);
+static inline void set_load_weight(sched_t *s, int8_t nice);
+static inline void alloc_timeslice(sched_t *s);
+static inline uint32_t set_vruntime(sched_t *s);
+static inline uint32_t max_vruntime(uint32_t min_vruntime, uint32_t vruntime);
+static inline uint32_t min_vruntime(uint32_t min_vruntime, uint32_t vruntime);
 
 
 
@@ -83,29 +73,30 @@ static void set_load_weight(thread_t *p);
  */
 void sched_init(void) {
     /* allocate memory spaces for kernel threads */
-    process_t *swapperp = (process_t *) alloc_kstack(0);
+    process_t *idlep = (process_t *) alloc_kstack(0);
     process_t *initp = (process_t *) alloc_kstack(1);
 
     /* set up process 0 */
-    sched = &swapperp->thread;
-    sched->state = RUNNABLE;
-    sched->parent = NULL;
-    sched->child = init;
-    sched->kthread = 1;
-    sched->argc = 1;
-    strcpy(sched->argv, "scheduler");
+    idle = &idlep->thread;
+    idle->state = RUNNABLE;
+    idle->parent = NULL;
+    idle->child = init;
+    idle->kthread = 1;
+    idle->argc = 1;
+    strcpy(idle->argv, "idle");
     
     /* set up process 1 */
     init = &initp->thread;
     init->state = RUNNABLE;  
-    init->parent = sched;
+    init->parent = idle;
     init->child = NULL;
     init->kthread = 1;   
     init->argc = 1;
-    strcpy(sched->argv, "init");
+    init->sched_info.nice = 5;
+    strcpy(init->argv, "init");
     
-    /* create task list */
-    task_head = &(sched->task);
+    /* create task queue */
+    task_head = &(idle->task);
     task_head->next = task_head;
     task_head->prev = task_head;
     list_add(&(init->task), task_head);
@@ -115,7 +106,11 @@ void sched_init(void) {
     runqueue->clock = 0;
     runqueue->nrunning = 0;
 
+    /* create wait queue */
+    
+
     /* add init process to the run queue */
+    place_entity(&init->sched_info, 1);
     enqueue_task(&init->sched_info, 0);
 }
 
@@ -159,19 +154,32 @@ void sched_init(void) {
  * 
  */
 void schedule(void) {
-    thread_t *curr, *next;
+    thread_t *curr, *next; 
+    uint32_t flags;
+
+    /* avoid preemption */
+    cli_and_save(flags);
 
     /* get current thread */
     GETPRO(curr);
+
+    /* store the current task */
+    put_prev_task(&curr->sched_info);
 
     /* find the next task to run */
     next = pick_next_task(&curr->sched_info);
 
     /* switch to the next task*/
     if (next != curr) {
-        sti();
+        curr->state = RUNNABLE;
+        next->state = RUNNING;
+        runqueue->current = &next->sched_info;
+        restore_flags(flags);
         context_switch(curr->context, next->context);
+        return;
     }
+
+    restore_flags(flags);
 }
 
 
@@ -182,10 +190,16 @@ void schedule(void) {
  * @param nice : nice value 
  * @return int8_t : index to the sched_prio_to_x array
  */
-static int8_t nice_to_index(int8_t nice) {
+static inline int8_t nice_to_index(int8_t nice) {
     return nice + 20;
 }
 
+
+static void put_prev_task(sched_t *curr) {
+    if (!curr->on_rq)
+        enqueue_entity(curr);
+    runqueue->current = NULL;
+}
 
 
 /**
@@ -199,39 +213,61 @@ static thread_t *pick_next_task(sched_t *curr) {
 
     /* if no task can be scheduled */
     if (!runqueue->nrunning)
-        return sched;
-
-    /* pick a new task */
-    next = get_task(curr);
+        return idle;
     
+    /* remove the leftmost node from queue */
+    dequeue_entity(runqueue->left_most);
+
     /* return the thread */
-    return task_of(next);
+    return task_of(rb_entry(runqueue->left_most));
 }
 
+static void enqueue_entity(sched_t *s) {
+
+}
 
 /**
- * @brief enqueue task to the runqueue
+ * @brief set_up task when creating
  * 
- * @param curr : current task sched info
- * @param wakeup : does the process just wake up?
+ * @param new : new task sched info
  */
-static void enqueue_task(sched_t *curr, int8_t wakeup) {
+void set_sched_task(sched_t *new) {
+    sched_t *curr = runqueue->current;
+
     /* enqueued already */
-    if (curr->on_rq) return;
+    if (new->on_rq) return;
 
+    /* set weights */
+    set_load_weight(new, new->nice);
+
+    /* set time slice*/
+    alloc_timeslice(new);
+
+    new->exec_time = runqueue->clock;
+    
+    if (curr) {
+        /* update vruntime of the current process */
+        update_curr(curr);
+        new->vruntime = new->vruntime;  /* new task first get vruntime from its parent */
+    }
+
+    /* set vruntime for new task */
+    place_entity(new, 1);
 }
 
 
 /**
- * @brief pick the next task's sched info
+ * @brief 
  * 
- * @param curr : current task sched info
- * @return sched_t* : the task's sched info
+ * @param s 
+ * @param new_task 
  */
-static sched_t *get_task(sched_t *curr) {
-    rb_tree *node = runqueue->rb_leftmost;
-    return sched_of(node);
+static void place_entity(sched_t *s, int8_t new_task) {
+    uint32_t vruntime = runqueue->min_vruntime;
+
+
 }
+
 
 
 /**
@@ -265,31 +301,66 @@ static inline sched_t *sched_of(rb_tree *node) {
  */
 int32_t update_curr(sched_t *curr) {
     uint32_t now = runqueue->clock;
-    uint32_t delta = now - curr->exec_time;
+    uint32_t delta;
+    
+    if (!curr) return 0; 
 
-    /* not changed yet */
-    if (!delta) return 0;
+    delta = now - curr->exec_time;
+
+    /* should not schedule now */
+    if (delta < curr->timeslice) return 0;
+
+    curr->exec_time = now;
 
     /* update vruntime */
     curr->vruntime += delta * (NICE_0_LOAD / curr->load.weight);
 
-    return curr->vruntime > runqueue->min_vruntime;
+    return min_vruntime(curr->vruntime, runqueue->min_vruntime) == runqueue->min_vruntime;
 }
 
 
-static void set_load_weight(thread_t *p) {
-    weight_t *load = &p->sched_info.load;
 
-    /* process 0*/
-    if (p == sched) {
-        load->weight = WEIGHT_SWAPPER;
-        load->inv_weight = WMULT_SWAPPER;
-        return;
-    }
+/**
+ * @brief find the max vruntime of two vruntime
+ * 
+ */
+static inline uint32_t max_vruntime(uint32_t min_vruntime, uint32_t vruntime) {
+	int32_t delta = (int32_t)(vruntime - min_vruntime);
+	if (delta > 0)
+		min_vruntime = vruntime;
 
-    /* other process */
-    load->weight = sched_prio_to_weight[nice_to_index(p->nice)];
-    load->inv_weight = sched_prio_to_wmult[nice_to_index(p->nice)];
+	return min_vruntime;
+}
+
+
+/**
+ * @brief find the min vruntime of two vruntime
+ * 
+ */
+static inline uint32_t min_vruntime(uint32_t min_vruntime, uint32_t vruntime) {
+	int32_t delta = (int32_t)(vruntime - min_vruntime);
+	if (delta < 0)
+		min_vruntime = vruntime;
+
+	return min_vruntime;
+}
+
+
+static inline void set_load_weight(sched_t *s, int8_t nice) {
+    weight_t *load = &s->load;
+
+    load->weight = sched_prio_to_weight[nice_to_index(nice)];
+    load->inv_weight = sched_prio_to_wmult[nice_to_index(nice)];
+}
+
+
+static inline void alloc_timeslice(sched_t *s) {
+    s->timeslice = ((s->load.weight / runqueue->total_weights) * TARGET_LATENCT, MIN_GRANULARITY);
+}
+
+
+static inline uint32_t set_vruntime(sched_t *s) {
+    return alloc_timeslice(s) * (NICE_0_LOAD / s->load.weight);
 }
 
 

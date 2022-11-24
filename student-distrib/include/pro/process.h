@@ -52,7 +52,6 @@ typedef struct thread {
     files              *fds;            /* opened file descritors */
     uint8_t            kthread;         /* 1 if this thread is belong to the kernel */
     terminal_t         *terminal;       /* terminal for this thread (shell only) */
-    uint32_t           nice;            /* nice value */
 } thread_t;
 
 
@@ -71,9 +70,10 @@ typedef union {
 } process_t;
 
 
-extern thread_t *sched;
+extern thread_t *idle;
 extern thread_t *init;
 extern list_head *task_head;  
+extern list_head *wait_queue;
 
 void swapper(void);
 void init_task(void);
