@@ -35,6 +35,7 @@ void do_timer(void) {
     thread_t *current;
 
     sys_ticks++;
+    runqueue->clock += TICKUNIT;
     send_eoi(TIMER_IRQ);      
 
     /* Critical section begins. */
@@ -43,9 +44,9 @@ void do_timer(void) {
     /* update sys_time */
     // TODO
 
-
-    /* adjust the sched red-black tree */    
-    
+    /* update vruntime of current task and schedule as needed */
+    if (update_curr(&current->sched_info))
+        schedule();
 
     /* Critical section ends. */
     restore_flags(intr_flag);

@@ -163,6 +163,8 @@ void entry(unsigned long magic, unsigned long addr) {
     /* Virtual Memory */
     page_init();                    /* Initialize page tables. */
 
+    /* Process */
+    sched_init();                   /* Initialize scheduler */
 
     /* Devices */
     keyboard_init();                /* Initialize the Keyboard driver. */
@@ -183,6 +185,5 @@ void entry(unsigned long magic, unsigned long addr) {
     clear();
 
     /* process 0 starts scheduling tasks for users */
-    sched_init();
     swapper();
 }
