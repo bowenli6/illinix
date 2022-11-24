@@ -14,7 +14,7 @@
 #define TASKSTART       2               /* user tasks starts from 2 */
 
 
-typedef enum {RUNNABLE, RUNNING, STOPPED, SLEEPING } pro_state;
+typedef enum {RUNNING, RUNNABLE, SLEEPING, STOPPED, EXITED} pro_state;
 
 
 /* hardware context */
@@ -39,6 +39,7 @@ typedef struct {
 /* define a thread that run as a process */
 typedef struct thread {
     list_head          task;            /* a list of all tasks  */
+    sched_t            sched_info;      /* info used for scheduler */
     volatile pro_state state;	        /* process state */
     int32_t            argc;            /* number of arguments */
     int8_t             **argv;          /* user command line argument */
@@ -51,7 +52,7 @@ typedef struct thread {
     files              *fds;            /* opened file descritors */
     uint8_t            kthread;         /* 1 if this thread is belong to the kernel */
     terminal_t         *terminal;       /* terminal for this thread (shell only) */
-    sched_t            sched_info;      /* info used for scheduler */
+    uint32_t           nice;            /* nice value */
 } thread_t;
 
 

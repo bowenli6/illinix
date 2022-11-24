@@ -167,7 +167,7 @@ void entry(unsigned long magic, unsigned long addr) {
     user_mem_init();
     page_init();                    /* Initialize page tables. */
 
-    
+
     /* Devices */
     keyboard_init();                /* Initialize the Keyboard driver. */
     RTC_init();                     /* Initialize the RTC driver. */
@@ -192,7 +192,6 @@ void entry(unsigned long magic, unsigned long addr) {
     clear();
 
     /* process 0 starts scheduling tasks for users */
-    sched_init();
     swapper();
 >>>>>>> 71ad153 (init scheduler module)
 }

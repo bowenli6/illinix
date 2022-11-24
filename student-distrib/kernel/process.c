@@ -31,9 +31,6 @@ static void update_tss(pid_t _pid);
  */
 void swapper(void) { 
     pause();    
-
-    /* awaken by a timer interrput */
-    schedule();
 }
 
 

@@ -17,7 +17,6 @@
 
 
 
-
 /*
  * Nice levels are multiplicative, with a gentle 10% change for every
  * nice level changed. I.e. when a CPU-bound task goes from nice 0 to
@@ -63,11 +62,18 @@ const uint32_t sched_prio_to_wmult[40] = {
 };
 
 
+/* the running queue containing all runable threads */
+cfs_rq *runqueue;
+
+
 /* local helper functions */
 
 static int8_t nice_to_index(int8_t nice);
-static thread_t *pick_next_task(thread_t *curr);
-static thread_t* real_time_sched(thread_t *curr);
+static thread_t *pick_next_task(sched_t *curr);
+static void enqueue_task(sched_t *curr, int8_t wakeup);
+static inline thread_t *task_of(sched_t *s);
+static inline sched_t *sched_of(rb_tree *node);
+static void set_load_weight(thread_t *p);
 
 
 
@@ -76,8 +82,6 @@ static thread_t* real_time_sched(thread_t *curr);
  * 
  */
 void sched_init(void) {
-    int i;
-
     /* allocate memory spaces for kernel threads */
     process_t *swapperp = (process_t *) alloc_kstack(0);
     process_t *initp = (process_t *) alloc_kstack(1);
@@ -106,11 +110,13 @@ void sched_init(void) {
     task_head->prev = task_head;
     list_add(&(init->task), task_head);
 
-    /* create prio list */
+    /* create runqueue */
+    runqueue = kmalloc(sizeof(cfs_rq));
+    runqueue->clock = 0;
+    runqueue->nrunning = 0;
 
-
-    /* start to running the task of process 0 */
-    swapper();
+    /* add init process to the run queue */
+    enqueue_task(&init->sched_info, 0);
 }
 
 
@@ -119,29 +125,53 @@ void sched_init(void) {
  * 
  * using the Linux Completely Fair scheduler (CFS) algorithm
  * 
- * referene: 
- * Love, Robert, Linux Kernel Development, Chapter 4
+ * CFS stands for "Completely Fair Scheduler," and is the new "desktop" process
+ * scheduler implemented by Ingo Molnar and merged in Linux 2.6.23.  It is the
+ * replacement for the previous vanilla scheduler's SCHED_OTHER interactivity
+ * code.
+ * 
+ * 80% of CFS's design can be summed up in a single sentence: CFS basically models
+ * an "ideal, precise multi-tasking CPU" on real hardware.
+
+ * "Ideal multi-tasking CPU" is a (non-existent  :-)) CPU that has 100% physical
+ * power and which can run each task at precise equal speed, in parallel, each at
+ * 1/nr_running speed.  For example: if there are 2 tasks running, then it runs
+ * each at 50% physical power --- i.e., actually in parallel.
+
+ * On real hardware, we can run only a single task at once, so we have to
+ * introduce the concept of "virtual runtime."  The virtual runtime of a task
+ * specifies when its next timeslice would start execution on the ideal
+ * multi-tasking CPU described above.  In practice, the virtual runtime of a task
+ * is its actual runtime normalized to the total number of running tasks.
+ * 
+ *                                      Reference
+ * Operating Systems: Three Easy Pieces by Remzi H. Arpaci-Dusseau and Andrea C. Arpaci-Dusseau.
+ * https://pages.cs.wisc.edu/~remzi/OSTEP/cpu-sched-lottery.pdf
+ * 
+ * Love, Robert, Linux Kernel Development
  * https://www.doc-developpement-durable.org/file/Projets-informatiques/cours-&-manuels-informatiques/Linux/Linux%20Kernel%20Development,%203rd%20Edition.pdf
- * https://lwn.net/Articles/87729/
- * https://www2.hawaii.edu/~esb/2004fall.ics612/dec06.html
+ * 
+ * Linux Documentation 
+ * https://www.kernel.org/doc/Documentation/scheduler/sched-design-CFS.txt
+ * 
+ * External website
  * https://static.linaro.org/connect/yvr18/presentations/yvr18-220.pdf
  * 
- * 
- * @return int32_t : 0 only if there are no tasks can be scheduled
  */
 void schedule(void) {
     thread_t *curr, *next;
-    int8_t prio;
 
+    /* get current thread */
     GETPRO(curr);
 
-    /* avoid deadlock by ensuring that devices can interrupt */
-    sti();
-
     /* find the next task to run */
-    next = pick_next_task(curr);
+    next = pick_next_task(&curr->sched_info);
 
-    context_switch(curr->context, next->context);
+    /* switch to the next task*/
+    if (next != curr) {
+        sti();
+        context_switch(curr->context, next->context);
+    }
 }
 
 
@@ -159,28 +189,108 @@ static int8_t nice_to_index(int8_t nice) {
 
 
 /**
- * @brief pick the next task to run
+ * @brief pick the task with the smallest vruntime
  * 
  * @param curr : the current running thread 
- * @return thread_t* : the pointer to next runable thread
+ * @return sched_t* : the pointer to next runable thread
  */
-static thread_t *pick_next_task(thread_t *curr) {
-    return NULL;
-}
+static thread_t *pick_next_task(sched_t *curr) {
+    sched_t *next;
 
+    /* if no task can be scheduled */
+    if (!runqueue->nrunning)
+        return sched;
+
+    /* pick a new task */
+    next = get_task(curr);
+    
+    /* return the thread */
+    return task_of(next);
+}
 
 
 /**
- * @brief schedule for a real-time process
+ * @brief enqueue task to the runqueue
  * 
- * @param curr : the current running thread 
- * @return thread_t* : the pointer to next runable thread
+ * @param curr : current task sched info
+ * @param wakeup : does the process just wake up?
  */
-static thread_t* real_time_sched(thread_t *curr) {
-    /* NOT IMPLEMENTED */
-    return 0;
+static void enqueue_task(sched_t *curr, int8_t wakeup) {
+    /* enqueued already */
+    if (curr->on_rq) return;
+
 }
 
+
+/**
+ * @brief pick the next task's sched info
+ * 
+ * @param curr : current task sched info
+ * @return sched_t* : the task's sched info
+ */
+static sched_t *get_task(sched_t *curr) {
+    rb_tree *node = runqueue->rb_leftmost;
+    return sched_of(node);
+}
+
+
+/**
+ * @brief get the thread_t of the sched_t
+ * 
+ * @param s : sched_t
+ * @return thread_t* : thread_t
+ */
+static inline thread_t *task_of(sched_t *s) {
+    return (thread_t*)((void*)s - (sizeof(list_head)));
+}
+
+
+/**
+ * @brief get the sched_t of the rb_tree
+ * 
+ * @param node : rb_tree
+ * @return sched_t* : sched_t
+ */
+static inline sched_t *sched_of(rb_tree *node) {
+    return (sched_t*)node;
+}
+
+
+/**
+ * @brief update the current process's vruntime 
+ * 
+ * @param curr : current sched info
+ * 
+ * @return int32_t : 1 if need schedule 0 otherwise
+ */
+int32_t update_curr(sched_t *curr) {
+    uint32_t now = runqueue->clock;
+    uint32_t delta = now - curr->exec_time;
+
+    /* not changed yet */
+    if (!delta) return 0;
+
+    /* update vruntime */
+    curr->vruntime += delta * (NICE_0_LOAD / curr->load.weight);
+
+    return curr->vruntime > runqueue->min_vruntime;
+}
+
+
+static void set_load_weight(thread_t *p) {
+    weight_t *load = &p->sched_info.load;
+
+    /* process 0*/
+    if (p == sched) {
+        load->weight = WEIGHT_SWAPPER;
+        load->inv_weight = WMULT_SWAPPER;
+        return;
+    }
+
+    /* other process */
+    load->weight = sched_prio_to_weight[nice_to_index(p->nice)];
+    load->inv_weight = sched_prio_to_wmult[nice_to_index(p->nice)];
+}
 
 
 /**
