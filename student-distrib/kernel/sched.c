@@ -6,6 +6,7 @@
 
 #define LOWESTPRI   139
 #define HIGHESTPRI  0
+#define MIN_TIMESLICE 10    /* 10 ms */
 #define BITMAP_SIZE 32
 #define QUANTUM(p)  ((p) < 120 ? ((140 - (p)) * 20) : ((140 - (p)) * 5))
 #define REALTIME(p) ((p) < 100)
@@ -15,12 +16,59 @@
 #define CHANGE_BIT(number, n)   ((number) ^= 1UL << (n))
 
 
-prio_array_t *runqueue;
 
-static void degrade(thread_t *t);
-static int32_t real_time_sched(thread_t *t);
-static int8_t get_max_bit(uint8_t normal);
-static thread_t *get_task(uint8_t prio);
+
+/*
+ * Nice levels are multiplicative, with a gentle 10% change for every
+ * nice level changed. I.e. when a CPU-bound task goes from nice 0 to
+ * nice 1, it will get ~10% less CPU time than another CPU-bound task
+ * that remained on nice 0.
+ *
+ * The "10% effect" is relative and cumulative: from _any_ nice level,
+ * if you go up 1 level, it's -10% CPU usage, if you go down 1 level
+ * it's +10% CPU usage. (to achieve that we use a multiplier of 1.25.
+ * If a task goes up by ~10% and another task goes down by ~10% then
+ * the relative distance between them is ~25%.)
+ */
+const uint32_t sched_prio_to_weight[40] = {
+    /* -20 */     88761,     71755,     56483,     46273,     36291,
+    /* -15 */     29154,     23254,     18705,     14949,     11916,
+    /* -10 */      9548,      7620,      6100,      4904,      3906,
+    /*  -5 */      3121,      2501,      1991,      1586,      1277,
+    /*   0 */      1024,       820,       655,       526,       423,
+    /*   5 */       335,       272,       215,       172,       137,
+    /*  10 */       110,        87,        70,        56,        45,
+    /*  15 */        36,        29,        23,        18,        15,
+};
+
+
+/*
+ * Inverse (2^32/x) values of the sched_prio_to_weight[] array, precalculated.
+ * 
+ * sched_prio_to_wmult[i] = 2^32 / sched_prio_to_weight[i]
+ * 
+ * In cases where the weight does not change often, we can use the
+ * precalculated inverse to speed up arithmetics by turning divisions
+ * into multiplications:
+ */
+const uint32_t sched_prio_to_wmult[40] = {
+    /* -20 */     48388,     59856,     76040,     92818,    118348,
+    /* -15 */    147320,    184698,    229616,    287308,    360437,
+    /* -10 */    449829,    563644,    704093,    875809,   1099582,
+    /*  -5 */   1376151,   1717300,   2157191,   2708050,   3363326,
+    /*   0 */   4194304,   5237765,   6557202,   8165337,  10153587,
+    /*   5 */  12820798,  15790321,  19976592,  24970740,  31350126,
+    /*  10 */  39045157,  49367440,  61356676,  76695844,  95443717,
+    /*  15 */ 119304647, 148102320, 186737708, 238609294, 286331153,
+};
+
+
+/* local helper functions */
+
+static int8_t nice_to_index(int8_t nice);
+static thread_t *pick_next_task(thread_t *curr);
+static thread_t* real_time_sched(thread_t *curr);
+
 
 
 /**
@@ -59,14 +107,7 @@ void sched_init(void) {
     list_add(&(init->task), task_head);
 
     /* create prio list */
-    runqueue = kmalloc(sizeof(prio_array_t));
 
-    /* init each level of staircase to an empty head */
-    for (i = 0; i < 140; ++i) {
-        runqueue->staircase[i].next = &runqueue->staircase[i];
-        runqueue->staircase[i].prev = &runqueue->staircase[i];
-    }
-    runqueue->n_active = 0;
 
     /* start to running the task of process 0 */
     swapper();
@@ -76,132 +117,69 @@ void sched_init(void) {
 /**
  * @brief scheduler service routine
  * 
- * using the staircase scheduler algorithm
- * referene: https://lwn.net/Articles/87729/
+ * using the Linux Completely Fair scheduler (CFS) algorithm
+ * 
+ * referene: 
+ * Love, Robert, Linux Kernel Development, Chapter 4
+ * https://www.doc-developpement-durable.org/file/Projets-informatiques/cours-&-manuels-informatiques/Linux/Linux%20Kernel%20Development,%203rd%20Edition.pdf
+ * https://lwn.net/Articles/87729/
+ * https://www2.hawaii.edu/~esb/2004fall.ics612/dec06.html
+ * https://static.linaro.org/connect/yvr18/presentations/yvr18-220.pdf
+ * 
  * 
  * @return int32_t : 0 only if there are no tasks can be scheduled
  */
-int32_t schedule(void) {
-    thread_t *t;
+void schedule(void) {
+    thread_t *curr, *next;
     int8_t prio;
 
-    GETPRO(t);
+    GETPRO(curr);
 
     /* avoid deadlock by ensuring that devices can interrupt */
     sti();
 
-    /* push the current process into a lower staircase level */
-    degrade(t);
+    /* find the next task to run */
+    next = pick_next_task(curr);
 
-    /* check if the task is real time */
-    if (REALTIME(t->prio)) return real_time_sched(t);
-    
-    /* get the current best prio task */
-    if ((prio = get_max_bit(1)) >= 0) {
-        context_switch(sched->context, get_task(prio)->context);
-    }
-
-    /* no task can be scheduled 
-     * return, pause, and wait for 
-     * awaking by a timer interrupt */
-    return 0;
-}
-
-
-/**
- * @brief  push the process into a lower staircase level
- * 
- * @param t : thread 
- */
-static void degrade(thread_t *t) {
-    uint8_t level = t->level;
-
-    /* edge case when the prio is LOWESTPRI and degrade the first time */
-    if (t->level == t->prio) {
-
-        if (t->level == LOWESTPRI) return;
-
-    } else {
-
-        /* it fall into the bottom */
-        if (t->level == LOWESTPRI) {
-            t->level = t->prio;
-            t->time_slice += t->time_slice_base;
-            t->epoch++;
-        }
-
-    }
-
-    /* remove the task from the staircase */
-    list_del(&t->task);
-
-    /* clear bit when no more task in the level*/
-    if (list_empty(task_head)) 
-        CLEAR_BIT(runqueue->bitmap[level / BITMAP_SIZE], level % BITMAP_SIZE);
-
-    /* add task to the staircase with level++ */
-    list_add(&t->task, &runqueue->staircase[++t->level]);
-    SET_BIT(runqueue->bitmap[t->level / BITMAP_SIZE], t->level % BITMAP_SIZE);
+    context_switch(curr->context, next->context);
 }
 
 
 
 /**
- * @brief pick the new task to run
+ * @brief nice[-20, 19] => index[0, 39]
  * 
- * @param prio : priority
- * @return thread_t* : thread pointer
+ * @param nice : nice value 
+ * @return int8_t : index to the sched_prio_to_x array
  */
-static thread_t *get_task(uint8_t prio) {
-    return (thread_t *)(runqueue->staircase[prio].next);
+static int8_t nice_to_index(int8_t nice) {
+    return nice + 20;
 }
 
 
+
 /**
- * @brief 
+ * @brief pick the next task to run
  * 
- * @param t 
- * @return int32_t 
+ * @param curr : the current running thread 
+ * @return thread_t* : the pointer to next runable thread
  */
-static int32_t real_time_sched(thread_t *t) {
+static thread_t *pick_next_task(thread_t *curr) {
+    return NULL;
+}
+
+
+
+/**
+ * @brief schedule for a real-time process
+ * 
+ * @param curr : the current running thread 
+ * @return thread_t* : the pointer to next runable thread
+ */
+static thread_t* real_time_sched(thread_t *curr) {
     /* NOT IMPLEMENTED */
     return 0;
 }
-
-
-/**
- * @brief Get the max bit object
- * 
- * @param normal 
- * @return int8_t 
- */
-static int8_t get_max_bit(uint8_t normal) {
-    int i;
-    int prio;
-
-    /* no active task */
-    if (!runqueue->n_active) return -1;
-    
-    /* if normal: i = 3; i < 6 */
-    /* if not normal i = 0; i < 3 */
-    for (i = normal * 3; i < (6 - (!normal) * 3); ++i) {
-        
-        /* check leading zeros to find the prio */
-        if ((prio =__builtin_clz(runqueue->bitmap[i])) < BITMAP_SIZE) {
-
-            /* if normal with prio in [96, 99] */
-            if (normal && i == 3 && prio < 4) continue;
-
-            /* if not normal with prio in [100, 127] */
-            if (!normal && i == 3 && prio >= 4) continue;
-
-            return BITMAP_SIZE * i + prio;
-        }
-    }
-
-    return -1;
-}
-
 
 
 

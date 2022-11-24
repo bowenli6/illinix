@@ -30,9 +30,10 @@ static void update_tss(pid_t _pid);
  * working as a scheduler 
  */
 void swapper(void) { 
-    /* keep trying to schedule and pause when no process can be scheduled */
-    while (!schedule()) 
-        pause();
+    pause();    
+
+    /* awaken by a timer interrput */
+    schedule();
 }
 
 
