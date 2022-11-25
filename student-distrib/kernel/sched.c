@@ -60,8 +60,9 @@ static void place_entity(sched_t *s, int8_t new_task);
 static inline thread_t *task_of(sched_t *s);
 static inline sched_t *sched_of(rb_tree *node);
 static inline void set_load_weight(sched_t *s, int8_t nice);
-static inline void alloc_timeslice(sched_t *s);
-static inline uint32_t set_vruntime(sched_t *s);
+static void sleep(sched_t *curr);
+static inline uint32_t alloc_timeslice(sched_t *s);
+static inline uint32_t alloc_vruntime(sched_t *s);
 static inline uint32_t max_vruntime(uint32_t min_vruntime, uint32_t vruntime);
 static inline uint32_t min_vruntime(uint32_t min_vruntime, uint32_t vruntime);
 
@@ -196,8 +197,10 @@ static inline int8_t nice_to_index(int8_t nice) {
 
 
 static void put_prev_task(sched_t *curr) {
-    if (!curr->on_rq)
-        enqueue_entity(curr);
+    if (curr->on_rq) {
+        update_curr(curr);
+        enqueue_entity(curr, 0);
+    }
     runqueue->current = NULL;
 }
 
@@ -209,22 +212,53 @@ static void put_prev_task(sched_t *curr) {
  * @return sched_t* : the pointer to next runable thread
  */
 static thread_t *pick_next_task(sched_t *curr) {
-    sched_t *next;
+    sched_t *next, *nnext;
 
     /* if no task can be scheduled */
     if (!runqueue->nrunning)
         return idle;
     
+    next = runqueue->left_most;
+
     /* remove the leftmost node from queue */
-    dequeue_entity(runqueue->left_most);
-
+    if (!(nnext = dequeue_entity(runqueue->left_most))) {
+        runqueue->nrunning = 0;
+        runqueue->current = runqueue->left_most;
+        runqueue->left_most = NULL; 
+        runqueue->min_vruntime = 0;
+    } else {
+        runqueue->nrunning--;
+        runqueue->current = runqueue->left_most;
+        runqueue->left_most = nnext;
+        runqueue->min_vruntime = nnext->vruntime;
+    }
+    
     /* return the thread */
-    return task_of(rb_entry(runqueue->left_most));
+    return task_of(rb_entry(next));
 }
 
-static void enqueue_entity(sched_t *s) {
 
+static void enqueue_entity(sched_t *s, int8_t wakeup) {
+    if (wakeup) {
+        /* update its vruntime */
+        s->vruntime += runqueue->min_vruntime;
+
+        /* remove it from the wait_queue */
+        list_del(&s->wait_node);
+        place_entity(s, 0);
+    }
+
+    if (s != runqueue->current) {
+        __enqueue_entity(s);
+    }
+    s->on_rq = 1;
 }
+
+
+static void __enqueue_entity(sched_t *s) {
+    add_rbnode(&s->node, s->vruntime - runqueue->min_vruntime);
+}
+
 
 /**
  * @brief set_up task when creating
@@ -241,31 +275,49 @@ void set_sched_task(sched_t *new) {
     set_load_weight(new, new->nice);
 
     /* set time slice*/
-    alloc_timeslice(new);
+    new->timeslice = alloc_timeslice(new);
 
     new->exec_time = runqueue->clock;
-    
+
     if (curr) {
         /* update vruntime of the current process */
-        update_curr(curr);
-        new->vruntime = new->vruntime;  /* new task first get vruntime from its parent */
+        (void) update_curr(curr);
+        new->vruntime = curr->vruntime;  /* new task first get vruntime from its parent */
     }
 
     /* set vruntime for new task */
     place_entity(new, 1);
+
+    /* put curr task into runqueue */
+    sleep(curr);
+}
+
+
+static int32_t wakeup_preempt_entity(sched_t *curr, sched_t *check) {
+    int32_t delta = curr->vruntime - check->vruntime;
+    return (delta > 0) && (delta > WAKEUP_GRANULARITY); 
 }
 
 
 /**
- * @brief 
+ * @brief adjust vruntime for the task
  * 
  * @param s 
- * @param new_task 
+ * @param new_task : 1 if this is a new task, 0 otherwise
  */
 static void place_entity(sched_t *s, int8_t new_task) {
     uint32_t vruntime = runqueue->min_vruntime;
 
+    if (new_task) {
+        /* update vruntime for new task */
+        vruntime += alloc_vruntime(s);
+    } else {
+        /* make up for sleeping process */
+        vruntime -= (TARGET_LATENCT >> 1);
+    }
 
+    /* avoid some process that only sleep for a short period of time to get compensation */
+    s->vruntime = max_vruntime(s->vruntime, vruntime);
 }
 
 
@@ -280,6 +332,11 @@ static inline thread_t *task_of(sched_t *s) {
     return (thread_t*)((void*)s - (sizeof(list_head)));
 }
 
+
+static void sleep(sched_t *curr) {
+    dequeue_entity(curr);
+    list_add(&task_of(curr)->task, wait_queue);
+}
 
 /**
  * @brief get the sched_t of the rb_tree
@@ -354,12 +411,12 @@ static inline void set_load_weight(sched_t *s, int8_t nice) {
 }
 
 
-static inline void alloc_timeslice(sched_t *s) {
-    s->timeslice = ((s->load.weight / runqueue->total_weights) * TARGET_LATENCT, MIN_GRANULARITY);
+static inline uint32_t alloc_timeslice(sched_t *s) {
+    return ((s->load.weight / runqueue->total_weights) * TARGET_LATENCT, MIN_GRANULARITY);
 }
 
 
-static inline uint32_t set_vruntime(sched_t *s) {
+static inline uint32_t alloc_vruntime(sched_t *s) {
     return alloc_timeslice(s) * (NICE_0_LOAD / s->load.weight);
 }
 

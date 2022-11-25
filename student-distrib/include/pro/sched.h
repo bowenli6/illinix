@@ -7,12 +7,14 @@
 
 /* sets a target for is approximation of the "infinitely small" 
  * scheduling duration in perfect multitasking */
-#define TARGET_LATENCT      48000000        /* 48 ms */
+#define TARGET_LATENCT      48000000UL        /* 48 ms */
+
+#define WAKEUP_GRANULARITY  1000000UL
 
 #define NICE_0_LOAD         1024            /* the weight for process has nice value 0 */
 
 /* minimum guanularity running time for each task */
-#define MIN_GRANULARITY     6000000         /* 6 ms */
+#define MIN_GRANULARITY     6000000UL         /* 6 ms */
 
 /* lowest prio and weights for process 0 */
 #define WEIGHT_SWAPPER      3               /* weight for process 0 */
@@ -34,6 +36,7 @@ typedef struct {
 /* sched process info */
 typedef struct {
     rb_tree  node;          /* a red-block tree node for this thread */
+    list_head wait_node;    /* use linked list of nodes to store waiting tasks*/
     weight_t load;          /* the weight info of the process */
     uint32_t vruntime;      /* virtual runtime */
     uint32_t exec_time;     /* time when exec the process (nanosecond)*/

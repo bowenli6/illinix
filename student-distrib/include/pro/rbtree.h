@@ -11,4 +11,7 @@ typedef struct rb_node {
 } rb_tree;
 
 
+void add_rbnode(rb_tree *node, uint32_t key);
+void remove_rbnode(rb_tree *node);
+
 #endif /* _RBTREE_H_ */
