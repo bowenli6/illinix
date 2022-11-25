@@ -52,7 +52,7 @@ void init_task(void) {
 
         // DO SOMETHING HERE IN THE FUTURE..
 
-        /* yield the CPU */
+        /* yield the CPU to process 0 again */
         schedule();
     }
 }
@@ -66,11 +66,15 @@ void init_task(void) {
  */
 void do_exit(uint32_t status) {
     thread_t *t;
+    thread_t **new; 
+
     GETPRO(t);
+    new = kmalloc(sizeof(thread_t *));
+
 
     /* check if the current process is running a system thread */
-    if (t->kthread) {
-        // TODO
+    if (t->kthread && strcmp(t->argv[0], SHELL)) {
+        // TODO       
     }
 
     /* free the current task */
@@ -79,6 +83,7 @@ void do_exit(uint32_t status) {
     process_free(parent, t->pid);
 
     ntask--;
+
 
     /* switch to its parent's stack */
     sti();

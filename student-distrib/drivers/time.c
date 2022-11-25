@@ -41,8 +41,7 @@ void do_timer(void) {
     /* critical section begins. */
     cli_and_save(intr_flag);  
 
-    /* update sys_time */
-    // TODO
+    // TODO update sys_time
 
     /* update vruntime of current task and schedule as needed */
     if (update_curr(&current->sched_info))
