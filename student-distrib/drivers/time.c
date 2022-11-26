@@ -34,17 +34,19 @@ void do_timer(void) {
     uint32_t intr_flag;
     thread_t *current;
 
+    /* update system clock */
     sys_ticks++;
-    runqueue->clock += TICKUNIT;
+    
+    /* update scheduler clock */
+    // TODO
+
     send_eoi(TIMER_IRQ);      
 
     /* critical section begins. */
     cli_and_save(intr_flag);  
 
-    // TODO update sys_time
-
-    /* update vruntime of current task and schedule as needed */
-    if (update_curr(&current->sched_info))
+    /* update vruntime of current task and reschedule when needed */
+    if (task_tick(&current->sched_info))
         schedule();
 
     /* critical section ends. */

@@ -9,6 +9,7 @@
  * scheduling duration in perfect multitasking */
 #define TARGET_LATENCY      48000000ULL     /* 48 ms */
 
+/* a small granularity time used for sleeping process to avoid too many context switches */
 #define WAKEUP_GRANULARITY  1000000ULL
 
 #define NR_LATENCY          (TARGET_LATENCY / WAKEUP_GRANULARITY)   /* 8 */
@@ -19,18 +20,14 @@
 #define MIN_GRANULARITY     6000000ULL      /* 6 ms */
 
 /* lowest prio and weights for process 0 */
-#define WEIGHT_SWAPPER      3               /* weight for process 0 */
-#define WMULT_SWAPPER       1431655765      /* the inv_weight for process 0 */
-#define WMULT_SHIFT         32              
+#define WEIGHT_IDLE         3               /* weight for process 0 */
+#define WMULT_IDLE          1431655765      /* the inv_weight for process 0 */
 
-/* walk up scheduling entities hierarchy */
+#define WMULT_SHIFT         32               
+
+/* walk up scheduling entities hierarchy (NOT USED IN THIS VERSION) */
 #define for_each_sched(se) \
 		for (; se; se = se->parent)
-
-
-/* map from nice value to weight info */
-extern const uint32_t sched_prio_to_weight[40];
-extern const uint32_t sched_prio_to_wmult[40];
 
 
 /* weight info */
@@ -82,10 +79,13 @@ typedef struct {
 
 
 extern cfs_rq *rq;
+extern const uint32_t sched_prio_to_weight[40];
+extern const uint32_t sched_prio_to_wmult[40];
 
 
 void sched_init(void);
 void set_sched_task(thread_t *new);
+int32_t task_tick(sched_t *curr);
 void schedule(void);
 void pause(void);
 
