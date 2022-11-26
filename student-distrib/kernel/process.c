@@ -10,10 +10,10 @@
 
 thread_t *idle;                 /* process 0 (idle process) */
 thread_t *init;                 /* process 1 (init process) */
-console_t *console;             /* the console */
+console_t *console;             /* console contains terminals */
 uint32_t ntask;                 /* current number of tasks created (does not count sched and init) */
-list_head *task_head;           /* the head of the task list */
-list_head *wait_queue;          /* list of sleeping tasks */
+list_head *task_queue;          /* list of all tasks (head is init) */
+list_head *wait_queue;          /* list of sleeping tasks (head is EMPTY task) */
 
 /* local helper functions */
 static int32_t __exec(thread_t *current, thread_t **new, const int8_t *cmd, uint8_t kthread);
@@ -410,13 +410,13 @@ static void console_init(void) {
     thread_t **new = kmalloc(sizeof(thread_t *));
 
     /* create console */
-    console = kmalloc(sizeof(console));    /* never be freed */
+    console = kmalloc(sizeof(console_t));    /* never be freed */
 
-    /* init three shells */
-    for (i = 0; i < num_shell; ++i) {
-        (void)__exec(init, new, SHELL, 1);
-        console->terminals[i]->shell = *new;
-    }
+    // /* init three shells */
+    // for (i = 0; i < num_shell; ++i) {
+    //     (void)__exec(init, new, SHELL, 1);
+    //     console->terminals[i]->shell = *new;
+    // }
 
     kfree(new);
 }

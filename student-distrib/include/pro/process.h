@@ -12,9 +12,12 @@
 #define MAXARGS         10              /* max number of arguments */
 #define SHELL           "shell"         /* shell program */
 #define TASKSTART       2               /* user tasks starts from 2 */
+#define NICE_INIT       5               /* nice value for init process */
+#define NICE_SHELL      5               /* nice value for shell process */
+#define NICE_NORMAL     0               /* nice value for default process */
 
 
-typedef enum {RUNNING, RUNNABLE, SLEEPING, STOPPED, EXITED} pro_state;
+typedef enum { RUNNING, RUNNABLE, SLEEPING, STOPPED, EXITED } pro_state;
 
 
 /* hardware context */
@@ -52,6 +55,7 @@ typedef struct thread {
     files              *fds;            /* opened file descritors */
     uint8_t            kthread;         /* 1 if this thread is belong to the kernel */
     terminal_t         *terminal;       /* terminal for this thread (shell only) */
+    int8_t             nice;            /* nice value */
 } thread_t;
 
 
