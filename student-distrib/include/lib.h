@@ -168,3 +168,14 @@ do {                                    \
 } while (0)
 
 #endif /* _LIB_H */
+
+
+/* cast the datatype of ptr to type */
+#define container_of(ptr, type, member) ({		    \
+	void *__mptr = (void *)(ptr);					\
+	((type *)(__mptr - offsetof(type, member))); })
+
+
+/* find the offset of the member within the struct type */
+#define offsetof(type, member) \
+    ((unsigned int)((unsigned char*)&((type*)0)->member - (unsigned char*)0))
