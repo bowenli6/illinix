@@ -1,3 +1,52 @@
+/**
+ * @file sched.c
+ * @author Bowen Li (bowenli6@illinois.edu)
+ * @brief Implmentation of the Linux Completely Fair Scheduler (CFS).
+
+ * @overview:
+ * CFS stands for "Completely Fair Scheduler," and is the new "desktop" process
+ * scheduler implemented by Ingo Molnar and merged in Linux 2.6.23.  It is the
+ * replacement for the previous vanilla scheduler's SCHED_OTHER interactivity
+ * code.
+ * 
+ * 80% of CFS's design can be summed up in a single sentence: CFS basically models
+ * an "ideal, precise multi-tasking CPU" on real hardware.
+
+ * "Ideal multi-tasking CPU" is a (non-existent  :-)) CPU that has 100% physical
+ * power and which can run each task at precise equal speed, in parallel, each at
+ * 1/nr_running speed.  For example: if there are 2 tasks running, then it runs
+ * each at 50% physical power --- i.e., actually in parallel.
+
+ * On real hardware, we can run only a single task at once, so we have to
+ * introduce the concept of "virtual runtime."  The virtual runtime of a task
+ * specifies when its next timeslice would start execution on the ideal
+ * multi-tasking CPU described above.  In practice, the virtual runtime of a task
+ * is its actual runtime normalized to the total number of running tasks.
+ * 
+ * @reference:
+ * Operating Systems: Three Easy Pieces by Remzi H. Arpaci-Dusseau and Andrea C. Arpaci-Dusseau.
+ * https://pages.cs.wisc.edu/~remzi/OSTEP/cpu-sched-lottery.pdf
+ * 
+ * Love, Robert, Linux Kernel Development
+ * https://www.doc-developpement-durable.org/file/Projets-informatiques/cours-&-manuels-informatiques/Linux/Linux%20Kernel%20Development,%203rd%20Edition.pdf
+ * 
+ * Linux Documentation 
+ * https://www.kernel.org/doc/Documentation/scheduler/sched-design-CFS.txt
+ *   
+ * Red-Black tree
+ * https://github.com/torvalds/linux/blob/master/Documentation/core-api/rbtree.rst
+ * 
+ * External website
+ * https://trepo.tuni.fi/bitstream/handle/10024/96864/GRADU-1428493916.pdf
+ * https://static.linaro.org/connect/yvr18/presentations/yvr18-220.pdf
+ * 
+ * @version 0.7
+ * @date 2022-11-26
+ * 
+ * @copyright Copyright (c) 2022
+ * 
+ */
+
 #include <pro/sched.h>
 #include <pro/process.h>
 #include <access.h>
@@ -52,14 +101,17 @@ const uint32_t sched_prio_to_wmult[40] = {
 cfs_rq *rq;
 
 
-/* local helper functions */
-
 static thread_t *pick_next_task(sched_t *curr);
-static thread_t *pick_next_entity(void);
+static sched_t *pick_next_entity(void);
+static void put_prev_task(sched_t *prev);
+static void dequeue_task(thread_t *prev, int8_t sleep);
+static void dequeue_entity(sched_t *prev, int8_t sleep);
+static void __dequeue_entity(sched_t *s);
 static void enqueue_task(thread_t *new, int8_t wakeup);
 static void enqueue_entity(sched_t *s, int8_t wakeup);
 static void __enqueue_entity(sched_t *s);
 static int32_t check_preempt_new(sched_t *curr, sched_t *new);
+static int32_t check_preempt_tick(sched_t *curr);
 static void update_curr(void);
 static void update_min_vruntime(void);
 static inline uint64_t calc_delta_vruntime(uint64_t delta, sched_t *s);
@@ -69,10 +121,11 @@ static inline uint64_t max_vruntime(uint64_t min_vruntime, uint64_t vruntime);
 static inline uint64_t min_vruntime(uint64_t min_vruntime, uint64_t vruntime);
 static inline void set_load_weight(sched_t *s, int8_t nice);
 static void place_entity(sched_t *s, int8_t new_task);
-static uint64_t sched_period(uint32_t nr_running);
 static uint64_t vtimeslice(sched_t *s);
 static uint64_t timeslice(sched_t *s);
-static inline update_load(weight_t *load, uint32_t weight);
+static uint64_t sched_period(uint32_t nr_running);
+static inline add_load(weight_t *load, uint32_t weight);
+static inline sub_load(weight_t *load, uint32_t weight);
 static inline int8_t nice_to_index(int8_t nice);
 
 
@@ -94,13 +147,15 @@ void sched_init(void) {
     idle->kthread = 1;
     idle->argc = 1;
     strcpy(idle->argv, "idle");
+    idle->sched_info.load.weight = WEIGHT_IDLE;
+    idle->sched_info.load.inv_weight = WMULT_IDLE;
     
     /* set up process 1 */
     init = &initp->thread;
     init->state = RUNNABLE;  
     init->parent = idle;
     init->child = NULL;
-    init->nice = 5;
+    init->nice = NICE_INIT;
     init->kthread = 1;
     init->argc = 1;
     strcpy(init->argv, "init");
@@ -129,131 +184,6 @@ void sched_init(void) {
 
 
 /**
- * @brief scheduler service routine
- * 
- * using the Linux Completely Fair Scheduler (CFS) algorithm
- * 
- * CFS stands for "Completely Fair Scheduler," and is the new "desktop" process
- * scheduler implemented by Ingo Molnar and merged in Linux 2.6.23.  It is the
- * replacement for the previous vanilla scheduler's SCHED_OTHER interactivity
- * code.
- * 
- * 80% of CFS's design can be summed up in a single sentence: CFS basically models
- * an "ideal, precise multi-tasking CPU" on real hardware.
-
- * "Ideal multi-tasking CPU" is a (non-existent  :-)) CPU that has 100% physical
- * power and which can run each task at precise equal speed, in parallel, each at
- * 1/nr_running speed.  For example: if there are 2 tasks running, then it runs
- * each at 50% physical power --- i.e., actually in parallel.
-
- * On real hardware, we can run only a single task at once, so we have to
- * introduce the concept of "virtual runtime."  The virtual runtime of a task
- * specifies when its next timeslice would start execution on the ideal
- * multi-tasking CPU described above.  In practice, the virtual runtime of a task
- * is its actual runtime normalized to the total number of running tasks.
- * 
- *                                      Reference
- * Operating Systems: Three Easy Pieces by Remzi H. Arpaci-Dusseau and Andrea C. Arpaci-Dusseau.
- * https://pages.cs.wisc.edu/~remzi/OSTEP/cpu-sched-lottery.pdf
- * 
- * Love, Robert, Linux Kernel Development
- * https://www.doc-developpement-durable.org/file/Projets-informatiques/cours-&-manuels-informatiques/Linux/Linux%20Kernel%20Development,%203rd%20Edition.pdf
- * 
- * Linux Documentation 
- * https://www.kernel.org/doc/Documentation/scheduler/sched-design-CFS.txt
- *   
- * External website
- * https://trepo.tuni.fi/bitstream/handle/10024/96864/GRADU-1428493916.pdf
- * https://static.linaro.org/connect/yvr18/presentations/yvr18-220.pdf
- * 
- */
-void schedule(void) {
-    thread_t *curr, *next; 
-    uint32_t flags;
-
-    /* avoid preemption */
-    cli_and_save(flags);
-
-    /* get current thread */
-    GETPRO(curr);
-
-    /* if the current state is going to sleep or has been stopped */
-    if (curr->state = SLEEPING || curr->state == STOPPED) {
-        /* remove the task from the runqueue */
-        dequeue_task(&curr->sched_info);
-        curr->sched_info.on_rq = 0;
-    }
-
-
-    /* find the next task to run */
-    next = pick_next_task(&curr->sched_info);
-
-    /* switch to the next task*/
-	if (likely(curr != next)) {
-        next->state = RUNNING;
-        rq->current = &next->sched_info;
-        restore_flags(flags);
-        context_switch(curr->context, next->context);
-        return;
-    }
-
-    restore_flags(flags);
-}
-
-
-
-
-static void put_prev_task(sched_t *curr) {
-    if (!curr->on_rq) {
-        update_curr();
-        enqueue_entity(curr, 0);
-    }
-    rq->current = NULL;
-}
-
-
-/**
- * @brief pick the task with the smallest vruntime
- * 
- * @param curr : the current running thread 
- * @return sched_t* : the pointer to next runable thread
- */
-static thread_t *pick_next_task(sched_t *curr) {
-    sched_t *next, *nnext;
-
-    /* if no task can be scheduled */
-    if (!rq->nr_running)
-        return idle;
-
-    /* store the current task */
-    put_prev_task(curr);
-    
-    next = rq->left_most;
-
-    /* remove the leftmost node from queue */
-    if (!(nnext = dequeue_entity(rq->left_most))) {
-        rq->nr_running = 0;
-        rq->current = rq->left_most;
-        rq->left_most = NULL; 
-        rq->min_vruntime = 0;
-    } else {
-        rq->nr_running--;
-        rq->current = rq->left_most;
-        rq->left_most = nnext;
-        rq->min_vruntime = nnext->vruntime;
-    }
-    
-    /* return the thread */
-    return task_of(rb_entry(next));
-}
-
-static thread_t *pick_next_entity(void) {
-
-}
-
-
-
-/**
  * @brief set up a new task (or wakeup task) for scheduling
  * 
  * @param new : new task thread info
@@ -261,6 +191,7 @@ static thread_t *pick_next_entity(void) {
 void set_sched_task(thread_t *new) {
     sched_t *curr = rq->current;
     sched_t *s = &new->sched_info;
+
     /* enqueued already */
     if (s->on_rq) return;
 
@@ -278,10 +209,157 @@ void set_sched_task(thread_t *new) {
     /* set vruntime for new task */
     place_entity(new, 1);
 
+    /* new task become runnable */
     new->state = RUNNABLE;
 
+    /* enqueue the task */
     enqueue_task(s, 0);
 }
+
+
+/**
+ * @brief scheduler service routine
+ * 
+ */
+void schedule(void) {
+    thread_t *curr, *next; 
+    sched_t *sched;
+    uint32_t flags;
+
+    /* avoid preemption */
+    cli_and_save(flags);
+
+    /* get current thread */
+    GETPRO(curr);
+
+    /* get sched info of the current task */
+    sched = &curr->sched_info;
+
+    /* if the current state has been sleeping or has been stopped */
+    if ((curr->state == SLEEPING) || (curr->state == STOPPED)) {
+        /* remove the task from the runqueue */
+        dequeue_task(sched, 1);
+        sched->on_rq = 0;
+    }
+
+    /* find the next task to run */
+    next = pick_next_task(sched);
+
+    /* switch to the next task*/
+	if (likely(curr != next)) {
+        if (curr->state == RUNNING) 
+            curr->state = RUNNABLE;
+        next->state = RUNNING;
+        rq->current = &next->sched_info;
+        restore_flags(flags);
+        context_switch(curr->context, next->context);
+        return;
+    }
+
+    restore_flags(flags);
+}
+
+
+/**
+ * @brief pick the task with the smallest vruntime
+ * 
+ * @param curr : the current running thread 
+ * @return sched_t* : the pointer to next runable thread
+ */
+static thread_t *pick_next_task(sched_t *curr) {
+    sched_t *next;
+
+    /* if no task can be scheduled */
+    if (!rq->nr_running)
+        return idle;
+
+    /* store the current task back to the run queue*/
+    put_prev_task(curr);
+    
+    /* get next sched entity and cached the next of the next entity if have any */
+    next = pick_next_entity();
+
+    /* remove the picked task from the run queue */
+    __dequeue_entity(next);
+
+    rq->current = next;
+
+    next->exec_start = rq->clock;
+
+    next->prev_sum_exec_time = next->sum_exec_time;
+    
+    /* return the thread */
+    return task_of(next);
+}
+
+
+
+static sched_t *pick_next_entity(void) {
+
+}
+
+
+/**
+ * @brief restore task into runqueue
+ * 
+ * @param prev : sched info
+ */
+static void put_prev_task(sched_t *prev) {
+
+    /* If the prev process is still on the run queue, it is very likely 
+     * that the prev process is preempted. Before giving up the cpu, it 
+     * is necessary to update the process runtime and other information. 
+     */
+    if (prev->on_rq) {
+        update_curr();
+        __enqueue_entity(prev);
+    }
+
+    rq->current = NULL;
+}
+
+
+/**
+ * @brief remove a prev task from runqueue
+ * 
+ * @param new : prev task thread info
+ * @param sleep : does the process just sleep?
+ */
+static void dequeue_task(thread_t *prev, int8_t sleep) {
+    sched_t *s = &prev->sched_info;
+    dequeue_entity(s, sleep);
+}
+
+
+/**
+ * @brief called when a task enters a sleep state. 
+ * It remove the scheduling entity (task) from the red-black 
+ * tree and decrements the nr_running variable.
+ * 
+ * @param s : a scheduling entity
+ * @param sleep : does the process just sleep?
+ */
+static void dequeue_entity(sched_t *prev, int8_t sleep) {
+    update_curr();
+
+    if (prev != rq->current)
+        __dequeue_entity(prev);
+    
+    sub_load(&rq->load, prev->load.weight);
+    rq->nr_running--;
+    prev->on_rq = 0;
+}
+
+
+/**
+ * @brief remove s from rea-black tree
+ * 
+ * @param s : sched info to remove
+ */
+static void __dequeue_entity(sched_t *s) {
+    rb_remove(s->node);
+}
+
 
 
 /**
@@ -309,19 +387,17 @@ static void enqueue_task(thread_t *new, int8_t wakeup) {
  */
 static void enqueue_entity(sched_t *s, int8_t wakeup) {
     /* update sum of all runnable tasks' load weights */
-    update_load(&rq->load, s->load.weight);
+    add_load(&rq->load, s->load.weight);
 
     if (wakeup) {
-        /* update its vruntime */
-        s->vruntime += rq->min_vruntime;
-
         /* remove it from the wait_queue */
         list_del(&(task_of(s)->task_node));
 
+        /* adjust vruntime */
         place_entity(s, 0);
     }
 
-    /* add to run queue*/
+    /* add to run queue */
     if (rq->current != s)
         __enqueue_entity(s);
 
@@ -333,7 +409,7 @@ static void enqueue_entity(sched_t *s, int8_t wakeup) {
 /**
  * @brief add s to rea-black tree using its vruntime as key
  * 
- * @param s : sched info
+ * @param s : sched info to add
  */
 static void __enqueue_entity(sched_t *s) {
     rb_add(&s->node, s->vruntime - rq->min_vruntime);
@@ -360,9 +436,16 @@ static int32_t check_preempt_new(sched_t *curr, sched_t *new) {
 }
 
 
+/**
+ * @brief called everytime when a timer interrupt is fired
+ * 
+ * @param curr : current sched info
+ * @return int32_t : 1 to reschedule, 0 otherwise
+ */
 int32_t task_tick(sched_t *curr) {
     update_curr();
     
+    /* only try to reschedule when there are more than 1 runnable task */
     if (rq->nr_running > 1) {
         return check_preempt_tick(curr);
     }
@@ -371,20 +454,43 @@ int32_t task_tick(sched_t *curr) {
 }
 
 
+/**
+ * @brief check if there is a task can preempt the curren task
+ * 
+ * @param curr : current task sched info
+ * @return int32_t : 1 to reschedule, 0 otherwise
+ */
 static int32_t check_preempt_tick(sched_t *curr) {
     uint64_t ideal = timeslice(curr) ;
     uint64_t delta = curr->sum_exec_time - curr->prev_sum_exec_time;
 
-    /* has used all timeslice */
+    /* has used all timeslice: should be preempted */
     if (delta > ideal) 
         return 1;
     
-    /* do not preempt for a short period */
+    /* in order to prevent frequent excessive preemption, we should 
+     * ensure that the running time of each process should not be less 
+     * than the minimum granularity time. So if the running time is 
+     * less than the minimum granularity time, it should not be preempted. 
+     */
     if (delta < MIN_GRANULARITY)
         return 0;
     
-    delta = 
-} 
+	delta = curr->vruntime - rq->min_vruntime;
+ 
+    /* vruntime of the current process is still smaller than the vruntime 
+     * of the leftmost scheduling entity in the red-black tree */
+	if (delta < 0) return 0;
+ 
+    /* NOT A BUG. After reviewing the submission records, the author's 
+     * intention is: I hope that tasks with small weights will be preempted 
+     * more easily. (MAGIC CODE BUT SOMEHOW WORKS!)
+     */
+	if (delta > ideal) return 1;
+
+    return 0;
+}   
+
 
 /**
  * @brief update the current process's vruntime 
@@ -393,11 +499,12 @@ static int32_t check_preempt_tick(sched_t *curr) {
 static void update_curr(void) {
     sched_t *curr = rq->current;
     uint64_t now = rq->clock;
-    uint32_t delta;
+    uint64_t delta;
 
     if (unlikely(!curr)) return;    
     
-    delta = (uint32_t) (now - curr->exec_start);
+    /* calculate the runtime difference since last scheduled */
+    delta = now - curr->exec_start;
 
     if (unlikely((int64_t)delta <= 0)) return;
 
@@ -423,6 +530,8 @@ static void update_min_vruntime(void) {
     sched_t *s;
     uint64_t vruntime = rq->min_vruntime;
     
+    if (rq->current) vruntime = rq->current->vruntime;
+
     /* if there is a cached left most node in the queue */
     if (rq->left_most) {
         /* get the sched info of the node */
@@ -430,7 +539,7 @@ static void update_min_vruntime(void) {
 
         /* update min_vruntime */
         if (!rq->current) vruntime = s->vruntime;
-        else vruntime = min_vruntime(rq->current->vruntime, s->vruntime);
+        else vruntime = min_vruntime(vruntime, s->vruntime);
     }
 
     /* ensure we never gain time by being placed backwards */
@@ -563,21 +672,63 @@ static inline void set_load_weight(sched_t *s, int8_t nice) {
  * @brief adjust vruntime for the task
  * 
  * @param s : sched info
- * @param new_task : 1 if this is a new task, 0 otherwise
+ * @param new_task : is the task a new task?
  */
 static void place_entity(sched_t *s, int8_t new_task) {
     uint64_t vruntime = rq->min_vruntime;
 
     if (new_task) {
         /* punish new task */
-        vruntime += timeslice(s);
+        vruntime += vtimeslice(s);
     } else {
         /* make up for sleeping task */
         vruntime -= (TARGET_LATENCY >> 1);
     }
 
-    /* avoid some process that only sleep for a short period of time to get compensation */
+    /* avoid some process that only sleep for a short period of time to get compensation
+     * but..WHY? consider this: 
+     * When a process has just slept for 1ms, and when it woke up, 
+     * you decide to award it 3ms by reducing its vruntime from 3ms, 
+     * so it then profit 2ms. We want to be FAIR! */
     s->vruntime = max_vruntime(s->vruntime, vruntime);
+}
+
+/**
+ * @brief assign s its virtual time slice
+ * 
+ * @param s : sched info
+ * @return uint64_t : virtual time slice
+ */
+static uint64_t vtimeslice(sched_t *s) {
+    return calc_delta_vruntime(timeslice(s), s);
+}
+
+
+/**
+ * @brief assign s its real time slice
+ * 
+ * @param s : sched info
+ * @return uint64_t : real time slice
+ */
+static uint64_t timeslice(sched_t *s) {
+	uint64_t slice = sched_period(rq->nr_running + !s->on_rq);
+    weight_t load = rq->load;
+
+    /* get the current sum of weights */
+    weight_t *rq_load = &rq->load;
+
+	if (unlikely(!s->on_rq)) {
+        /* if (unlikely) s is not on the runqueue
+         * use a new load to include s */
+        add_load(&load, s->load.weight);
+        rq_load = &load;
+    }
+
+    /* calculate the proportion of the weight of the scheduling entity se 
+     * to the weight of the entire ready queue, and then multiply it by 
+     * the scheduling cycle time to get the time that the current scheduling 
+     * entity should run. */
+    return __calc_delta_vruntime(slice, s->load.weight, rq_load);
 }
 
 
@@ -598,35 +749,6 @@ static uint64_t sched_period(uint32_t nr_running) {
         return period;
 }
 
-/**
- * @brief give s its virtual time slice
- * 
- * @param s : sched info
- * @return uint64_t : virtual time slice
- */
-static uint64_t vtimeslice(sched_t *s) {
-    return calc_delta_vruntime(__timeslice(s), s);
-}
-
-
-/**
- * @brief give s its real time slice
- * 
- * @param s : sched info
- * @return uint64_t : real time slice
- */
-static uint64_t timeslice(sched_t *s) {
-	uint64_t slice = sched_period(rq->nr_running + !s->on_rq);
-    weight_t load = rq->load;
-    weight_t *rq_load = &rq->load;
-
-	if (unlikely(!s->on_rq)) {
-        update_load(&load, s->load.weight);
-        rq_load = &load;
-    }
-
-    return __calc_delta_vruntime(slice, s->load.weight, rq_load);
-}
 
 
 /**
@@ -635,10 +757,23 @@ static uint64_t timeslice(sched_t *s) {
  * @param load : load weight
  * @param weight : offset
  */
-static inline update_load(weight_t *load, uint32_t weight) {
+static inline add_load(weight_t *load, uint32_t weight) {
     load->weight += weight;
     load->inv_weight += weight;
 }
+
+
+/**
+ * @brief update load weight by subtracting weight
+ * 
+ * @param load : load weight
+ * @param weight : offset
+ */
+static inline sub_load(weight_t *load, uint32_t weight) {
+    load->weight -= weight;
+    load->inv_weight -= weight;
+}
+
 
 /**
  * @brief nice[-20, 19] => index[0, 39]
