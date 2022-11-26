@@ -7,14 +7,16 @@
 
 /* sets a target for is approximation of the "infinitely small" 
  * scheduling duration in perfect multitasking */
-#define TARGET_LATENCT      48000000UL        /* 48 ms */
+#define TARGET_LATENCY      48000000ULL     /* 48 ms */
 
-#define WAKEUP_GRANULARITY  1000000UL
+#define WAKEUP_GRANULARITY  1000000ULL
+
+#define NR_LATENCY          (TARGET_LATENCY / WAKEUP_GRANULARITY)   /* 8 */
 
 #define NICE_0_LOAD         1024            /* the weight for process has nice value 0 */
 
 /* minimum guanularity running time for each task */
-#define MIN_GRANULARITY     6000000UL         /* 6 ms */
+#define MIN_GRANULARITY     6000000ULL      /* 6 ms */
 
 /* lowest prio and weights for process 0 */
 #define WEIGHT_SWAPPER      3               /* weight for process 0 */
@@ -83,7 +85,6 @@ extern cfs_rq *rq;
 
 
 void sched_init(void);
-void update_curr(sched_t *curr);
 void set_sched_task(thread_t *new);
 void schedule(void);
 void pause(void);

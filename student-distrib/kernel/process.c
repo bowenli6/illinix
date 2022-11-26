@@ -11,9 +11,10 @@
 thread_t *idle;                 /* process 0 (idle process) */
 thread_t *init;                 /* process 1 (init process) */
 console_t *console;             /* console contains terminals */
-uint32_t ntask;                 /* current number of tasks created (does not count sched and init) */
-list_head *task_queue;          /* list of all tasks (head is init) */
-list_head *wait_queue;          /* list of sleeping tasks (head is EMPTY task) */
+uint32_t ntask;                 /* current number of tasks created */
+list_head *task_queue;          /* list of all tasks (idle -> init -> {user task}) */
+list_head *wait_queue;          /* list of sleeping tasks (idle -> {sleeping user task || init}) */
+
 
 /* local helper functions */
 static int32_t __exec(thread_t *current, thread_t **new, const int8_t *cmd, uint8_t kthread);
