@@ -16,6 +16,8 @@
 #define NICE_SHELL      5               /* nice value for shell process */
 #define NICE_NORMAL     0               /* nice value for default process */
 
+#define task_of(ptr)  container_of(ptr, thread_t, sched_info)
+
 
 typedef enum { RUNNING, RUNNABLE, SLEEPING, STOPPED, EXITED } pro_state;
 
@@ -41,7 +43,7 @@ typedef struct {
 
 /* define a thread that run as a process */
 typedef struct thread {
-    list_head          task;            /* a list of all tasks  */
+    list_head          task_node;       /* a list of all tasks  */
     sched_t            sched_info;      /* info used for scheduler */
     volatile pro_state state;	        /* process state */
     int32_t            argc;            /* number of arguments */
@@ -76,7 +78,7 @@ typedef union {
 
 extern thread_t *idle;
 extern thread_t *init;
-extern list_head *task_head;  
+extern list_head *task_queue;  
 extern list_head *wait_queue;
 
 void swapper(void);

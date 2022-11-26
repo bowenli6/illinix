@@ -54,10 +54,13 @@ cfs_rq *rq;
 
 /* local helper functions */
 
-static inline int8_t nice_to_index(int8_t nice);
 static thread_t *pick_next_task(sched_t *curr);
-static void sleep(sched_t *curr);
-
+static thread_t *pick_next_entity(void);
+static void enqueue_task(thread_t *new, int8_t wakeup);
+static void enqueue_entity(sched_t *s, int8_t wakeup);
+static void __enqueue_entity(sched_t *s);
+static int32_t check_preempt_new(sched_t *curr, sched_t *new);
+static void update_curr(void);
 static void update_min_vruntime(void);
 static inline uint64_t calc_delta_vruntime(uint64_t delta, sched_t *s);
 static uint64_t __calc_delta_vruntime(uint64_t delta, uint32_t weight, weight_t *load);
@@ -66,6 +69,11 @@ static inline uint64_t max_vruntime(uint64_t min_vruntime, uint64_t vruntime);
 static inline uint64_t min_vruntime(uint64_t min_vruntime, uint64_t vruntime);
 static inline void set_load_weight(sched_t *s, int8_t nice);
 static void place_entity(sched_t *s, int8_t new_task);
+static uint64_t sched_period(uint32_t nr_running);
+static uint64_t vtimeslice(sched_t *s);
+static uint64_t timeslice(sched_t *s);
+static inline update_load(weight_t *load, uint32_t weight);
+static inline int8_t nice_to_index(int8_t nice);
 
 
 
@@ -98,24 +106,25 @@ void sched_init(void) {
     strcpy(init->argv, "init");
     
     /* create task queue */
-    task_head = &(idle->task);
-    task_head->next = task_head;
-    task_head->prev = task_head;
-    list_add(&(init->task), task_head);
-
+    task_queue = &(idle->task_node);
+    task_queue->next = task_queue;
+    task_queue->prev = task_queue;
+    list_add(&(init->task_node), task_queue);
+    
+    /* create wait queue */
+    wait_queue = &(idle->task_node);
+    wait_queue->next = wait_queue;
+    wait_queue->prev = wait_queue;
+    
     /* create runqueue */
     rq = kmalloc(sizeof(cfs_rq));
     rq->nr_running = 0;
     rq->current = NULL;
     rq->left_most = NULL;
     // rq->root = ?
-    
-    /* create wait queue */
-    wait_queue
 
     /* add init process to the run queue */
-    place_entity(&init->sched_info, 1);
-    enqueue_task(&init->sched_info, 0);
+    set_sched_task(init);
 }
 
 
@@ -168,15 +177,19 @@ void schedule(void) {
     /* get current thread */
     GETPRO(curr);
 
-    /* store the current task */
-    put_prev_task(&curr->sched_info);
+    /* if the current state is going to sleep or has been stopped */
+    if (curr->state = SLEEPING || curr->state == STOPPED) {
+        /* remove the task from the runqueue */
+        dequeue_task(&curr->sched_info);
+        curr->sched_info.on_rq = 0;
+    }
+
 
     /* find the next task to run */
     next = pick_next_task(&curr->sched_info);
 
     /* switch to the next task*/
-    if (next != curr) {
-        curr->state = RUNNABLE;
+	if (likely(curr != next)) {
         next->state = RUNNING;
         rq->current = &next->sched_info;
         restore_flags(flags);
@@ -189,20 +202,10 @@ void schedule(void) {
 
 
 
-/**
- * @brief nice[-20, 19] => index[0, 39]
- * 
- * @param nice : nice value 
- * @return int8_t : index to the sched_prio_to_x array
- */
-static inline int8_t nice_to_index(int8_t nice) {
-    return nice + 20;
-}
-
 
 static void put_prev_task(sched_t *curr) {
     if (!curr->on_rq) {
-        update_curr(curr);
+        update_curr();
         enqueue_entity(curr, 0);
     }
     rq->current = NULL;
@@ -221,6 +224,9 @@ static thread_t *pick_next_task(sched_t *curr) {
     /* if no task can be scheduled */
     if (!rq->nr_running)
         return idle;
+
+    /* store the current task */
+    put_prev_task(curr);
     
     next = rq->left_most;
 
@@ -231,7 +237,7 @@ static thread_t *pick_next_task(sched_t *curr) {
         rq->left_most = NULL; 
         rq->min_vruntime = 0;
     } else {
-        rq->nrunning--;
+        rq->nr_running--;
         rq->current = rq->left_most;
         rq->left_most = nnext;
         rq->min_vruntime = nnext->vruntime;
@@ -241,9 +247,60 @@ static thread_t *pick_next_task(sched_t *curr) {
     return task_of(rb_entry(next));
 }
 
+static thread_t *pick_next_entity(void) {
+
+}
+
+
 
 /**
- * @brief Called when a task enters a runnable state. 
+ * @brief set up a new task (or wakeup task) for scheduling
+ * 
+ * @param new : new task thread info
+ */
+void set_sched_task(thread_t *new) {
+    sched_t *curr = rq->current;
+    sched_t *s = &new->sched_info;
+    /* enqueued already */
+    if (s->on_rq) return;
+
+    /* set weights */
+    set_load_weight(new, new->nice);
+
+    if (curr) {
+        /* update vruntime of the current process */
+        update_curr();
+
+        /* new task first get vruntime from its parent */
+        s->vruntime = curr->vruntime;  
+    }
+
+    /* set vruntime for new task */
+    place_entity(new, 1);
+
+    new->state = RUNNABLE;
+
+    enqueue_task(s, 0);
+}
+
+
+/**
+ * @brief add a new task (or wakeup task) to runqueue
+ * 
+ * @param new : new task thread info
+ * @param wakeup : does the process just wake up?
+ */
+static void enqueue_task(thread_t *new, int8_t wakeup) {
+    sched_t *s = &new->sched_info;
+    
+    if (s->on_rq) return;
+
+    enqueue_entity(s, wakeup);
+}
+
+
+/**
+ * @brief called when a task enters a runnable state. 
  * It puts the scheduling entity (task) into the red-black 
  * tree and increments the nr_running variable.
  * 
@@ -251,84 +308,98 @@ static thread_t *pick_next_task(sched_t *curr) {
  * @param wakeup : does the task just wake up?
  */
 static void enqueue_entity(sched_t *s, int8_t wakeup) {
+    /* update sum of all runnable tasks' load weights */
+    update_load(&rq->load, s->load.weight);
+
     if (wakeup) {
         /* update its vruntime */
         s->vruntime += rq->min_vruntime;
 
         /* remove it from the wait_queue */
-        list_del(&s->wait_node);
+        list_del(&(task_of(s)->task_node));
+
         place_entity(s, 0);
     }
 
-    if (s != rq->current) {
+    /* add to run queue*/
+    if (rq->current != s)
         __enqueue_entity(s);
-    }
+
     s->on_rq = 1;
-}
-
-
-static void __enqueue_entity(sched_t *s) {
-    add_rbnode(&s->node, s->vruntime - rq->min_vruntime);
+    rq->nr_running++;
 }
 
 
 /**
- * @brief set_up task when creating
+ * @brief add s to rea-black tree using its vruntime as key
  * 
- * @param new : new task 
- * @param 
+ * @param s : sched info
  */
-void set_sched_task(thread_t *new, int8_t wakeup) {
-    sched_t *curr = rq->current;
-    sched_t *s = &new->sched_info;
-    /* enqueued already */
-    if (s->on_rq) return;
+static void __enqueue_entity(sched_t *s) {
+    rb_add(&s->node, s->vruntime - rq->min_vruntime);
+}
 
-    /* set nice value */
-    new->nice = NICE_NORMAL;
 
-    /* set weights */
-    set_load_weight(new, new->nice);
+/**
+ * @brief check if new task can preempt the current task
+ * 
+ * @param curr : current task
+ * @param check : new task
+ * @return int32_t : 1 for yes, -1 for no, 0 for maybe, but don't want to
+ * (because their vruntime are really close, we don't want too many context switches)
+ */
+static int32_t check_preempt_new(sched_t *curr, sched_t *new) {
+    int64_t delta = curr->vruntime - new->vruntime;
+    if (delta <= 0)
+        return -1;
 
-    if (curr) {
-        /* update vruntime of the current process */
-        update_curr(curr);
-        s->vruntime = curr->vruntime;  /* new task first get vruntime from its parent */
+    if (delta > WAKEUP_GRANULARITY) 
+        return 1;
+
+    return 0;
+}
+
+
+int32_t task_tick(sched_t *curr) {
+    update_curr();
+    
+    if (rq->nr_running > 1) {
+        return check_preempt_tick(curr);
     }
 
-    /* set vruntime for new task */
-    place_entity(new, 1);
-
-    /* put curr task into wait_queue */
-    s->vruntime -= rq->min_vruntime;
-
-    new->state = RUNNABLE;
-    enqueue_task(s, );
-}
-
-static void enqueue_task(sched_t *s, int8_t wakeup) {
-
+    return 0;
 }
 
 
-static int32_t wakeup_preempt_entity(sched_t *curr, sched_t *check) {
-    int32_t delta = curr->vruntime - check->vruntime;
-    return (delta > 0) && (delta > WAKEUP_GRANULARITY); 
-}
+static int32_t check_preempt_tick(sched_t *curr) {
+    uint64_t ideal = timeslice(curr) ;
+    uint64_t delta = curr->sum_exec_time - curr->prev_sum_exec_time;
 
+    /* has used all timeslice */
+    if (delta > ideal) 
+        return 1;
+    
+    /* do not preempt for a short period */
+    if (delta < MIN_GRANULARITY)
+        return 0;
+    
+    delta = 
+} 
 
 /**
  * @brief update the current process's vruntime 
  * 
- * @param curr : current sched info
  */
-void update_curr(sched_t *curr) {
+static void update_curr(void) {
+    sched_t *curr = rq->current;
     uint64_t now = rq->clock;
     uint32_t delta;
+
+    if (unlikely(!curr)) return;    
     
     delta = (uint32_t) (now - curr->exec_start);
 
-    if (!delta) return;
+    if (unlikely((int64_t)delta <= 0)) return;
 
     /* update total runtime */
     curr->sum_exec_time += delta;  
@@ -344,6 +415,10 @@ void update_curr(sched_t *curr) {
 }
 
 
+/**
+ * @brief update current min_vruntime
+ * 
+ */
 static void update_min_vruntime(void) {
     sched_t *s;
     uint64_t vruntime = rq->min_vruntime;
@@ -351,7 +426,7 @@ static void update_min_vruntime(void) {
     /* if there is a cached left most node in the queue */
     if (rq->left_most) {
         /* get the sched info of the node */
-        s = rb_entry(rq->left_most, sched_t, node);
+        s = sched_of(rq->left_most);
 
         /* update min_vruntime */
         if (!rq->current) vruntime = s->vruntime;
@@ -372,7 +447,7 @@ static void update_min_vruntime(void) {
  */
 static inline uint64_t calc_delta_vruntime(uint64_t delta, sched_t *s) {
     /* if the task has nice value different than 0 */
-    if (s->load.weight != NICE_0_LOAD) {
+	if (unlikely(s->load.weight != NICE_0_LOAD)) {
         delta = __calc_delta_vruntime(delta, NICE_0_LOAD, &s->load);
     }
 
@@ -394,13 +469,20 @@ static inline uint64_t calc_delta_vruntime(uint64_t delta, sched_t *s) {
  * inv_weight = (2 ** 32) / weight
  * 
  * @param delta : amount of changes of the real runtime (nanosecond)
- * @param weight : NICE_0_LOAD
+ * @param weight : weight offset
  * @param load : load weight of the thread
  * @return uint64_t : amount of changes of the virtual runtime (nanosecond)
  */
 static uint64_t __calc_delta_vruntime(uint64_t delta, uint32_t weight, weight_t *load) {
     uint64_t fact = weight;
     int32_t shift = WMULT_SHIFT;
+
+    if (unlikely(fact >> 32)) {
+		while (fact >> 32) {
+			fact >>= 1;
+			shift--;
+		}
+	}
 
     /* NICE_0_LOAD * inv_weight */
     fact = (uint64_t)((uint32_t) fact * load->inv_weight);
@@ -484,18 +566,88 @@ static inline void set_load_weight(sched_t *s, int8_t nice) {
  * @param new_task : 1 if this is a new task, 0 otherwise
  */
 static void place_entity(sched_t *s, int8_t new_task) {
-    uint32_t vruntime = rq->min_vruntime;
+    uint64_t vruntime = rq->min_vruntime;
 
     if (new_task) {
         /* punish new task */
-        vruntime += vslice(s);
+        vruntime += timeslice(s);
     } else {
         /* make up for sleeping task */
-        vruntime -= (TARGET_LATENCT >> 1);
+        vruntime -= (TARGET_LATENCY >> 1);
     }
 
     /* avoid some process that only sleep for a short period of time to get compensation */
     s->vruntime = max_vruntime(s->vruntime, vruntime);
+}
+
+
+/**
+ * @brief get the total timeslices
+ * 
+ * @param nr_running : number of runnable task
+ * @return uint64_t : total timeslices
+ */
+static uint64_t sched_period(uint32_t nr_running) {
+        uint64_t period = TARGET_LATENCY;
+        
+        if (unlikely(nr_running > NR_LATENCY)) {
+                period = MIN_GRANULARITY;
+                period *= nr_running;
+        }
+
+        return period;
+}
+
+/**
+ * @brief give s its virtual time slice
+ * 
+ * @param s : sched info
+ * @return uint64_t : virtual time slice
+ */
+static uint64_t vtimeslice(sched_t *s) {
+    return calc_delta_vruntime(__timeslice(s), s);
+}
+
+
+/**
+ * @brief give s its real time slice
+ * 
+ * @param s : sched info
+ * @return uint64_t : real time slice
+ */
+static uint64_t timeslice(sched_t *s) {
+	uint64_t slice = sched_period(rq->nr_running + !s->on_rq);
+    weight_t load = rq->load;
+    weight_t *rq_load = &rq->load;
+
+	if (unlikely(!s->on_rq)) {
+        update_load(&load, s->load.weight);
+        rq_load = &load;
+    }
+
+    return __calc_delta_vruntime(slice, s->load.weight, rq_load);
+}
+
+
+/**
+ * @brief update load weight by adding weight
+ * 
+ * @param load : load weight
+ * @param weight : offset
+ */
+static inline update_load(weight_t *load, uint32_t weight) {
+    load->weight += weight;
+    load->inv_weight += weight;
+}
+
+/**
+ * @brief nice[-20, 19] => index[0, 39]
+ * 
+ * @param nice : nice value 
+ * @return int8_t : index to the sched_prio_to_x array
+ */
+static inline int8_t nice_to_index(int8_t nice) {
+    return nice + 20;
 }
 
 

@@ -25,6 +25,12 @@ typedef struct {
     int8_t   on_rq;             /* does the process on runqueue now? */
 } sched_t;
 
+typedef struct thread {
+    sched_t            sched_info;      /* info used for scheduler */
+    int32_t            argc;            /* number of arguments */
+    int8_t             **argv;          /* user command line argument */
+} thread_t;
+
 #define container_of(ptr, type, member) ({		    \
 	void *__mptr = (void *)(ptr);					\
 	((type *)(__mptr - offsetof(type, member))); })
@@ -33,6 +39,19 @@ typedef struct {
 #define offsetof(type, member) \
     ((unsigned int)((unsigned char*)&((type*)0)->member - (unsigned char*)0))
 
+
+#define task_of(ptr)  container_of(ptr, thread_t, sched_info)
+
+
+/* weight info */
+typedef struct {
+    unsigned int weight;
+    unsigned int inv_weight;
+} weight_t;
+
+static inline update_load(weight_t *load, unsigned int weight) {
+    load->weight += weight;
+}
 
 #define GETPRO(p)                       \
 do {                                    \
@@ -48,11 +67,10 @@ do {                                    \
 } while (0)
 
 int main(void) {
-    sched_t *s = malloc(sizeof(sched_t));
-    s->on_rq = 10;
-
-    sched_t *c = container_of(&s->node, sched_t, node);
-    printf("%d\n", c->on_rq);
-
+    weight_t *myload = malloc(sizeof(weight_t));
+    myload->weight = 123;
+    weight_t load = *myload;
+    myload->weight = 100;
+    printf("%d\n", (int)load.weight);
     return 0;
 }   

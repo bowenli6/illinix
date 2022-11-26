@@ -27,6 +27,12 @@ typedef unsigned char uint8_t;
 typedef uint32_t pid_t;
 typedef uint32_t gid_t;
 
+/* x is likely to be true */
+#define likely(x)	    __builtin_expect(!!(x), 1)
+
+/* x is unlikely to be treu */
+#define unlikely(x)	    __builtin_expect(!!(x), 0)
+
 #endif /* ASM */
 
 #endif /* _TYPES_H */
