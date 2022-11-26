@@ -183,9 +183,9 @@ void entry(unsigned long magic, unsigned long addr) {
     /* This is an test for share gitlab. */
 #ifdef RUN_TESTS
     /* Run tests */
-    //launch_tests();
+    launch_tests();
     
 #endif
-    clear();
-    swapper();  /* process 0 starts schedule tasks for users */
+    //clear();
+    //swapper();  /* process 0 starts schedule tasks for users */
 }

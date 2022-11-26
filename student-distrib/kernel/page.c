@@ -118,7 +118,6 @@ int32_t do_vidmap(uint8_t **screen_start) {
 
 
 
-
 /*
 pte_t* 
 _walk(pagedir_t pd, uint32_t va, int alloc)

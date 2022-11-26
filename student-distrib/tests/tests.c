@@ -568,20 +568,24 @@ int test_checkpoint3() {
 /* Checkpoint 5 tests */
 
 void test_kmalloc() {
-	int temp, t2;
+	int temp, t2, t3;
     printf("kmalloc 4MB: %x\n", t2 = (uint32_t)kmalloc(PAGE_SIZE_4MB));
     printf("kmalloc 123: %x\n", temp = (uint32_t)kmalloc(123));
-    kfree((void*)temp);
+    //kfree((void*)temp);
 	printf("kfree 123\n");
-    free_page((void*)t2, 10);
+    kfree((void*)t2);
 	printf("kfree 4MB\n");
     printf("kmalloc 8KB: %x\n", (uint32_t)kmalloc(PAGE_SIZE*2));
-    printf("kmalloc 1MB: %x\n", (uint32_t)kmalloc(PAGE_SIZE_4MB/4));
-    printf("kmalloc 4MB: %x\n", (uint32_t)kmalloc(PAGE_SIZE_4MB));
+    printf("kmalloc 1MB: %x\n", t3 = (uint32_t)kmalloc(PAGE_SIZE_4MB/4));
+    printf("kmalloc 2MB: %x\n", (uint32_t)kmalloc(PAGE_SIZE_4MB/2));
+	//kfree((void*)t3);
+	printf("kree 1MB\n");
     printf("kmalloc 513: %x\n", (uint32_t)kmalloc(513));
     printf("kmalloc 1024: %x\n", (uint32_t)kmalloc(1024));
     printf("kmalloc 2048: %x\n", (uint32_t)kmalloc(1024));
     printf("kmalloc 4KB: %x\n", (uint32_t)kmalloc(PAGE_SIZE));
+	printf("kmalloc 8KB: %x\n", (uint32_t)kmalloc(2 * PAGE_SIZE));
+	printf("kmalloc 4KB: %x\n", (uint32_t)kmalloc(PAGE_SIZE));
 }
 
 /* Test suite entry point */

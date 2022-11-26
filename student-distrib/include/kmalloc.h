@@ -7,7 +7,7 @@
 #define SLAB_PAGES 4
 #define MAX_ORDER 11
 
-#define SLAB_SIZE 0x200
+#define SLAB_SIZE 0x08
 
 #define BIT_MAP_COMP(x) (1L << (x % 32))
 
@@ -36,18 +36,17 @@ typedef struct free_area_t {
     uint32_t bit_map[128];
 } free_area_t;
 
-typedef struct alloc_header_t {
+typedef struct page_header_t {
     int addr;
-    int size;
-} alloc_header_t;
+    int order;
+    struct page_header_t* next;
+} page_header_t;
 
 typedef struct slab_t {
     int size;
-    int addr;
     int status;
     struct slab_t* last;
     struct slab_t* next;
-    //alloc_header_t* info;
 } slab_t;
 
 void kmalloc_init(void);
@@ -55,10 +54,6 @@ void* kmalloc(int size);
 void kfree(void* p);
 void* get_page(int order);
 void free_page(void* p, int order);
-
-void page_alloc_init(void);
-void* page_alloc(void);
-void page_free(void* p);
 int buddy_size(int order);
 
 void slab_init(void);
