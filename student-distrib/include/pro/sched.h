@@ -30,6 +30,10 @@
 		for (; se; se = se->parent)
 
 
+/* get sched info from a rb_node */
+#define	sched_of(ptr) rb_entry(ptr, sched_t, node)
+
+
 /* weight info */
 typedef struct {
     uint32_t weight;
@@ -78,14 +82,15 @@ typedef struct {
 } cfs_rq;
 
 
+
 extern cfs_rq *rq;
 extern const uint32_t sched_prio_to_weight[40];
 extern const uint32_t sched_prio_to_wmult[40];
 
 
 void sched_init(void);
-void set_sched_task(thread_t *new);
-int32_t task_tick(sched_t *curr);
+void sched_fork(thread_t *task);
+void task_tick(sched_t *curr);
 void schedule(void);
 void pause(void);
 

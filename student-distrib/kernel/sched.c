@@ -40,7 +40,7 @@
  * https://trepo.tuni.fi/bitstream/handle/10024/96864/GRADU-1428493916.pdf
  * https://static.linaro.org/connect/yvr18/presentations/yvr18-220.pdf
  * 
- * @version 0.7
+ * @version 0.8
  * @date 2022-11-26
  * 
  * @copyright Copyright (c) 2022
@@ -188,32 +188,32 @@ void sched_init(void) {
  * 
  * @param new : new task thread info
  */
-void set_sched_task(thread_t *new) {
+void sched_fork(thread_t *task) {
     sched_t *curr = rq->current;
-    sched_t *s = &new->sched_info;
-
-    /* enqueued already */
-    if (s->on_rq) return;
+    sched_t *new = &task->sched_info;
 
     /* set weights */
-    set_load_weight(new, new->nice);
+    set_load_weight(new, task->nice);
 
     if (curr) {
         /* update vruntime of the current process */
         update_curr();
 
         /* new task first get vruntime from its parent */
-        s->vruntime = curr->vruntime;  
+        new->vruntime = curr->vruntime;  
     }
 
     /* set vruntime for new task */
     place_entity(new, 1);
 
     /* new task become runnable */
-    new->state = RUNNABLE;
+    task->state = RUNNABLE;
 
-    /* enqueue the task */
-    enqueue_task(s, 0);
+    /* enqueue task to runqueue */
+    enqueue_task(task, 0);
+
+    /* check if reschedling is needed */
+    if (check_preempt_new) task->flag = NEED_RESCHED;
 }
 
 
@@ -232,11 +232,14 @@ void schedule(void) {
     /* get current thread */
     GETPRO(curr);
 
+    /* clear NEED_RESCHED flag */
+    curr->flag = 0;
+
     /* get sched info of the current task */
     sched = &curr->sched_info;
 
     /* if the current state has been sleeping or has been stopped */
-    if ((curr->state == SLEEPING) || (curr->state == STOPPED)) {
+    if (curr->state == SLEEPING) {
         /* remove the task from the runqueue */
         dequeue_task(sched, 1);
         sched->on_rq = 0;
@@ -247,10 +250,13 @@ void schedule(void) {
 
     /* switch to the next task*/
 	if (likely(curr != next)) {
+
         if (curr->state == RUNNING) 
             curr->state = RUNNABLE;
+
         next->state = RUNNING;
         rq->current = &next->sched_info;
+
         restore_flags(flags);
         context_switch(curr->context, next->context);
         return;
@@ -273,10 +279,10 @@ static thread_t *pick_next_task(sched_t *curr) {
     if (!rq->nr_running)
         return idle;
 
-    /* store the current task back to the run queue*/
+    /* store the current task back to the run queue only if curr is present */
     put_prev_task(curr);
     
-    /* get next sched entity and cached the next of the next entity if have any */
+    /* get next sched entity */
     next = pick_next_entity();
 
     /* remove the picked task from the run queue */
@@ -293,9 +299,19 @@ static thread_t *pick_next_task(sched_t *curr) {
 }
 
 
-
+/**
+ * @brief pick the next sched info with the smallest vruntime
+ * and (if possible) cached the next next rbnode into rq->left_most
+ * and its vruntime into rq->min_vruntime
+ * 
+ * @return sched_t* : picked sched info
+ */
 static sched_t *pick_next_entity(void) {
+    rb_node *__left_most = rq->left_most;
 
+    if (unlikely(!__left_most)) return NULL;
+
+    return sched_of(__left_most);
 }
 
 
@@ -312,6 +328,7 @@ static void put_prev_task(sched_t *prev) {
      */
     if (prev->on_rq) {
         update_curr();
+        /* cache the next entity which has the min_vruntime if have any */
         __enqueue_entity(prev);
     }
 
@@ -440,14 +457,15 @@ static int32_t check_preempt_new(sched_t *curr, sched_t *new) {
  * @brief called everytime when a timer interrupt is fired
  * 
  * @param curr : current sched info
- * @return int32_t : 1 to reschedule, 0 otherwise
  */
-int32_t task_tick(sched_t *curr) {
+void task_tick(sched_t *curr) {
     update_curr();
     
     /* only try to reschedule when there are more than 1 runnable task */
-    if (rq->nr_running > 1) {
-        return check_preempt_tick(curr);
+    if (rq->nr_running) {
+        if (check_preempt_tick(curr)) {
+            task_of(curr)->flag = NEED_RESCHED;
+        }
     }
 
     return 0;
@@ -482,9 +500,13 @@ static int32_t check_preempt_tick(sched_t *curr) {
      * of the leftmost scheduling entity in the red-black tree */
 	if (delta < 0) return 0;
  
-    /* NOT A BUG. After reviewing the submission records, the author's 
+    /* NOT A BUG. 
+     * After reviewing the submission records, the author's 
      * intention is: I hope that tasks with small weights will be preempted 
-     * more easily. (MAGIC CODE BUT SOMEHOW WORKS!)
+     * more easily. Ensure that a task that missed wakeup preemption by a
+     * narrow margin doesn't have to wait for a full slice. This also mitigates 
+     * buddy induced latencies under load.
+     * (MAGIC CODE BUT SOMEHOW WORKS!)
      */
 	if (delta > ideal) return 1;
 
@@ -786,6 +808,7 @@ static inline int8_t nice_to_index(int8_t nice) {
 }
 
 
+
 /**
  * @brief halts the central processing unit (CPU) until 
  * the next external interrupt is fired.
@@ -798,3 +821,4 @@ void pause(void) {
     /* Spin (nicely, so we don't chew up cycles) */
     asm volatile (".1: hlt; jmp .1;");
 }
+
