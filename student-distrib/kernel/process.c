@@ -1,3 +1,27 @@
+/**
+ * @file process.c
+ * @brief Process Management Unit
+ * 
+ * @fork:
+ * fork -> sys_fork -> 
+ *    do_fork -> process_create
+ *            -> process_clone
+ *            -> sched_fork -> enqueue_task -> check_preempt_new
+ *            -> return child's pid
+ * 
+ * @execute:
+ * 
+ * @exit:
+ * 
+ * 
+ * @version 0.1
+ * @date 2022-11-27
+ * 
+ * @copyright Copyright (c) 2022
+ * 
+ */
+
+
 #include <pro/process.h>
 #include <pro/sched.h>
 #include <boot/x86_desc.h>
@@ -6,6 +30,7 @@
 #include <drivers/fs.h>
 #include <access.h>
 #include <errno.h> 
+
 
 
 thread_t *idle;                 /* process 0 (idle process) */
@@ -56,6 +81,43 @@ void init_task(void) {
         /* yield the CPU to process 0 again */
         schedule();
     }
+}
+
+
+/**
+ * @brief clone a new process from the current one
+ * 
+ * @param kthread : is the new thread a kernel thread?
+ * @return int32_t : 0 - to child
+ *                 < 0 - error number
+ *                 > 0 - pid of the child process
+ * Note that fork returns twice: 
+ * it returns pid of the child to current process
+ * and returns 0 to the child process
+ * 
+ * pid 0 is reserved by the kernel, which will not be
+ * used by the user.
+ */
+int32_t do_fork(uint8_t kthread) {
+    pid_t pid;
+    thread_t *parent, *child;
+
+    /* get current process */
+    GETPRO(parent);
+
+    /* create child process */
+    if (!(child = process_create(parent, kthread)))
+        return -1;
+    
+
+    /* set up sched info for child */
+    fork_sched_task(child); 
+
+    /* check */
+    check_preempt_new(&parent->sched_info, &child->sched_info);
+
+    /* parent return child's pid */
+    return pid;
 }
 
 
@@ -179,7 +241,7 @@ static int32_t __exec(thread_t *current, thread_t **new, const int8_t *cmd, uint
 
     /* create terminals if the program is shell */
     if (!strcmp(argv[0], SHELL)) {
-        (*new)->sched_info.nice = -5;
+        (*new)->nice = NICE_SHELL;
 
         if (console->size == console->max) {
             process_free(*new, pid);
@@ -193,7 +255,7 @@ static int32_t __exec(thread_t *current, thread_t **new, const int8_t *cmd, uint
 
         console->terminals[console->size++] = terminal;
     } else {
-        (*new)->sched_info.nice = 0;
+        (*new)->nice = NICE_NORMAL;
     }
 
     /* init file array */

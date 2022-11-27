@@ -6,7 +6,7 @@
 
 // #define rb_parent(r)   ((struct rb_node *)((r)->__rb_parent_color & ~3))
 
-#define	sched_of(ptr) container_of(ptr, sched_t, node);
+#define rb_entry(node, type, member) container_of(node, type, member);
 
  
 typedef struct _rb_node {
@@ -16,7 +16,6 @@ typedef struct _rb_node {
 } rb_node;
 
 
-void add_rbnode(rb_node *node, uint32_t key);
-void remove_rbnode(rb_node *node);
+
 
 #endif /* _RBTREE_H_ */

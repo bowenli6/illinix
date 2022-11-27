@@ -5,8 +5,8 @@
 #include <lib.h>
 #include <io.h>
 
-uint32_t sys_ticks;  /* stores the number of elapsed ticks since the system was started (up to 50 days) */
-timespec sys_time;   /* current time and date */
+volatile uint32_t sys_ticks;  /* stores the number of elapsed ticks since the system was started (up to 50 days) */
+timespec sys_clock;           /* current time and date */
 
 /**
  * @brief init PIT (Programmable Interval Timer)
@@ -37,17 +37,27 @@ void do_timer(void) {
     /* update system clock */
     sys_ticks++;
     
-    /* update scheduler clock */
-    // TODO
+    /* update scheduler clock 
+     * NOTE: the waying of doing this might be updated 
+     * when high precision system clock is enabled 
+     */
+    rq->clock += TICKUNIT;
 
     send_eoi(TIMER_IRQ);      
 
     /* critical section begins. */
     cli_and_save(intr_flag);  
 
+    GETPRO(current);
+
     /* update vruntime of current task and reschedule when needed */
-    if (task_tick(&current->sched_info))
+    task_tick(&current->sched_info);
+
+    if (current->flag == NEED_RESCHED) {
+        restore_flags(intr_flag);
         schedule();
+        return;
+    }
 
     /* critical section ends. */
     restore_flags(intr_flag);

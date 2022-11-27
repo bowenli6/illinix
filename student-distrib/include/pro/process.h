@@ -12,14 +12,16 @@
 #define MAXARGS         10              /* max number of arguments */
 #define SHELL           "shell"         /* shell program */
 #define TASKSTART       2               /* user tasks starts from 2 */
-#define NICE_INIT       5               /* nice value for init process */
-#define NICE_SHELL      5               /* nice value for shell process */
-#define NICE_NORMAL     0               /* nice value for default process */
+#define NICE_INIT       10              /* nice value for init process */
+#define NICE_SHELL      0               /* nice value for shell process */
+#define NICE_NORMAL     5               /* nice value for default process */
 
 #define task_of(ptr)  container_of(ptr, thread_t, sched_info)
 
+#define NEED_RESCHED    1               /* flag used for rescheduling */
 
-typedef enum { RUNNING, RUNNABLE, SLEEPING, STOPPED, EXITED } pro_state;
+typedef enum { UNUSED, RUNNING, RUNNABLE, SLEEPING, EXITED, ZOMIBIE } pro_state;
+
 
 
 /* hardware context */
@@ -46,6 +48,7 @@ typedef struct thread {
     list_head          task_node;       /* a list of all tasks  */
     sched_t            sched_info;      /* info used for scheduler */
     volatile pro_state state;	        /* process state */
+    volatile uint8_t   flag;            /* process flag */
     int32_t            argc;            /* number of arguments */
     int8_t             **argv;          /* user command line argument */
     pid_t              pid;             /* process id number */
