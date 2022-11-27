@@ -34,6 +34,7 @@ typedef struct {
     uint32_t edi;
     uint32_t ebp;
     uint32_t esp;
+    uint32_t eip;
     uint32_t eflags;
     uint16_t es;
     uint16_t cs;
@@ -88,11 +89,17 @@ void swapper(void);
 void init_task(void);
 
 void do_exit(uint32_t status);
+void do_halt(uint32_t status);
+int32_t do_fork(thread_t *parent, uint8_t kthread);
 int32_t do_execute(const int8_t *cmd);
 pid_t do_getpid(void);
 
 uint32_t get_esp0(pid_t pid);
+void context_switch(thread_t *from, thread_t *to);
+
+/* implemented in switch.S */
 void save_context(context_t *context);
-void context_switch(context_t *from, context_t *to);
+void swtch(context_t *from, context_t *to);
+
 
 #endif /* _PROCESS_H_ */

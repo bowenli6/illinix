@@ -43,6 +43,7 @@ void do_keyboard(void) {
     /* Critical section begins. */
     cli_and_save(intr_flag);  
 
+
     if (scancode < SCANCODES_SIZE)              /* key press (make) */
         key_press(scancode);
     else                                        /* key release (break) */

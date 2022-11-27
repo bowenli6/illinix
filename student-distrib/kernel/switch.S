@@ -27,14 +27,13 @@ save_context:
     movl    %esp, %ebp;
 
     pushl   %eax
-    pushl   %edx 
 
     # get arguments
     movl    8(%ebp), %eax 
 
     # store current hardware context to eax
-    movl    4(%esp), EAX(%eax)
-    movl    0(%esp), EBX(%eax)
+    movl    0(%esp), EAX(%eax)
+    movl    %ebx,    EBX(%eax)
     movl    %edx,    EDX(%eax)
     movl    %esi,    ESI(%eax)
     movl    %edi,    EDI(%eax)
@@ -55,8 +54,8 @@ save_context:
 
 # arg0: the hardware context of the thread that wants to switch
 # arg0: the hardware context of the thread that will be switched with
-.globl context_switch
-context_switch:
+.globl swtch
+swtch:
     pushl   %ebp;
     movl    %esp, %ebp;
 
@@ -67,10 +66,13 @@ context_switch:
     movl    8(%ebp), %eax 
     movl    12(%ebp), %edx
 
+    testl   %eax, %eax  # arg0 is NULL
+    je      to
+
     # store current hardware context to eax
     movl    4(%esp), EAX(%eax)
-    movl    0(%esp), EBX(%eax)
-    movl    %edx,    EDX(%eax)
+    movl    0(%esp), EDX(%eax)
+    movl    %ebx,    EBX(%eax)
     movl    %esi,    ESI(%eax)
     movl    %edi,    EDI(%eax)
     movl    %ebp,    EBP(%eax)
@@ -84,6 +86,7 @@ context_switch:
     movl    %fs,     FS(%eax)
     movl    %gs,     GS(%eax)
 
+to:
     # load edx to the current hardware context 
     movl    EAX(%edx), %eax
     movl    EBX(%edx), %ebx

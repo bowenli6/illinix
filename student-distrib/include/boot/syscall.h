@@ -9,7 +9,7 @@
 void syscall_handler();
 
 /* Required by ECE391. */
-asmlinkage int32_t sys_exit(uint8_t status);
+asmlinkage int32_t sys_halt(uint8_t status);
 asmlinkage int32_t sys_execute(const int8_t *cmd);
 asmlinkage int32_t sys_open(const int8_t *filename);
 asmlinkage int32_t sys_close(int32_t fd);
@@ -24,6 +24,10 @@ asmlinkage int32_t sys_sigreturn(void);
 /* Extra Credit */
 
 asmlinkage int32_t sys_restart(void);
+asmlinkage int32_t sys_fork(void);
+asmlinkage int32_t sys_exit(void);
+asmlinkage int32_t sys_getpid(void);
+
 
 /* --------------------------------Process-------------------------------- */
 

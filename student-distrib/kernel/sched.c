@@ -40,7 +40,7 @@
  * https://trepo.tuni.fi/bitstream/handle/10024/96864/GRADU-1428493916.pdf
  * https://static.linaro.org/connect/yvr18/presentations/yvr18-220.pdf
  * 
- * @version 0.8
+ * @version 0.9
  * @date 2022-11-26
  * 
  * @copyright Copyright (c) 2022
@@ -171,7 +171,7 @@ void sched_init(void) {
     wait_queue->next = wait_queue;
     wait_queue->prev = wait_queue;
     
-    /* create runqueue */
+    /* create run queue */
     rq = kmalloc(sizeof(cfs_rq));
     rq->nr_running = 0;
     rq->current = NULL;
@@ -218,6 +218,57 @@ void sched_fork(thread_t *task) {
 
 
 /**
+ * @brief invoked when a thread is exited
+ * 
+ */
+void sched_exit(void) {
+    sched_t *next;
+    thread_t *torun;
+
+    /* get next sched entity */
+    next = pick_next_entity();
+
+    /* remove the picked task from the run queue */
+    __dequeue_entity(next);
+
+    rq->current = next;
+
+    next->exec_start = rq->clock;
+
+    next->prev_sum_exec_time = next->sum_exec_time;
+    
+    torun = task_of(next);
+
+    torun->state = RUNNING;
+
+    context_switch(NULL, next);
+}
+
+
+/**
+ * @brief wake up a sleeping process
+ * 
+ * @param task : task info
+ */
+void sched_wakeup(thread_t *task) {
+    task->state = RUNNABLE;
+    enqueue_task(task, 1);
+}
+
+
+
+/**
+ * @brief let a running process to sleep
+ * 
+ * @param task : task info 
+ */
+void sched_sleep(thread_t *task) {
+    task->state = SLEEPING;
+    schedule();
+}
+
+
+/**
  * @brief scheduler service routine
  * 
  */
@@ -258,12 +309,16 @@ void schedule(void) {
         rq->current = &next->sched_info;
 
         restore_flags(flags);
-        context_switch(curr->context, next->context);
+        context_switch(curr, next);
         return;
     }
 
     restore_flags(flags);
 }
+
+
+
+
 
 
 /**
@@ -459,6 +514,7 @@ static int32_t check_preempt_new(sched_t *curr, sched_t *new) {
  * @param curr : current sched info
  */
 void task_tick(sched_t *curr) {
+    /* update vruntime of the current task */
     update_curr();
     
     /* only try to reschedule when there are more than 1 runnable task */
@@ -479,7 +535,7 @@ void task_tick(sched_t *curr) {
  * @return int32_t : 1 to reschedule, 0 otherwise
  */
 static int32_t check_preempt_tick(sched_t *curr) {
-    uint64_t ideal = timeslice(curr) ;
+    uint64_t ideal = timeslice(curr);
     uint64_t delta = curr->sum_exec_time - curr->prev_sum_exec_time;
 
     /* has used all timeslice: should be preempted */

@@ -1,5 +1,6 @@
 #include <boot/syscall.h>
 #include <pro/process.h>
+#include <pro/sched.h>
 #include <errno.h>
 #include <boot/page.h>
 #include <lib.h>
@@ -13,7 +14,7 @@
  * @param status : 
  * @return int32_t : positive or 0 denote success, negative values denote an error condition
  */
-asmlinkage int32_t sys_exit(uint8_t status) {
+asmlinkage int32_t sys_halt(uint8_t status) {
    cli();
 
    /* never returns to the halting process */
@@ -22,6 +23,35 @@ asmlinkage int32_t sys_exit(uint8_t status) {
    return 0; /* never reach here */
 }
 
+
+/**
+ * @brief A system call service routine for creating a process
+ * The calling convation of this function is to use the 
+ * arguments from the stack
+ * 
+ * @param status : 
+ * @return int32_t : positive or 0 denote success, negative values denote an error condition
+ */
+asmlinkage int32_t sys_fork(void) {
+   pid_t pid;
+   thread_t *current;
+
+   cli();
+
+   /* get current process */
+   GETPRO(current);
+
+   /* get pid of child */
+   pid = do_fork(current, 0);
+
+   sti();
+
+   /* check for preemption */
+   if (current->flag == NEED_RESCHED)
+      schedule();
+
+   return pid; 
+}
 
 /**
  * @brief A system call service routine for creating a process
@@ -77,7 +107,7 @@ asmlinkage int32_t sys_close(int32_t fd) {
  * @return int32_t : positive or 0 denote success, negative values denote an error condition
  */
 asmlinkage int32_t sys_read(int32_t fd, void *buf, uint32_t nbytes) {
-   return do_read(fd, buf, nbytes);
+    return do_read(fd, buf, nbytes);
 }
 
 
@@ -105,15 +135,19 @@ asmlinkage int32_t sys_write(int32_t fd, const void *buf, uint32_t nbytes) {
  * @return int32_t : positive or 0 denote success, negative values denote an error condition
  */
 asmlinkage int32_t sys_getargs(uint8_t *buf, int32_t nbytes) {
+    thread_t *curr;
+
+    GETPRO(curr);
+
     /* no arguments */
-    if (CURRENT->argc <= 1) 
+    if (curr->argc <= 1) 
         return -1;
 
     /* buf is NULL */
     if (!buf)
         return -1;
 
-   strncpy((char*)buf, CURRENT->argv[1], nbytes);
+   strncpy((char*)buf, curr->argv[1], nbytes);
    return 0;
 }
 
