@@ -290,17 +290,17 @@ nobadsys:
     call  *syscall_table(, %eax, 4)         # perform the system call.
     movl  %eax, EAX(%esp)		            # store the return value
 syscall_exit:
-    popl %ebx
-	popl %ecx
-	popl %edx
-	popl %esi
-	popl %edi
-	popl %ebp
-	popl %eax
-    popl %ds
-	popl %es
-	addl $4, %esp
-	iret;		    
+        popl %ebx
+        popl %ecx
+        popl %edx
+        popl %esi
+        popl %edi
+        popl %ebp
+        popl %eax
+        popl %ds
+        popl %es
+        addl $4, %esp
+        iret;		    
 
 resume_userspace:
     # TODO: Check for recheduling request, not implmented yet.

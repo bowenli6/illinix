@@ -98,24 +98,55 @@ void init_task(void) {
  * pid 0 is reserved by the kernel, which will not be
  * used by the user.
  */
-int32_t do_fork(uint8_t kthread) {
+int32_t do_fork(thread_t *parent, uint8_t kthread) {
     pid_t pid;
-    thread_t *parent, *child;
-
-    /* get current process */
-    GETPRO(parent);
+    uint32_t *ebp, *eip;
+    thread_t *child;
 
     /* create child process */
     if (!(child = process_create(parent, kthread)))
         return -1;
-    
 
+    /* clone thread info of child from parent */
+    if (process_clone() < 0)
+        return -1;
+        
     /* set up sched info for child */
     fork_sched_task(child); 
 
-    /* check */
+    /* check if child can preempt parent */
     check_preempt_new(&parent->sched_info, &child->sched_info);
 
+    /* save child hardware context */
+    save_context(child->context);
+
+    ntask++;
+
+    /* get ebp (contains old ebp : 0(%ebp) and eip : 4(%ebp))*/
+    ebp = (uint32_t*) child->context->ebp;
+    eip = ebp + 1;
+
+    /* set saved eip to the address of label child_ret;
+     * GCC includes a non-standard extension for saving labels 
+     * as values by using && + label; 
+     * I tried to avoid doing this but for now, this is the only 
+     * way to do it. */
+    *eip = &&child_ret;
+
+    /* parent will jump to parent_ret */
+    goto parent_ret;
+
+child_ret:
+    /* get shared eip in user space */
+    child->usreip = get_eip_user();
+
+    /* shared user esp */
+    child->usresp = USER_STACK_ADDR;
+    
+    /* context switch to child's user space (ring 3) */
+    switch_to_user(child);
+
+parent_ret:
     /* parent return child's pid */
     return pid;
 }
@@ -134,7 +165,6 @@ void do_exit(uint32_t status) {
     GETPRO(t);
     new = kmalloc(sizeof(thread_t *));
 
-
     /* check if the current process is running a system thread */
     if (t->kthread && strcmp(t->argv[0], SHELL)) {
         // TODO       
@@ -147,19 +177,11 @@ void do_exit(uint32_t status) {
 
     ntask--;
 
-
-    /* switch to its parent's stack */
-    sti();
-    asm volatile ("                         \n\
-                    movl %%edx, %%ebp       \n\
-                    movl %%ebx, %%eax       \n\
-                    leave                   \n\
-                    ret                     \n\
-                  "
-                  :
-                  : "d"(parent->context->ebp), "b"(status)
-                  : "memory"
-    );      
+    /* leave its children to init */
+    // TODO
+    
+    /* when wait syscall is implement, the parent will get the exit status */
+    sched_exit();
 }
 
 
@@ -189,7 +211,6 @@ int32_t do_execute(const int8_t *cmd) {
         save_context(current->context);
     }
 
-    
     child = *new;
     kfree(new);
 
@@ -411,18 +432,19 @@ static void process_free(thread_t *current, pid_t pid) {
  * (1) pop and or are for getting IF in EFLAGS
  * so that intrrupts will be enabled in user mode.
  * (2) set USER_DS to the GDT entry for user data segment ds.
- * (3) push the addres of 0 in the stack for halt to return
+ * (3) movl 0 to EAX because child always return 0
  * 
  */
 void switch_to_user(thread_t *p) {
     
     update_tss(p->pid);
+    user_mem_map(p->pid);
 
     sti();
 
     asm volatile ("                         \n\
-                    andl  $0xFF, %%eax      \n\
-                    movw  %%ax, %%ds        \n\
+                    andl  $0xFF,  %%eax     \n\
+                    movw  %%ax,   %%ds      \n\
                     pushl %%eax             \n\
                     pushl %%ebx             \n\
                     pushfl                  \n\
@@ -431,6 +453,7 @@ void switch_to_user(thread_t *p) {
                     pushl %%ebx             \n\
                     pushl %%ecx             \n\
                     pushl %%edx             \n\
+                    movl  $0,     %%eax,    \n\
                     iret                    \n\
                   "
                   :
@@ -482,4 +505,17 @@ static void console_init(void) {
     // }
 
     kfree(new);
+}
+
+
+/**
+ * @brief change process's context from one process to the other
+ * 
+ * @param from : switch from this process
+ * @param to : jump to this process
+ */
+void context_switch(thread_t *from, thread_t *to) {
+    if (from) user_mem_unmap(from->pid);
+    user_mem_map(to->pid);
+    swtch(from->context, to->context);
 }

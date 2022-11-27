@@ -1,6 +1,7 @@
 #include <drivers/terminal.h>
 #include <vfs/ece391_vfs.h>
 #include <pro/process.h>
+#include <pro/sched.h>
 #include <lib.h>
 #include <io.h>
 
@@ -240,6 +241,8 @@ int32_t terminal_read(int32_t fd, void *buf, int32_t nbytes) {
     uint32_t intr_flag;
     int32_t nread;
     uint8_t start = 0;
+    thread_t *curr;
+
     if (fd != stdin)
         return -1;
 
@@ -255,7 +258,13 @@ int32_t terminal_read(int32_t fd, void *buf, int32_t nbytes) {
     /* Init to zero. (read is not stopped) */
     terminal.exit = 0;
 
+    GETPRO(curr);
+
+
     while (!terminal.exit) {
+
+        /* sleep and waiting for an IO operation */
+        sched_sleep(curr);
 
         /* Waiting for intrrupt occurs... */
 

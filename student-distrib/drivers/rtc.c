@@ -4,6 +4,7 @@
 #include <vfs/ece391_vfs.h>
 #include <pro/process.h>
 #include <drivers/fs.h>
+#include <access.h>
 #include <lib.h>
 #include <io.h>
 

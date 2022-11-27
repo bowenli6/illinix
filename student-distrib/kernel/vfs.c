@@ -68,6 +68,8 @@ int32_t do_close(int32_t fd) {
 int32_t do_read(int32_t fd, void *buf, uint32_t nbytes) {
    int32_t errno;
    file_op f_op;
+   thread_t *curr;
+
 
    /* validate file descriptor */
    if ((errno = validate_fd(fd)) < 0)
@@ -81,10 +83,12 @@ int32_t do_read(int32_t fd, void *buf, uint32_t nbytes) {
    /* copy data from user space to kernel space */
    // if ((errno = copy_from_user((void *)kbuf, (void *)buf, nbytes)) <= 0)
    //    return errno;
+   
+   GETPRO(curr);
 
    /* copy data from user space to kernel space*/
    /* invoke read routine */
-   f_op = CURRENT->fds.fd[fd].f_op;
+   f_op = curr->fds.fd[fd].f_op;
    return f_op.read(fd, (void *)buf, nbytes);
 }
 
