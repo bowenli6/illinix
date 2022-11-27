@@ -67,6 +67,7 @@ typedef struct thread {
     files              fds;             /* opened file descritors */
     uint8_t            kthread;         /* 1 if this thread is belong to the kernel */
     signal_struct_t    *sig; 
+    hardware_context_t *context;
 } thread_t;
 
 

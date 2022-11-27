@@ -13,7 +13,37 @@ static int32_t interrupt_handler();
 static int32_t alarm_handler(); 
 static int32_t user1_handler();
 
+/* Only occurs when Kernel ----> Usr */
+/* 1: Mask all other signals, and need to */
+asmlinkage int32_t deliver_signal() {
+    // mask all signal and store the original stuff
+    int32_t i, flags, sig_num;
 
+    cli_and_save(flags);
+
+    // store the previous mask state and then mask all other signals
+    for (i = 0; i < SIG_COUNT; ++ i) {
+        CURRENT->sig->previous_mask_arr[i] = CURRENT->sig->mask_arr[i];
+        add_mask(i);
+    }
+
+    for (i = 0; i < SIG_COUNT; ++ i) {
+        if (CURRENT->sig->mask_arr[i] != 1 && CURRENT->sig->pen_arr[i] == 1) {
+            sig_num = i;
+            break;
+        }
+    }
+
+    // According to ULK P.441, if ka.sa.sa_handler is equal to ISG_DFL, we must perform default handler
+    if (CURRENT->sig->exe_sig_act[sig_num] == default_arr[sig_num]) {
+        default_arr[sig_num]();    
+    } else {
+        do_deliver(CURRENT->context, CURRENT->sig->exe_sig_act[sig_num], sig_num);
+    }
+
+    restore(flags);
+    return 0;
+}
 
 
 asmlinkage int32_t sys_set_handler(int32_t signum, void *handler_addr) {
@@ -86,13 +116,13 @@ int32_t send_signal(thread_t* thread, int8_t signum) {
 
 static
 int32_t div_zero_handler() {
-    sys_halt(256);
+    do_halt(256);
     return 0;
 }
 
 static
 int32_t segfault_handler() {
-    sys_halt(256);
+    do_halt(256);
     return 0;
 }
 
@@ -132,6 +162,7 @@ int32_t thread_sig_init(thread_t* thread) {
     for (i = 0; i < SIG_COUNT; ++ i) {
         thread->sig->mask_arr[i] = 0;
         thread->sig->pen_arr[i] = 0;
+        thread->sig->previous_mask_arr[i] = 0;
         thread->sig->exe_sig_act[i] = (default_action*)NULL;
     }
 
