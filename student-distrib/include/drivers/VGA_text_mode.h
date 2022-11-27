@@ -24,4 +24,8 @@ extern uint32_t VGA_enabled;
 void VGA_init(uint16_t width, uint16_t height, uint16_t bitPixel);
 void VGA_write(uint16_t REG_index, uint16_t data);
 void VGA_switch_terminal(int32_t terminal_index);
+void vga_text_set_color(uint8_t x, uint8_t y, uint8_t foreground, uint8_t background);
 void VGA_text_set_cursor_position(uint8_t x, uint8_t y);
+
+
+

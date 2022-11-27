@@ -3,6 +3,13 @@
 #include "../include/pro/process.h"
 
 
+// initialize VGA status
+uint16_t VGA_witdh_resoltion = 0;
+uint16_t VGA_height_resolution = 0;
+uint16_t VGA_bit_per_pixel = 0;
+uint32_t VGA_enabled = 0;
+
+
 
 void VGA_init(uint16_t width, uint16_t height, uint16_t bitPixel){
 
@@ -49,7 +56,9 @@ void VGA_switch_terminal(int32_t terminal_index){
 
 
 void vga_text_set_color(uint8_t x, uint8_t y, uint8_t foreground, uint8_t background) {
+    /* read the color from input */
     uint8_t color = (background & 0xF) << 4 | (foreground & 0xF);
+    /* set the char at the specific location to color */
     *(uint8_t*) (SCREEN + (y * WIDTH + x) * 2 + 1) = color;
 }
 
@@ -75,3 +84,12 @@ void VGA_text_set_cursor_position(uint8_t x, uint8_t y){
     outb(cursor_lowpos ,VGA_TEXT_DATA_port);
 
 }
+
+
+
+
+
+
+
+
+
