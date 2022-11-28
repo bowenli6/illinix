@@ -47,6 +47,7 @@
 #include <pro/sched.h>
 #include <pro/process.h>
 #include <access.h>
+#include <kmalloc.h>
 #include <lib.h>
 
 /*
@@ -116,15 +117,14 @@ static uint64_t __calc_delta_vruntime(uint64_t delta, uint32_t weight, weight_t 
 static inline uint64_t mul_u64_u32_shr(uint64_t a, uint32_t mul, uint32_t shift);
 static inline uint64_t max_vruntime(uint64_t min_vruntime, uint64_t vruntime);
 static inline uint64_t min_vruntime(uint64_t min_vruntime, uint64_t vruntime);
-static inline void set_load_weight(sched_t *s, int8_t nice);
+static inline void set_load_weight(sched_t *s, int32_t nice);
 static void place_entity(sched_t *s, int8_t new_task);
 static uint64_t vtimeslice(sched_t *s);
 static uint64_t timeslice(sched_t *s);
 static uint64_t sched_period(uint32_t nr_running);
-static inline add_load(weight_t *load, uint32_t weight);
-static inline sub_load(weight_t *load, uint32_t weight);
-static inline int8_t nice_to_index(int8_t nice);
-
+static inline void add_load(weight_t *load, uint32_t weight);
+static inline void sub_load(weight_t *load, uint32_t weight);
+static inline int32_t nice_to_index(int32_t nice);
 
 
 /**
@@ -176,7 +176,7 @@ void sched_init(void) {
     // rq->root = ?
 
     /* add init process to the run queue */
-    set_sched_task(init);
+    sched_fork(init);
 }
 
 
@@ -210,7 +210,7 @@ void sched_fork(thread_t *task) {
     enqueue_task(task, 0);
 
     /* check if reschedling is needed */
-    if (check_preempt_new) task->flag = NEED_RESCHED;
+    if (check_preempt_new(curr, new) == 1) task->flag = NEED_RESCHED;
 }
 
 
@@ -238,7 +238,7 @@ void sched_exit(void) {
 
     torun->state = RUNNING;
 
-    context_switch(NULL, next);
+    context_switch(NULL, torun);
 }
 
 
@@ -293,7 +293,7 @@ void schedule(void) {
     /* if the current state has been sleeping or has been stopped */
     if (curr->state == SLEEPING) {
         /* remove the task from the runqueue */
-        dequeue_task(sched, 1);
+        dequeue_task(curr, 1);
         sched->on_rq = 0;
     }
 
@@ -449,7 +449,7 @@ static void dequeue_entity(sched_t *prev, int8_t sleep) {
  * @param s : sched info to remove
  */
 static void __dequeue_entity(sched_t *s) {
-    rb_remove(s->node);
+    // rb_remove(s->node);
 }
 
 
@@ -504,7 +504,7 @@ static void enqueue_entity(sched_t *s, int8_t wakeup) {
  * @param s : sched info to add
  */
 static void __enqueue_entity(sched_t *s) {
-    rb_add(&s->node, s->vruntime - rq->min_vruntime);
+    // rb_add(&s->node, s->vruntime - rq->min_vruntime);
 }
 
 
@@ -539,12 +539,10 @@ void task_tick(sched_t *curr) {
     
     /* only try to reschedule when there are more than 1 runnable task */
     if (rq->nr_running) {
-        if (check_preempt_tick(curr)) {
+        if (check_preempt_tick(curr) == 1) {
             task_of(curr)->flag = NEED_RESCHED;
         }
     }
-
-    return 0;
 }
 
 
@@ -758,7 +756,7 @@ static inline uint64_t min_vruntime(uint64_t min_vruntime, uint64_t vruntime) {
  * @param s : sched info
  * @param nice : nice value
  */
-static inline void set_load_weight(sched_t *s, int8_t nice) {
+static inline void set_load_weight(sched_t *s, int32_t nice) {
     weight_t *load = &s->load;
 
     load->weight = sched_prio_to_weight[nice_to_index(nice)];
@@ -855,7 +853,7 @@ static uint64_t sched_period(uint32_t nr_running) {
  * @param load : load weight
  * @param weight : offset
  */
-static inline add_load(weight_t *load, uint32_t weight) {
+static inline void add_load(weight_t *load, uint32_t weight) {
     load->weight += weight;
     load->inv_weight += weight;
 }
@@ -867,7 +865,7 @@ static inline add_load(weight_t *load, uint32_t weight) {
  * @param load : load weight
  * @param weight : offset
  */
-static inline sub_load(weight_t *load, uint32_t weight) {
+static inline void sub_load(weight_t *load, uint32_t weight) {
     load->weight -= weight;
     load->inv_weight -= weight;
 }
@@ -879,7 +877,7 @@ static inline sub_load(weight_t *load, uint32_t weight) {
  * @param nice : nice value 
  * @return int8_t : index to the sched_prio_to_x array
  */
-static inline int8_t nice_to_index(int8_t nice) {
+static inline int32_t nice_to_index(int32_t nice) {
     return nice + 20;
 }
 

@@ -44,7 +44,7 @@ static inline void list_del(list_head *entry) {
 }
 
 static inline int32_t list_empty(list_head *head) {
-    return head->next = head;
+    return head->next == head;
 }
 
 

@@ -28,6 +28,7 @@
 #include <pro/pid.h>
 #include <lib.h>
 #include <drivers/fs.h>
+#include <kmalloc.h>
 #include <access.h>
 #include <errno.h> 
 
@@ -44,12 +45,14 @@ list_head *wait_queue;          /* list of sleeping tasks (idle -> {sleeping use
 /* local helper functions */
 static int32_t __exec(thread_t *current, thread_t **new, const int8_t *cmd, uint8_t kthread);
 static thread_t *process_create(thread_t *current, uint8_t kthread);
+static int32_t process_clone(thread_t *parent, thread_t *child);
+static uint32_t get_eip_user(thread_t *task);
 static void process_free(thread_t *current, pid_t pid);
 static int32_t parse_arg(int8_t *cmd, int8_t *argv[]);
 static int32_t copy_args(thread_t *t, int8_t *argv[]);
-static void switch_to_user(thread_t *p);
+static void switch_to_user(thread_t *curr);
 static void console_init(void);
-static void update_tss(pid_t _pid);
+static void update_tss(thread_t *curr);
 
 
 /**
@@ -113,9 +116,6 @@ int32_t do_fork(thread_t *parent, uint8_t kthread) {
     /* set up sched info for child */
     sched_fork(child); 
 
-    /* check if child can preempt parent */
-    check_preempt_new(&parent->sched_info, &child->sched_info);
-
     /* save child hardware context */
     save_context(child->context);
 
@@ -130,7 +130,7 @@ int32_t do_fork(thread_t *parent, uint8_t kthread) {
      * as values by using && + label; 
      * I tried to avoid doing this but for now, this is the only 
      * way to do it. */
-    *eip = &&child_ret;
+    *eip = (uint32_t)(&&child_ret);
 
     /* parent will jump to parent_ret */
     goto parent_ret;
@@ -141,9 +141,6 @@ child_ret:
 
     /* shared user esp */
     child->usresp = USER_STACK_ADDR;
-    
-    /* map child's vitural address space */
-    user_mem_map(child->pid);
 
     /* context switch to child's user space (ring 3) */
     switch_to_user(child);
@@ -165,6 +162,7 @@ parent_ret:
 static int32_t process_clone(thread_t *parent, thread_t *child) {
     // COPY 4MB 
     // FILE 
+    return 0;
     
 }
 
@@ -176,7 +174,7 @@ static int32_t process_clone(thread_t *parent, thread_t *child) {
  * @return uint32_t 
  */
 static uint32_t get_eip_user(thread_t *task) {
-
+    return 0;
 } 
 
 
@@ -262,7 +260,7 @@ static int32_t __exec(thread_t *current, thread_t **new, const int8_t *cmd, uint
     int32_t errno;
     int32_t argc;
     uint32_t EIP_reg;
-    terminal_t *terminal;
+    // terminal_t *terminal;
     int8_t **argv = kmalloc(MAXARGS * ARGSIZE);
 
     /* parse arguments */
@@ -282,7 +280,7 @@ static int32_t __exec(thread_t *current, thread_t **new, const int8_t *cmd, uint
     }    
 
     /* executable check and load program image into user's memory */
-    if ((errno = pro_loader(argv[0], &EIP_reg, pid)) < 0) {
+    if ((errno = pro_loader(argv[0], &EIP_reg, *new)) < 0) {
         process_free(current, pid);
         return errno;
     }
@@ -300,7 +298,9 @@ static int32_t __exec(thread_t *current, thread_t **new, const int8_t *cmd, uint
     fd_init(*new);
 
     /* set up sched info */
-    set_sched_task(&(*new)->sched_info);
+    sched_fork(*new);
+
+    // TODO
 
     /* store registers */
     (*new)->usreip = EIP_reg;
@@ -450,9 +450,9 @@ static thread_t *process_create(thread_t *current, uint8_t kthread) {
  */
 static void process_free(thread_t *current, pid_t pid) {
     kill_pid(pid);
-    free_kstack(pid);
+    free_kstack((void*)current);
     user_mem_unmap(pid);
-    update_tss(current->pid);
+    update_tss(current);
     user_mem_map(current->pid);
 }
 
@@ -469,31 +469,31 @@ static void process_free(thread_t *current, pid_t pid) {
  * (3) movl 0 to EAX because child always return 0
  * 
  */
-void switch_to_user(thread_t *p) {
+static void switch_to_user(thread_t *curr) {
     
-    update_tss(p->pid);
-    user_mem_map(p->pid);
+    update_tss(curr);
+    user_mem_map(curr->pid);
 
     sti();
 
-    asm volatile ("                         \n\
-                    andl  $0xFF,  %%eax     \n\
-                    movw  %%ax,   %%ds      \n\
-                    pushl %%eax             \n\
-                    pushl %%ebx             \n\
-                    pushfl                  \n\
-                    popl  %%ebx             \n\
-                    orl   $0x200, %%ebx     \n\
-                    pushl %%ebx             \n\
-                    pushl %%ecx             \n\
-                    pushl %%edx             \n\
-                    movl  $0,     %%eax,    \n\
-                    iret                    \n\
-                  "
-                  :
-                  : "a"(USER_DS), "b"(p->usresp), "c"(USER_CS), "d"(p->usreip)
-                  : "memory"
-    );      
+    // asm volatile ("                         \n\
+    //                 andl  $0xFF,  %%eax     \n\
+    //                 movw  %%ax,   %%ds      \n\
+    //                 pushl %%eax             \n\
+    //                 pushl %%ebx             \n\
+    //                 pushfl                  \n\
+    //                 popl  %%ebx             \n\
+    //                 orl   $0x200, %%ebx     \n\
+    //                 pushl %%ebx             \n\
+    //                 pushl %%ecx             \n\
+    //                 pushl %%edx             \n\
+    //                 movl  $0,     %%eax,    \n\
+    //                 iret                    \n\
+    //               "
+    //               :
+    //               : "a"(USER_DS), "b"(curr->usresp), "c"(USER_CS), "d"(curr->usreip)
+    //               : "memory"
+    // );      
 }
 
 
@@ -502,24 +502,25 @@ void switch_to_user(thread_t *p) {
  * 
  * @param _pid : process id
  */
-static void update_tss(pid_t pid) {
+static void update_tss(thread_t *curr) {
     tss.ss0 = KERNEL_DS;
-    tss.esp0 = get_esp0(pid);
+    tss.esp0 = get_esp0(curr);
 }
 
 
 /**
  * @brief get the esp0 of the process
  * 
- * @param pid : process id
+ * @param curr : thread info
  * @return uint32_t kernel esp
  */
-uint32_t get_esp0(pid_t pid) {
-    return 0; // TODO
+uint32_t get_esp0(thread_t *curr) {
+    process_t *process = (process_t *)curr;
+    return (uint32_t)(((void*)process) + sizeof(process_t) - 4);
 }
 
 
-/**
+/**  
  * @brief init console
  * 
  */
@@ -532,7 +533,7 @@ static void console_init(void) {
 
     /* init three shells */
     for (i = 0; i < NTERMINAL; ++i) {
-        pid = fork(init, 1);
+        pid = do_fork(init, 1);
         console->terminals[i] = terminal_create();
     }
 }

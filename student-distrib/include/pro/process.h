@@ -25,7 +25,6 @@
 typedef enum { UNUSED, RUNNING, RUNNABLE, SLEEPING, EXITED, ZOMIBIE } pro_state;
 
 
-
 /* hardware context */
 typedef struct {
     uint32_t eax;
@@ -66,7 +65,7 @@ typedef struct thread {
     files              *fds;            /* opened file descritors */
     uint8_t            kthread;         /* 1 if this thread is belong to the kernel */
     terminal_t         *terminal;       /* terminal for this thread (shell only) */
-    int8_t             nice;            /* nice value */
+    int32_t            nice;            /* nice value */
 } thread_t;
 
 /* array of terminals for each shells */
@@ -97,12 +96,32 @@ int32_t do_execute(const int8_t *cmd);
 pid_t do_getpid(void);
 void *do_sbrk(uint32_t size);
 
-uint32_t get_esp0(pid_t pid);
+uint32_t get_esp0(thread_t *curr);
 void context_switch(thread_t *from, thread_t *to);
+int32_t file_init(int32_t fd, file_t *file, dentry_t *dentry, file_op *op, thread_t *curr);
+
+/* implemented in fs.c */
+
+int32_t pro_loader(int8_t *fname, uint32_t *EIP, thread_t *curr);
 
 /* implemented in switch.S */
+
 void save_context(context_t *context);
 void swtch(context_t *from, context_t *to);
 
+/* implemented in vfs.c */
+
+int32_t fd_init(thread_t *curr);
+int32_t __open(int32_t fd, const int8_t *fname, file_type_t type, file_op *op, thread_t *curr);
+
+/* implemented in file.c */
+
+int32_t file_init(int32_t fd, file_t *file, dentry_t *dentry, file_op *op, thread_t *curr);
+
+/* implemented in sched.c */
+
+void sched_fork(thread_t *task);
+void sched_sleep(thread_t *task);
+void sched_wakeup(thread_t *task);
 
 #endif /* _PROCESS_H_ */

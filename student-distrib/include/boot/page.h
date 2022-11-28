@@ -14,8 +14,6 @@
 #define KERNEL_PAGES        16
 #define MAX_PHYS_PAGES      64
 
-#define VIR_MEM_BEGIN       0x08000000      /* The mem begins at 128MB */
-
 
 #define PTE_PRESENT 0x1
 #define PTE_RW 0x2

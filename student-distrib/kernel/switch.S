@@ -1,4 +1,3 @@
-#include <pro/process.h>
 
 .data 
 
@@ -28,13 +27,21 @@ save_context:
 
     pushl   %eax
 
-    # get arguments
+    # get argument
     movl    8(%ebp), %eax 
 
+    # save edx
+    pushl   %edx 
+
+    movl    4(%esp), %edx 
+
     # store current hardware context to eax
-    movl    0(%esp), EAX(%eax)
-    movl    %ebx,    EBX(%eax)
+    movl    %edx,    EAX(%eax)
+
+    popl    %edx
+
     movl    %edx,    EDX(%eax)
+    movl    %ebx,    EBX(%eax)
     movl    %esi,    ESI(%eax)
     movl    %edi,    EDI(%eax)
     movl    %ebp,    EBP(%eax)
@@ -42,11 +49,11 @@ save_context:
     pushfl
     popl    %ecx
     movl    %ecx,    EFLAGS(%eax)
-    movl    %es,     ES(%eax)
-    movl    %cs,     CS(%eax)
-    movl    %ds,     DS(%eax)
-    movl    %fs,     FS(%eax)
-    movl    %gs,     GS(%eax)
+    movw    %es,     ES(%eax)
+    movw    %cs,     CS(%eax)
+    movw    %ds,     DS(%eax)
+    movw    %fs,     FS(%eax)
+    movw    %gs,     GS(%eax)
 
     leave 
     ret
@@ -59,19 +66,26 @@ swtch:
     pushl   %ebp;
     movl    %esp, %ebp;
 
+    # save eax 
     pushl   %eax
-    pushl   %edx 
 
-    # get arguments
+    # get first argument
     movl    8(%ebp), %eax 
-    movl    12(%ebp), %edx
-
+    
     testl   %eax, %eax  # arg0 is NULL
     je      to
 
+    # save edx
+    pushl   %edx 
+
+    movl    4(%esp), %edx 
+
     # store current hardware context to eax
-    movl    4(%esp), EAX(%eax)
-    movl    0(%esp), EDX(%eax)
+    movl    %edx,    EAX(%eax)
+
+    popl    %edx
+
+    movl    %edx,    EDX(%eax)
     movl    %ebx,    EBX(%eax)
     movl    %esi,    ESI(%eax)
     movl    %edi,    EDI(%eax)
@@ -80,28 +94,31 @@ swtch:
     pushfl
     popl    %ecx
     movl    %ecx,    EFLAGS(%eax)
-    movl    %es,     ES(%eax)
-    movl    %cs,     CS(%eax)
-    movl    %ds,     DS(%eax)
-    movl    %fs,     FS(%eax)
-    movl    %gs,     GS(%eax)
+    movw    %es,     ES(%eax)
+    movw    %cs,     CS(%eax)
+    movw    %ds,     DS(%eax)
+    movw    %fs,     FS(%eax)
+    movw    %gs,     GS(%eax)
 
-to:
+to: 
+    # get second argument
+    movl    12(%ebp), %edx 
+
     # load edx to the current hardware context 
     movl    EAX(%edx), %eax
     movl    EBX(%edx), %ebx
-    movl    EDX(%edx), %edx
     movl    ESI(%edx), %esi
     movl    EDI(%edx), %edi
     movl    EBP(%edx), %ebp
     movl    ESP(%edx), %esp
     pushl   EFLAGS(%edx)
     popfl
-    movl    ES(%edx),  %es
-    movl    CS(%edx),  %cs
-    movl    DS(%edx),  %ds
-    movl    FS(%edx),  %fs
-    movl    GS(%edx),  %gs
+    movw    ES(%edx),  %es
+    movw    CS(%edx),  %cs
+    movw    DS(%edx),  %ds
+    movw    FS(%edx),  %fs
+    movw    GS(%edx),  %gs
+    movl    EDX(%edx), %edx
 
     leave
     ret 

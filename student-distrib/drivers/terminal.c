@@ -1,8 +1,10 @@
 #include <drivers/terminal.h>
 #include <vfs/vfs.h>
-#include <pro/process.h>
 #include <pro/sched.h>
+#include <pro/process.h>
+#include <kmalloc.h>
 #include <lib.h>
+#include <access.h>
 #include <io.h>
 
 /* Local functions, see headers for descriptions. */
@@ -33,6 +35,8 @@ terminal_t *terminal_create(void) {
     terminal->exit = 0;                         /* \n is not read. */
     terminal->buffer = kmalloc(TERBUF_SIZE);    /* create buffer */
     memset((void*)terminal->buffer, 0, TERBUF_SIZE);
+
+    return terminal;
 }
 
 
@@ -66,7 +70,7 @@ void key_press(uint32_t scancode, terminal_t *terminal) {
     case LALT:
         terminal->alt = 1;
     case BACKSPACE:
-        backspace(scancode);
+        backspace(terminal);
         return;
     case CTRL:
         terminal->ctrl = 1;

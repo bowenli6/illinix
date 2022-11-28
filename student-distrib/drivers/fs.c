@@ -180,7 +180,8 @@ uint32_t get_size(uint32_t index) {
  * @brief Load program image into user vitural address space
  * 
  * @param fname file name of the program
- * @param p the process to load program for
+ * @param EIP: the address of the user program eip register
+ * @param curr : the current process 
  * @return int32_t : positive or 0 denote success, negative values denote an error condition
  */
 int32_t pro_loader(int8_t *fname, uint32_t *EIP, thread_t *curr) {
@@ -190,7 +191,6 @@ int32_t pro_loader(int8_t *fname, uint32_t *EIP, thread_t *curr) {
     inode_t file;
     uint8_t header[40];
     uint8_t eip_buf[4];
-    process_t *p;
     uint8_t magic_number[4] = { 0x7f, 0x45, 0x4c, 0x46 };
 
     /* check if the file is a user-level executable file */

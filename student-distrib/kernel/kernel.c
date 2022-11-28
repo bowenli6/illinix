@@ -19,7 +19,7 @@
 #include <lib.h>
 #include <io.h>
 #include <access.h>
-
+#include <kmalloc.h>
 #include <tests/tests.h>
 
 #define RUN_TESTS
@@ -172,6 +172,8 @@ void entry(unsigned long magic, unsigned long addr) {
     RTC_init();                     /* Initialize the RTC driver. */
     PIT_init();                     /* Initialize the PIT driver */
 
+    /* Process */
+    sched_init();
 
     /* Enable interrupts */
     printf("Enabling Interrupts\n");
@@ -181,7 +183,7 @@ void entry(unsigned long magic, unsigned long addr) {
     /* This is an test for share gitlab. */
 #ifdef RUN_TESTS
     /* Run tests */
-    launch_tests();
+    // launch_tests();
     
 #endif
     //clear();

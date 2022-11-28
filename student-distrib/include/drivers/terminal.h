@@ -15,7 +15,6 @@ typedef struct {
     uint8_t size;                       /* The current size of the buffer. */
     uint8_t *buffer;                    /* Line buffer input. */
     uint8_t exit;                       /* A flag for stdin, 1 if \n is detected. */
-    thread_t *shell;                    /* the shell associated with this terminal */
 } terminal_t;
 
 

@@ -23,6 +23,5 @@ typedef struct {
     uint32_t f_pos;         /* Current file offset (file pointer). */
 } file_t;
 
-int32_t file_init(int32_t fd, file_t *file, dentry_t *dentry, file_op *op, thread_t *curr);
 
 #endif /* _FILE_H */

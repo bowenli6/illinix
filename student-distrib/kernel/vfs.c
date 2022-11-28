@@ -1,5 +1,6 @@
 #include <drivers/fs.h>
 #include <drivers/rtc.h>
+#include <pro/process.h>
 #include <vfs/vfs.h>
 #include <errno.h>
 #include <access.h>

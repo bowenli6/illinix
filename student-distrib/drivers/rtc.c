@@ -1,7 +1,7 @@
 #include <drivers/rtc.h>
 #include <boot/i8259.h>
 #include <vfs/file.h>
-#include <vfs/ece391_vfs.h>
+#include <vfs/vfs.h>
 #include <pro/process.h>
 #include <drivers/fs.h>
 #include <access.h>
@@ -64,10 +64,12 @@ void do_RTC() {
  * @return int32_t : 0 on success, -1 otherwise.
  */
 int32_t RTC_open(const int8_t* filename) {
+    thread_t *curr;
+    GETPRO(curr);
     /* initialize the RTC and set initial frequency to 2 as instructed */
     RTC_init();
     set_RTC_freq(2);
-    return __open(2, filename, RTC, &rtc_op, CURRENT->pid);
+    return __open(2, filename, RTC, &rtc_op, curr);
 }
 
 /**

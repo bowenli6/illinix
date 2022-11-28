@@ -1,4 +1,3 @@
-Skip to content
 #include <boot/x86_desc.h>
 #include <boot/page.h>
 #include <kmalloc.h>

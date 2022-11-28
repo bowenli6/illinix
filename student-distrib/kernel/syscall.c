@@ -14,7 +14,7 @@
  * @param status : 
  * @return int32_t : positive or 0 denote success, negative values denote an error condition
  */
-asmlinkage int32_t sys_halt(uint8_t status) {
+asmlinkage int32_t sys_exit(uint8_t status) {
    cli();
 
    /* never returns to the halting process */
@@ -184,5 +184,6 @@ asmlinkage void *sys_sbrk(void) {
    thread_t *curr;
 
    GETPRO(curr);
+   return NULL;
 
 }

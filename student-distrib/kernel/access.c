@@ -37,7 +37,6 @@ void user_mem_unmap(pid_t pid) {
  */
 void *alloc_kstack() {
     return get_page(1);
-    //return (void*)pt;
 }
 
 /**
@@ -47,7 +46,5 @@ void *alloc_kstack() {
  */
 void free_kstack(void* pt) {
     free_page(pt, 1);
-    //uint32_t pt = PAGE_SIZE_4MB * (KERNEL_INDEX + 1) - PAGE_SIZE * 2 * (pid + 2);
-    //memset((char*)pt, 0, PAGE_SIZE *2);
 }
 
