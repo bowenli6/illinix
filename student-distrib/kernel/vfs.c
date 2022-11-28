@@ -2,6 +2,7 @@
 #include <drivers/rtc.h>
 #include <pro/process.h>
 #include <vfs/vfs.h>
+#include <kmalloc.h>
 #include <errno.h>
 #include <access.h>
 #include <lib.h>
@@ -207,7 +208,6 @@ int32_t fd_init(thread_t *curr) {
         curr->fds->fd[i].f_count = 0;
     }
 
-    terminal_create();
     return (__open(0, "stdin", TERMINAL, &terminal_op, curr)) + (__open(1, "stdout", TERMINAL, &terminal_op, curr));
 }
 

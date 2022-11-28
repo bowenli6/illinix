@@ -3,7 +3,7 @@
 #include <errno.h>
 #include <lib.h>
 
-uint8_t pidmap[BITMAP_SIZE];
+// uint8_t pidmap[BITMAP_SIZE];
 pid_t size;
 
 /**
@@ -43,7 +43,7 @@ pid_t alloc_pid() {
  * 
  */
 void pidmap_init() {
-    memset((void *)pidmap, 0, BITMAP_SIZE);
+    // memset((void *)pidmap, 0, BITMAP_SIZE);
     size = 2;   /* 0, 1 are allocted by idle and init process */
 }
 

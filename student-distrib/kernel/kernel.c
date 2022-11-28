@@ -177,7 +177,7 @@ void entry(unsigned long magic, unsigned long addr) {
 
     /* Enable interrupts */
     printf("Enabling Interrupts\n");
-    sti();
+    // sti();
 
 
     /* This is an test for share gitlab. */
@@ -186,6 +186,9 @@ void entry(unsigned long magic, unsigned long addr) {
     // launch_tests();
     
 #endif
-    //clear();
-    //swapper();  /* process 0 starts schedule tasks for users */
+    clear();
+    
+    init_task();
+
+    swapper();  /* process 0 starts schedule tasks for users */
 }

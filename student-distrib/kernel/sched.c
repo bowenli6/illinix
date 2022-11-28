@@ -141,8 +141,6 @@ void sched_init(void) {
     idle->state = RUNNABLE;
     idle->parent = NULL;
     idle->kthread = 1;
-    idle->argc = 1;
-    strcpy(idle->argv, "idle");
     idle->sched_info.load.weight = WEIGHT_IDLE;
     idle->sched_info.load.inv_weight = WMULT_IDLE;
     
@@ -155,7 +153,9 @@ void sched_init(void) {
     init->nice = NICE_INIT;
     init->kthread = 1;
     init->argc = 1;
-    strcpy(init->argv, "init");
+    init->argv = kmalloc(sizeof(int8_t*));
+    init->argv[0] = kmalloc(5);
+    strcpy(init->argv[0], "init");
     
     /* create task queue */
     task_queue = &(idle->task_node);
@@ -173,10 +173,11 @@ void sched_init(void) {
     rq->nr_running = 0;
     rq->current = NULL;
     rq->left_most = NULL;
+    
     // rq->root = ?
 
     /* add init process to the run queue */
-    sched_fork(init);
+    // sched_fork(init);
 }
 
 

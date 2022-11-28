@@ -59,7 +59,7 @@ void do_timer(void) {
     //     return;
     // }
 
-    __schedule();
+    // __schedule();
 
     /* critical section ends. */
     restore_flags(intr_flag);

@@ -265,7 +265,7 @@ int32_t terminal_read(int32_t fd, void *buf, int32_t nbytes) {
     while (!terminal->exit) {
 
         /* sleep and waiting for an IO operation */
-        sched_sleep(curr);
+        // sched_sleep(curr);
 
         /* Waiting for intrrupt occurs... */
 

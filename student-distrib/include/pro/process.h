@@ -71,6 +71,7 @@ typedef struct thread {
 /* array of terminals for each shells */
 typedef struct {
     terminal_t **terminals;
+    int32_t    size;
 } console_t;
 
 

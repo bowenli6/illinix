@@ -33,7 +33,6 @@
 #include <errno.h> 
 
 
-
 thread_t *idle;                 /* process 0 (idle process) */
 thread_t *init;                 /* process 1 (init process) */
 console_t *console;             /* console contains terminals */
@@ -49,7 +48,6 @@ static int32_t process_clone(thread_t *parent, thread_t *child);
 static uint32_t get_eip_user(thread_t *task);
 static void process_free(thread_t *current, pid_t pid);
 static int32_t parse_arg(int8_t *cmd, int8_t *argv[]);
-static int32_t copy_args(thread_t *t, int8_t *argv[]);
 static void switch_to_user(thread_t *curr);
 static void console_init(void);
 static void update_tss(thread_t *curr);
@@ -256,32 +254,38 @@ int32_t do_execute(const int8_t *cmd) {
  * @return int32_t : positive or 0 denote success, negative values denote an error condition
  */
 static int32_t __exec(thread_t *current, thread_t **new, const int8_t *cmd, uint8_t kthread) {
+    int i;
     pid_t pid;
     int32_t errno;
     int32_t argc;
     uint32_t EIP_reg;
     // terminal_t *terminal;
-    int8_t **argv = kmalloc(MAXARGS * ARGSIZE);
+
+    /* temp arguments array */
+    int8_t **argv = kmalloc(MAXARGS * sizeof(int8_t*));
+    for (i = 0; i < MAXARGS; ++i)
+        argv[i] = kmalloc(ARGSIZE);
 
     /* parse arguments */
-    if ((argc = parse_arg((int8_t *)cmd, argv)) < 0)
+    if ((argc = parse_arg((int8_t *)cmd, argv)) < 0) {
+        kfree(argv);
         return argc;
+    }
 
     /* create process */
-    if (!(*new = process_create(current, kthread)))
+    if (!(*new = process_create(current, kthread))) {
+        kfree(argv);
         return -1;
+    }
 
     /* get process and set its arguments */
     (*new)->argc = argc;
-
-    if ((errno = copy_args(*new, argv)) < 0) {
-        process_free(current, pid);
-        return errno; 
-    }    
+    (*new)->argv = argv;    
 
     /* executable check and load program image into user's memory */
     if ((errno = pro_loader(argv[0], &EIP_reg, *new)) < 0) {
         process_free(current, pid);
+        kfree(argv);
         return errno;
     }
     
@@ -289,7 +293,16 @@ static int32_t __exec(thread_t *current, thread_t **new, const int8_t *cmd, uint
     /* create terminals if the program is shell */
     if (!strcmp(argv[0], SHELL)) {
         (*new)->nice = NICE_SHELL;
-        // TODO
+        
+        if (kthread) {
+            /* create a new terminal for this shell */
+            (*new)->terminal = terminal_create();
+            console->terminals[console->size++] = (*new)->terminal;
+        } else {
+            /* get the terminal from its parent */
+            (*new)->terminal = current->terminal;
+        }
+
     } else {
         (*new)->nice = NICE_NORMAL;
     }
@@ -298,7 +311,7 @@ static int32_t __exec(thread_t *current, thread_t **new, const int8_t *cmd, uint
     fd_init(*new);
 
     /* set up sched info */
-    sched_fork(*new);
+    // sched_fork(*new);
 
     // TODO
 
@@ -308,7 +321,7 @@ static int32_t __exec(thread_t *current, thread_t **new, const int8_t *cmd, uint
 
     /* increment number of tasks */
     ntask++;
-
+    
     return 0;
 }
 
@@ -372,29 +385,6 @@ static int32_t parse_arg(int8_t *cmd, int8_t *argv[]) {
 
 
 /**
- * @brief copy the argv into p->agrv
- * 
- * @param p : process
- * @param argv : arguments list
- * @return int32_t : number of arguments copied, or < 0 if cannot copy
- */
-static int32_t copy_args(thread_t *t, int8_t *argv[]) {
-    int i;
-
-    if (t->argc > MAXARGS) return -1;
-
-    if (!argv) return -1;
-
-    for (i = 0; i < t->argc; ++i) {
-        strcpy(t->argv[i], argv[i]);
-    }
-
-    return i;
-}
-
-
-
-/**
  * @brief Create a process_t for a new process
  * 
  * @param current : the current thread
@@ -419,6 +409,8 @@ static thread_t *process_create(thread_t *current, uint8_t kthread) {
 
     /* set the parent pointer */
     t->parent = current;
+
+    
 
     /* check if max_children is full */
     if (current->n_children == current->max_children) {
@@ -476,24 +468,23 @@ static void switch_to_user(thread_t *curr) {
 
     sti();
 
-    // asm volatile ("                         \n\
-    //                 andl  $0xFF,  %%eax     \n\
-    //                 movw  %%ax,   %%ds      \n\
-    //                 pushl %%eax             \n\
-    //                 pushl %%ebx             \n\
-    //                 pushfl                  \n\
-    //                 popl  %%ebx             \n\
-    //                 orl   $0x200, %%ebx     \n\
-    //                 pushl %%ebx             \n\
-    //                 pushl %%ecx             \n\
-    //                 pushl %%edx             \n\
-    //                 movl  $0,     %%eax,    \n\
-    //                 iret                    \n\
-    //               "
-    //               :
-    //               : "a"(USER_DS), "b"(curr->usresp), "c"(USER_CS), "d"(curr->usreip)
-    //               : "memory"
-    // );      
+    asm volatile ("                         \n\
+                    andl  $0xFF,  %%eax     \n\
+                    movw  %%ax,   %%ds      \n\
+                    pushl %%eax             \n\
+                    pushl %%ebx             \n\
+                    pushfl                  \n\
+                    popl  %%ebx             \n\
+                    orl   $0x200, %%ebx     \n\
+                    pushl %%ebx             \n\
+                    pushl %%ecx             \n\
+                    pushl %%edx             \n\
+                    iret                    \n\
+                  "
+                  :
+                  : "a"(USER_DS), "b"(curr->usresp), "c"(USER_CS), "d"(curr->usreip)
+                  : "memory"
+    );      
 }
 
 
@@ -525,17 +516,31 @@ uint32_t get_esp0(thread_t *curr) {
  * 
  */
 static void console_init(void) {
-    int i;
-    pid_t pid;
+    // int i;
+    thread_t **pshell;
+    thread_t *shell;
 
     /* create console */
     console = kmalloc(sizeof(console_t));    /* never be freed */
+    console->terminals = kmalloc(NTERMINAL * sizeof(terminal_t*));
+    console->size = 0;
+
+    shell = kmalloc(sizeof(thread_t*));
 
     /* init three shells */
-    for (i = 0; i < NTERMINAL; ++i) {
-        pid = do_fork(init, 1);
-        console->terminals[i] = terminal_create();
-    }
+    // for (i = 0; i < NTERMINAL; ++i) {
+    //     pid = do_fork(init, 1);
+    //     console->terminals[i] = terminal_create();
+    // }
+
+    /* test one shell */
+    (void) __exec(init, pshell, SHELL, 1);
+    shell = *pshell;
+    kfree(shell);
+
+    /* switch to user mode (ring 3) */
+    switch_to_user(shell);
+
 }
 
 
