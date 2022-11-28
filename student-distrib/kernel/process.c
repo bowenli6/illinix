@@ -401,7 +401,7 @@ static thread_t *process_create(thread_t *current, uint8_t kthread) {
     if ((pid = alloc_pid()) < 0) 
         return NULL;
 
-    p = (process_t *)alloc_kstack(pid);
+    p = (process_t *)alloc_kstack();
     t = &p->thread;
     
     /* setup current pid */
@@ -536,7 +536,7 @@ static void console_init(void) {
     /* test one shell */
     (void) __exec(init, pshell, SHELL, 1);
     shell = *pshell;
-    kfree(shell);
+    free_kstack(shell);
 
     /* switch to user mode (ring 3) */
     switch_to_user(shell);
