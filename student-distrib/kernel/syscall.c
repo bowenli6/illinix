@@ -117,6 +117,7 @@ asmlinkage int32_t sys_getargs(uint8_t *buf, int32_t nbytes) {
    return 0;
 }
 
+
 /**
  * @brief A system call service routine for mapping the text-mode video memory into user 
  * space at a pre-set virtual address.

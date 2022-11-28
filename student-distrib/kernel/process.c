@@ -7,26 +7,30 @@
 #include <access.h>
 #include <errno.h> 
 
-process_union *init;    /* Process 1 (init process) */
-process_union *task_map[TASK_COUNT];    /* Currently process 2 (the shell) and 3 */
-pid_t curr_pid;         /* current pid*/
+
+thread_t *init;                 /* process 1 (init process) */
+thread_t *tasks[NTASK];         /* list of user processes (pid starting from 2 to PID_SIZE) */
+console_t *console;             /* the console */
+pid_t curr_pid;                 /* current pid */
 
 
 /* local helper functions */
-
-static int32_t process_create(void);
+static void console_init(void);
+static int32_t process_create(uint8_t kthread);
 static void process_free(pid_t _pid);
-static void context_switch(process_t *p);
 static int32_t parse_arg(int8_t *cmd, char argv[MAXARGS][COMMAND_LEN]);
-static int32_t copy_args(process_t *p, char argv[MAXARGS][COMMAND_LEN]);
+static int32_t copy_args(thread_t *t, char argv[MAXARGS][COMMAND_LEN]);
 static void update_tss(pid_t _pid);
+static int32_t __exec(const int8_t *cmd, uint8_t kthread);
+static thread_t *get_task(pid_t pid);
 
 
 /**
  * @brief the task of the system process 0
- * working as a scheduler and a time interrupt handler (only for now)
+ * working as a scheduler 
  */
-void swapper() { 
+void swapper(void) { 
+    /* keep trying to schedule and pause when no process can be scheduled */
     while (!schedule()) 
         pause();
 }
@@ -39,10 +43,19 @@ void swapper() {
  * 
  * shell process will be created by fork in the future
  */
-void init_task() {
+void init_task(void) {
+    cli();
+    init->state = RUNNING;
     pidmap_init();
-    curr_pid = 0;
-    (void) do_execute("shell");
+    console_init();
+    
+    /* typing user name and password */
+    // TODO
+
+    init->state = RUNNABLE;
+    save_context(init->context);
+    /* adopt orphan processes */
+    // TODO
 }
 
 
@@ -59,8 +72,8 @@ void do_halt(uint32_t status) {
         init_task();
     }
 
-    process_t *curr = CURRENT;
-    process_t *parent = CURRENT->parent;
+    thread_t *curr = CURRENT;
+    thread_t *parent = CURRENT->parent;
     curr_pid = parent->pid;
     parent->child = NULL;
     update_tss(parent->pid);
@@ -75,7 +88,7 @@ void do_halt(uint32_t status) {
                     ret                     \n\
                   "
                   :
-                  : "d"(parent->ebp), "b"(status)
+                  : "d"(parent->context->ebp), "b"(status)
                   : "memory"
     );      
 }
@@ -85,64 +98,97 @@ void do_halt(uint32_t status) {
  * @brief create a new process to execute a program
  * 
  * @param cmd : the program name with arguments
+ * @return int32_t : positive or 0 denote success, negative values denote an error condition
  */
 int32_t do_execute(const int8_t *cmd) {
-    pid_t pid;
+    thread_t *t;   
     uint32_t ebp;
-    process_t *p;
     int32_t errno;
-    int32_t argc;
-    char argv[MAXARGS][COMMAND_LEN];    
-    uint32_t EIP_reg;
 
-    /* parse arguments */
-    if ((argc = parse_arg((int8_t *)cmd, argv)) < 0) 
-        return argc;
-
-    /* create process */
-    if ((pid = process_create()) < 0)
-        return pid;
-
-    /* get process and set its arguments */
-    p = GETPRO(pid);
-    p->argc = argc;
-    if ((errno = copy_args(p, argv)) < 0) {
-        process_free(pid);
-        update_tss(CURRENT->pid);
-        user_mem_map(CURRENT->pid);
-        return errno; 
-    }    
-
-    /* executable check and load program image into user's memory */
-    if ((errno = pro_loader(argv[0], &EIP_reg, pid)) < 0) {
-        process_free(pid);
-        update_tss(CURRENT->pid);
-        user_mem_map(CURRENT->pid);
+    if ((errno = __exec(cmd, 0)) < 0)
         return errno;
-    }
 
-    /* init file array */
-    fd_init(pid);
-
-    /* store registers */
-    p->eip = EIP_reg;
-    p->esp = USER_STACK_ADDR;
-    p->ebp = USER_STACK_ADDR;
-
-    if (curr_pid) {
+    if (!t->kthread) {
         /* save the kernel stack of the current process */
         asm volatile("movl %%ebp, %0"
                     :
                     : "rm"(ebp)             
                     : "memory" 
                     );
-        CURRENT->ebp = ebp;
+        CURRENT->context->ebp = ebp;
     }
 
     /* switch to user mode (ring 3) */
-    context_switch(p);
+    switch_to_user(t);
 
     return 0;   /* never reach here */
+}
+
+
+/**
+ * @brief lower operation for executing a process
+ * 
+ * @param cmd : command line arguments
+ * @param kthread : 1 if it is kernel thread, 0 otherwie
+ * @return int32_t : positive or 0 denote success, negative values denote an error condition
+ */
+static int32_t __exec(const int8_t *cmd, uint8_t kthread) {
+    pid_t pid;
+    thread_t *t;
+    int32_t errno;
+    int32_t argc;
+    char argv[MAXARGS][COMMAND_LEN];    
+    uint32_t EIP_reg;
+    terminal_t *terminal;
+
+    /* parse arguments */
+    if ((argc = parse_arg((int8_t *)cmd, argv)) < 0) 
+        return argc;
+
+    /* create process */
+    if ((pid = process_create(kthread)) < 0)
+        return pid;
+
+    /* get process and set its arguments */
+    t = GETPRO(pid);
+    t->argc = argc;
+    if ((errno = copy_args(t, argv)) < 0) {
+        process_free(pid);
+       
+        return errno; 
+    }    
+
+    /* executable check and load program image into user's memory */
+    if ((errno = pro_loader(argv[0], &EIP_reg, pid)) < 0) {
+        process_free(pid);
+        return errno;
+    }
+
+    /* create terminals if the program is shell */
+    if (!strcmp(argv[0], SHELL)) {
+
+        if (console->size == console->max) {
+            process_free(pid);
+            return -1;
+        }
+
+        if (!(terminal = terminal_create(pid))) {
+            process_free(pid);
+            return -1;
+        }
+
+        console->terminals[console->size++] = terminal;
+    }
+
+    /* init file array */
+    fd_init(pid);
+
+    /* store registers */
+    t->eip = EIP_reg;
+    t->context->esp = USER_STACK_ADDR;
+    t->context->ebp = USER_STACK_ADDR;
+    
+    return 0;
 }
 
 
@@ -227,15 +273,15 @@ static int32_t parse_arg(int8_t *cmd, char argv[MAXARGS][COMMAND_LEN]) {
  * @param argv : arguments list
  * @return int32_t : number of arguments copied, or < 0 if cannot copy
  */
-static int32_t copy_args(process_t *p, char argv[MAXARGS][COMMAND_LEN]) {
+static int32_t copy_args(thread_t *t, char argv[MAXARGS][COMMAND_LEN]) {
     int i;
 
-    if (p->argc > MAXARGS) return -1;
+    if (t->argc > MAXARGS) return -1;
 
     if (!argv) return -1;
 
-    for (i = 0; i < p->argc; ++i) {
-        strcpy(p->argv[i], argv[i]);
+    for (i = 0; i < t->argc; ++i) {
+        strcpy(t->argv[i], argv[i]);
     }
 
     return i;
@@ -248,29 +294,42 @@ static int32_t copy_args(process_t *p, char argv[MAXARGS][COMMAND_LEN]) {
  * 
  * @return int32_t : 0
  */
-static int32_t process_create(void) {
+static int32_t process_create(uint8_t kthread) {
     pid_t pid;
     process_t *p;
+    thread_t *t;
 
     if ((pid = alloc_pid()) < 0) 
         return pid;
 
+<<<<<<< HEAD
     task_map[pid-2] = (process_union *)alloc_kstack();
+=======
+    /* process overflow */
+    if (pid >= NTASK + TASKSTART) 
+        return -1;
+>>>>>>> 71ad153 (init scheduler module)
 
-    p = GETPRO(pid);
+    p = (process_t *)alloc_kstack(pid-2);
+    tasks[pid-TASKSTART] = &p->thread;
+
+    t = GETPRO(pid);
     
     /* setup current pid */
-    p->pid = pid;
+    t->pid = pid;
 
     /* setup the kernel stack info */
 
     /* set the parent pointer */
-    if (pid == 2) {
-        p->parent = NULL;
+    if (kthread) {
+        t->parent = init;
     } else {
-        p->parent = CURRENT;
+        t->parent = CURRENT;
         CURRENT->child = p;
     }
+
+    /* not a kernel thread */
+    t->kthread = kthread;
 
     return pid;
 }
@@ -280,12 +339,21 @@ static int32_t process_create(void) {
  * @brief Free a existing process_t
  * 
  */
-static void process_free(pid_t _pid) {
+static void process_free(pid_t pid) {
     CURRENT->child = NULL;
+<<<<<<< HEAD
     free_kstack(task_map[_pid-2]);
     task_map[_pid-2] = NULL;
     kill_pid();
     user_mem_unmap(_pid);
+=======
+    tasks[pid-TASKSTART] = NULL;
+    kill_pid();
+    free_kstack(pid-TASKSTART);
+    user_mem_unmap(pid);
+    update_tss(CURRENT->pid);
+    user_mem_map(CURRENT->pid);
+>>>>>>> 71ad153 (init scheduler module)
 }
 
 
@@ -301,7 +369,7 @@ static void process_free(pid_t _pid) {
  * (3) push the addres of 0 in the stack for halt to return
  * 
  */
-static void context_switch(process_t *p) {
+void switch_to_user(thread_t *p) {
     
     update_tss(p->pid);
 
@@ -323,7 +391,7 @@ static void context_switch(process_t *p) {
                     iret                    \n\
                   "
                   :
-                  : "a"(USER_DS), "b"(p->esp), "c"(USER_CS), "d"(p->eip)
+                  : "a"(USER_DS), "b"(p->context->esp), "c"(USER_CS), "d"(p->eip)
                   : "memory"
     );      
 }
@@ -334,8 +402,50 @@ static void context_switch(process_t *p) {
  * 
  * @param _pid : process id
  */
-static void update_tss(pid_t _pid) {
+static void update_tss(pid_t pid) {
     tss.ss0 = KERNEL_DS;
+<<<<<<< HEAD
     tss.esp0 = KERNEL_STACK_BEGIN - (_pid - 1) * KERNEL_STACK_SZ - 0x4;
+=======
+    tss.esp0 = get_esp0(pid);
+>>>>>>> 71ad153 (init scheduler module)
 }
 
+
+/**
+ * @brief Get the esp0 of the process
+ * 
+ * @param pid : process id
+ * @return uint32_t kernel esp
+ */
+uint32_t get_esp0(pid_t pid) {
+    return KERNEL_STACK_BEGIN - pid * KERNEL_STACK_SZ - 0x4;
+}
+
+
+/**
+ * @brief init console
+ * 
+ */
+static void console_init(void) {
+    int num_shell = 3;
+
+    /* create console */
+    console = (console_t *)kmalloc(sizeof(console));
+
+    /* init three shells */
+    while (num_shell--)
+        (void)__exec(SHELL, 1);
+}
+
+
+/**
+ * @brief Get the task has process id = pid
+ * USE FOR DEBUG ONLY
+ * 
+ * @param pid : process id
+ * @return thread_t : thread object
+ */
+static thread_t *get_task(pid_t pid) {
+    return tasks[pid-TASKSTART];
+}

@@ -13,6 +13,7 @@
 #include <drivers/fs.h>
 #include <vfs/ece391_vfs.h>
 #include <pro/process.h>
+#include <pro/sched.h>
 #include <debug.h>
 #include <lib.h>
 #include <io.h>
@@ -27,12 +28,6 @@
 /* Check if the bit BIT in FLAGS is set. */
 #define CHECK_FLAG(flags, bit)   ((flags) & (1 << (bit)))
 
-void shell() {
-    clear();
-    puts("Hello illinix!\n");
-    puts("Keyboard Test:\n");
-
-}
 
 /* Check if MAGIC is valid and print the Multiboot information structure
    pointed by ADDR. */
@@ -176,11 +171,11 @@ void entry(unsigned long magic, unsigned long addr) {
     keyboard_init();                /* Initialize the Keyboard driver. */
     RTC_init();                     /* Initialize the RTC driver. */
 
-    /* Process */
 
     /* Enable interrupts */
     printf("Enabling Interrupts\n");
     sti();
+
 
     /* This is an test for share gitlab. */
 #ifdef RUN_TESTS
@@ -188,6 +183,14 @@ void entry(unsigned long magic, unsigned long addr) {
     launch_tests();
     
 #endif
+<<<<<<< HEAD
     //clear();
     //swapper();  /* process 0 starts schedule tasks for users */
+=======
+    clear();
+
+    /* process 0 starts scheduling tasks for users */
+    sched_init();
+    swapper();
+>>>>>>> 71ad153 (init scheduler module)
 }

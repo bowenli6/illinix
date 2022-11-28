@@ -3,11 +3,6 @@
 #include <kmalloc.h>
 #include <lib.h>
 
-/**
- * @brief Turn on paging related registers.
- *
- */
-
 #define VIR_MEM_BEGIN           0x08000000      /* The mem begins at 128MB */
 
 //static int pde_alloc_index = 2;
@@ -27,6 +22,11 @@ buddy ufree_list[MAX_ORDER + 1];
 
 pd_descriptor_t pdesc[ENTRY_NUM];
 
+
+/**
+ * @brief Turn on paging related registers.
+ *
+ */
 void enable_paging()
 {
     /* set CR3 to directory base address */
