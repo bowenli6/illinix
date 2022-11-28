@@ -1,76 +1,44 @@
-// #ifndef _VFS_H
-// #define _VFS_H
-
-// #include <types.h>
-// #include <vfs/file.h>
-// #include <vfs/inode.h>
-// #include <vfs/dentry.h>
-
-// /* Flags for open() system call. */
-// #define O_RDONLY    0       /* Open for reading only. */
-// #define O_WRONLY    0       /* Open for writing only. */
-// #define O_RDWR      0       /* Open for both reading and writing. */
-// #define O_CREATE    0       /* Create the file if it does not exist. */
-// #define O_APPEND    0       /* Always write at end of the file. */
+#ifndef _VFS_H_
+#define _VFS_H_
 
 
-// #define FD_CAPACITY     0   /* A process cannot use more than this many of file descriptors. */
+#define OPEN_MAX    8               /* Each task can have up to 8 open files. */
+#define stdin       0               /* Standard input from the terminal. */
+#define stdout      1               /* Standard output to the terminal. */
 
-// typedef struct {
+#include <vfs/file.h>
+#include <pro/process.h>
 
-// } vfsmount_t;
-
-// typedef struct {
-//     int mask;               /* Bit mask used when opening the file to set the file permissions. */
-//     uint32_t count;         /* The number of processes sharing this table. */
-//     dentry_t *root;         /* The dentry of the root directory. */
-//     dentry_t *pwd;          /* The dentry of the current working directory. */
-//     vfsmount_t *rootmnt;    /* Mounted filesystem object of the root directory. */
-//     vfsmount_t *pwdmnt;     /* Mounted filesystem object of the current working directory. */  
-// } vfs_t;
-
-
-
-// typedef struct {
-//     /* The index of the file_t pointer is the file descriptors. 
-//      * 0: stdin, 1: stdout, 2: stderr. */
-//     file_t **fd;            /* Pointer to array of file objects pointers. */
-//     fd_t   *open_fds;       /* Pointer to array of open file descriptors. */
-//     int    file_size;       /* Current maximum number of file objects. Init to 32. */
-//     int    fd_size;         /* Current maximum number of open file descriptors. */
-// } file_table;
+int32_t fd_init(thread_t *curr);
+int32_t file_open(const int8_t *fname);
+int32_t file_close(int32_t fd);
+int32_t file_read(int32_t fd, void *buf, int32_t nbytes);
+int32_t file_write(int32_t fd, const void *buf, int32_t nbytes);
+int32_t directory_open(const int8_t *fname);
+int32_t directory_close(int32_t fd);
+int32_t directory_read(int32_t fd, void *buf, int32_t nbytes);
+int32_t directory_write(int32_t fd, const void *buf, int32_t nbytes);
+// int32_t __open(int32_t fd, const int8_t *fname, file_type_t type, file_op *op);
+int32_t do_open(const int8_t *filename);
+int32_t do_close(int32_t fd);
+int32_t do_read(int32_t fd, void *buf, uint32_t nbytes);
+int32_t do_write(int32_t fd, const void *buf, uint32_t nbytes);
 
 
-// typedef struct {
-//     inode_t inode;
-//     inode_t *prev;
-//     inode_t *next;
-// } i_list;
-
-// i_list unused;          /* The list of valid unused inodes. */
-// i_list inused;          /* The list of valid inused inodes. */
-// i_list idirty;          /* The list of dirty inodes. */
+/* Interactions between a process and a filesystem */
+typedef struct {
+    uint32_t count;     /* Number of processes sharing this table */
+    uint32_t umask;     /* Bit mask used when opening the file to set the file permissions */
+    dentry_t *root;     /* Dentry of the root directory */
+    dentry_t *pwd;      /* Dentry of the current working directory */
+} vfs_t;
 
 
-// /* Systerm call interface provided by the VFS. */
-
-// int sys_open();
-
-
-
-// /* Not used yet. */
-// void mount();           /* Mount filesystems. */
-// void umount();          /* Unmount filesystems. */
-// void sys_fs();          /* Get filesystem information. */
-// void stat_fs();         /* Get filestem statistics. */
-// void chroot();          /* Change root directory. */
-// void chdir();           /* Manipulate directory entries. */
+typedef struct {
+    uint32_t count;         /* Number of processes sharing this table */
+    uint32_t max_fd;        /* Current maximun number of file objects */
+    file_t fd[OPEN_MAX];    /* Pointers to array of file object pointers */
+} files;
 
 
-// void dup();
-// void dup2();
-// void fcntl();
-
-
-
-// #endif /* _VFS_H */
+#endif /* _VFS_H_ */

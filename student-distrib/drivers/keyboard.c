@@ -1,5 +1,6 @@
 #include <drivers/keyboard.h>
 #include <drivers/terminal.h>
+#include <pro/process.h>
 #include <boot/i8259.h>
 #include <lib.h>
 #include <io.h>
@@ -37,17 +38,22 @@ void keyboard_init(void) {
  */
 void do_keyboard(void) {
     uint32_t intr_flag;
+    thread_t *curr;
+    terminal_t *terminal;
     uint32_t scancode = inb(KEYBOARD_PORT);      /* Read one byte from stdin. */
+
     send_eoi(KEYBOARD_IRQ);                     /* Send End of interrupt to the PIC. */
 
     /* Critical section begins. */
     cli_and_save(intr_flag);  
 
+    GETPRO(curr);
+    terminal = curr->terminal;
 
     if (scancode < SCANCODES_SIZE)              /* key press (make) */
-        key_press(scancode);
+        key_press(scancode, terminal);
     else                                        /* key release (break) */
-        key_release(scancode - SCANCODES_SIZE);
+        key_release(scancode - SCANCODES_SIZE, terminal);
 
     /* Critical section ends. */
     restore_flags(intr_flag);

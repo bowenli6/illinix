@@ -1,7 +1,7 @@
 #ifndef _PROCESS_H_
 #define _PROCESS_H_
 
-#include <vfs/ece391_vfs.h>
+#include <vfs/vfs.h>
 #include <drivers/terminal.h>
 #include <access.h>
 #include <pro/sched.h>

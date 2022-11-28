@@ -20,9 +20,9 @@ typedef struct {
 
 
 
-void key_press(uint32_t scancode);
-void key_release(uint32_t scancode);
-terminal_t *terminal_create(thread_t *shell);
+void key_press(uint32_t scancode, terminal_t *terminal);
+void key_release(uint32_t scancode, terminal_t *terminal);
+terminal_t *terminal_create(void);
 void terminal_free(terminal_t *terminal);
 int32_t terminal_open(const int8_t *fname);
 int32_t terminal_close(int32_t fd);
