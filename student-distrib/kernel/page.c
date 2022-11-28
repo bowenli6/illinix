@@ -222,7 +222,7 @@ _walk(uint32_t va, uint32_t flags, int alloc)
         *pde = PTE_PRESENT | flags | ADDR_TO_PTE(ptaddr);
     }
 
-    pte_t* pte = (pte_t*) (ADDR_TO_PTE(*pde) << PDE_OFFSET_4KB);
+    pte_t* pte = (pte_t*) ADDR_TO_PTE(*pde);
 
     return &pte[(va >> VA_OFFSET) & GETBIT_10];
 }
@@ -277,16 +277,17 @@ vmalloc(uint32_t start_addr, int oldsize, int newsize, int flags)
 
     if(oldsize > newsize) 
         return -1;
-    startva = start_addr + ADDR_TO_PTE(oldsize) + PAGE_SIZE * ((oldsize % PAGE_SIZE) == 0);
-    endva = start_addr + ADDR_TO_PTE(newsize + PAGE_SIZE - 1);
+    startva = start_addr + ADDR_TO_PTE(oldsize) + PAGE_SIZE * ((oldsize % PAGE_SIZE) != 0);
+    endva =  ADDR_TO_PTE(start_addr + newsize + PAGE_SIZE - 1);
 
-    for(va = startva; va <= endva; va += PAGE_SIZE) {
+    for(va = startva; va < endva; va += PAGE_SIZE) {
         if((pa = get_user_page(0)) == 0)
             return -1;
         if(mmap(va, pa, PAGE_SIZE, flags) == -1) 
             return -1; 
     }
-
+    flush_tlb();
+    
     return 0;
 }
 
@@ -306,13 +307,18 @@ int sbrk(int incr)
 }
 
 /*
+
 void 
 vmdealloc(pagedir_t pd, int oldsize, int newsize)
 {
     uint32_t startva, endva, va, pa;
     startva = ADDR_TO_PTE(newsize) + PAGE_SIZE;
     endva = ADDR_TO_PTE(oldsize);
+
     _freemap(pd, va, (startva - endva) / PAGE_SIZE);
+
     return;
 }
+
+
 */

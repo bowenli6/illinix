@@ -415,15 +415,16 @@ void* slab_alloc(int size)
         else
             return slab_alloc(size - sizeof(slab_t));
     }
-    
+
+    s->status = 1;
     if(s->size == size_n) {
-        s->status = 1;
         return (void*)(((uint32_t)s) + sizeof(slab_t));
     } else {
         /* put the rest of the space back */
         ns = (slab_t*) (((uint32_t)s) + size_n * SLAB_SIZE);
         ns->size = s->size - size_n;
         ns->status = 0;
+        s->size = size_n;
         slab_list_push(slab_free_list, ns);
 
         return (void*)(((uint32_t)s) + sizeof(slab_t));
@@ -456,7 +457,7 @@ int slab_space_grow()
 void slab_free(slab_t* p)
 {
     slab_t *ns = (slab_t*) p;
-    slab_list_remove(ns);
+    //slab_list_remove(ns);
     ns = _slab_free(ns);
     ns->status = 0;
 
