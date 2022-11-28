@@ -2,7 +2,6 @@
  * @file sched.c
  * @author Bowen Li (bowenli6@illinois.edu)
  * @brief Implmentation of the Linux Completely Fair Scheduler (CFS).
-
  * @overview:
  * CFS stands for "Completely Fair Scheduler," and is the new "desktop" process
  * scheduler implemented by Ingo Molnar and merged in Linux 2.6.23.  It is the
@@ -11,12 +10,10 @@
  * 
  * 80% of CFS's design can be summed up in a single sentence: CFS basically models
  * an "ideal, precise multi-tasking CPU" on real hardware.
-
  * "Ideal multi-tasking CPU" is a (non-existent  :-)) CPU that has 100% physical
  * power and which can run each task at precise equal speed, in parallel, each at
  * 1/nr_running speed.  For example: if there are 2 tasks running, then it runs
  * each at 50% physical power --- i.e., actually in parallel.
-
  * On real hardware, we can run only a single task at once, so we have to
  * introduce the concept of "virtual runtime."  The virtual runtime of a task
  * specifies when its next timeslice would start execution on the ideal
@@ -900,4 +897,3 @@ void pause(void) {
     /* Spin (nicely, so we don't chew up cycles) */
     asm volatile (".1: hlt; jmp .1;");
 }
-

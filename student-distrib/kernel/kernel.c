@@ -12,14 +12,13 @@
 #include <drivers/rtc.h>
 #include <drivers/fs.h>
 #include <drivers/time.h>
-#include <vfs/ece391_vfs.h>
+#include <vfs/vfs.h>
 #include <pro/process.h>
 #include <pro/sched.h>
 #include <debug.h>
 #include <lib.h>
 #include <io.h>
 #include <access.h>
-#include <kmalloc.h>
 
 #include <tests/tests.h>
 
@@ -185,13 +184,6 @@ void entry(unsigned long magic, unsigned long addr) {
     launch_tests();
     
 #endif
-<<<<<<< HEAD
     //clear();
     //swapper();  /* process 0 starts schedule tasks for users */
-=======
-    clear();
-
-    /* process 0 starts scheduling tasks for users */
-    swapper();
->>>>>>> 71ad153 (init scheduler module)
 }

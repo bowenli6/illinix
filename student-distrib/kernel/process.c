@@ -411,14 +411,8 @@ static thread_t *process_create(thread_t *current, uint8_t kthread) {
     if ((pid = alloc_pid()) < 0) 
         return NULL;
 
-    /* process overflow */
-    if (pid >= NTASK + TASKSTART) 
-        return -1;
-
-    p = (process_t *)alloc_kstack(pid-2);
-    tasks[pid-TASKSTART] = &p->thread;
-
-    t = GETPRO(pid);
+    p = (process_t *)alloc_kstack(pid);
+    t = &p->thread;
     
     /* setup current pid */
     t->pid = pid;
@@ -454,14 +448,12 @@ static thread_t *process_create(thread_t *current, uint8_t kthread) {
  * @brief Free a existing process_t
  * 
  */
-static void process_free(pid_t pid) {
-    CURRENT->child = NULL;
-    tasks[pid-TASKSTART] = NULL;
-    kill_pid();
-    free_kstack(pid-TASKSTART);
+static void process_free(thread_t *current, pid_t pid) {
+    kill_pid(pid);
+    free_kstack(pid);
     user_mem_unmap(pid);
-    update_tss(CURRENT->pid);
-    user_mem_map(CURRENT->pid);
+    update_tss(current->pid);
+    user_mem_map(current->pid);
 }
 
 
@@ -512,11 +504,7 @@ void switch_to_user(thread_t *p) {
  */
 static void update_tss(pid_t pid) {
     tss.ss0 = KERNEL_DS;
-<<<<<<< HEAD
-    tss.esp0 = KERNEL_STACK_BEGIN - (_pid - 1) * KERNEL_STACK_SZ - 0x4;
-=======
     tss.esp0 = get_esp0(pid);
->>>>>>> 71ad153 (init scheduler module)
 }
 
 

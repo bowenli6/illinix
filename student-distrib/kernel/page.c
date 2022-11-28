@@ -1,7 +1,13 @@
+Skip to content
 #include <boot/x86_desc.h>
 #include <boot/page.h>
 #include <kmalloc.h>
 #include <lib.h>
+
+/**
+ * @brief Turn on paging related registers.
+ *
+ */
 
 #define VIR_MEM_BEGIN           0x08000000      /* The mem begins at 128MB */
 
@@ -22,11 +28,6 @@ buddy ufree_list[MAX_ORDER + 1];
 
 pd_descriptor_t pdesc[ENTRY_NUM];
 
-
-/**
- * @brief Turn on paging related registers.
- *
- */
 void enable_paging()
 {
     /* set CR3 to directory base address */
@@ -306,18 +307,13 @@ int sbrk(int incr)
 }
 
 /*
-
 void 
 vmdealloc(pagedir_t pd, int oldsize, int newsize)
 {
     uint32_t startva, endva, va, pa;
     startva = ADDR_TO_PTE(newsize) + PAGE_SIZE;
     endva = ADDR_TO_PTE(oldsize);
-
     _freemap(pd, va, (startva - endva) / PAGE_SIZE);
-
     return;
 }
-
-
 */
