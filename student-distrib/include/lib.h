@@ -179,3 +179,4 @@ do {                                    \
 /* find the offset of the member within the struct type */
 #define offsetof(type, member) \
     ((unsigned int)((unsigned char*)&((type*)0)->member - (unsigned char*)0))
+

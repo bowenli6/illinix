@@ -143,7 +143,6 @@ void sched_init(void) {
     idle = &idlep->thread;
     idle->state = RUNNABLE;
     idle->parent = NULL;
-    idle->child = init;
     idle->kthread = 1;
     idle->argc = 1;
     strcpy(idle->argv, "idle");
@@ -154,7 +153,8 @@ void sched_init(void) {
     init = &initp->thread;
     init->state = RUNNABLE;  
     init->parent = idle;
-    init->child = NULL;
+    init->children = kmalloc(MAXCHILDREN * sizeof(thread_t*));
+    init->n_children = 0;
     init->nice = NICE_INIT;
     init->kthread = 1;
     init->argc = 1;
@@ -270,7 +270,11 @@ void sched_sleep(thread_t *task) {
 
 /**
  * @brief scheduler service routine
+ * where to call this rountime:
+ * (1). timer interrupt (1ms) will check NEED_RESCHED flag
+ *  if NEED_RESCHED == 1, schedule()
  * 
+ * (2). process wants to sleep, schedule()
  */
 void schedule(void) {
     thread_t *curr, *next; 
@@ -316,6 +320,25 @@ void schedule(void) {
     restore_flags(flags);
 }
 
+
+
+void __schedule(void) {
+    uint32_t flags;
+    thread_t *curr;
+
+     /* avoid preemption */
+    cli_and_save(flags);
+
+    /* get current thread */
+    GETPRO(curr);
+
+    if (curr->state == RUNNING) 
+        curr->state = RUNNABLE;
+
+    curr->children[0]->state = RUNNING;
+
+    context_switch(curr, curr->children[0]);
+}
 
 
 

@@ -99,20 +99,19 @@ void init_task(void) {
  * used by the user.
  */
 int32_t do_fork(thread_t *parent, uint8_t kthread) {
-    pid_t pid;
     uint32_t *ebp, *eip;
     thread_t *child;
 
     /* create child process */
-    if (!(child = process_create(parent, kthread)))
+    if ((child = process_create(parent, kthread)) < 0)
         return -1;
 
     /* clone thread info of child from parent */
-    if (process_clone() < 0)
+    if (process_clone(parent, child) < 0)
         return -1;
         
     /* set up sched info for child */
-    fork_sched_task(child); 
+    sched_fork(child); 
 
     /* check if child can preempt parent */
     check_preempt_new(&parent->sched_info, &child->sched_info);
@@ -138,18 +137,47 @@ int32_t do_fork(thread_t *parent, uint8_t kthread) {
 
 child_ret:
     /* get shared eip in user space */
-    child->usreip = get_eip_user();
+    child->usreip = get_eip_user(parent);
 
     /* shared user esp */
     child->usresp = USER_STACK_ADDR;
     
+    /* map child's vitural address space */
+    user_mem_map(child->pid);
+
     /* context switch to child's user space (ring 3) */
     switch_to_user(child);
 
 parent_ret:
     /* parent return child's pid */
-    return pid;
+    return child->pid;
 }
+
+
+
+/**
+ * @brief 
+ * 
+ * @param parent 
+ * @param child 
+ * @return int32_t 
+ */
+static int32_t process_clone(thread_t *parent, thread_t *child) {
+    // COPY 4MB 
+    // FILE 
+    
+}
+
+
+/**
+ * @brief Get the eip user object
+ * 
+ * @param task 
+ * @return uint32_t 
+ */
+static uint32_t get_eip_user(thread_t *task) {
+
+} 
 
 
 /**
@@ -172,7 +200,7 @@ void do_exit(uint32_t status) {
 
     /* free the current task */
     thread_t *parent = t->parent;
-    parent->child = NULL;
+    parent->children = NULL;
     process_free(parent, t->pid);
 
     ntask--;
@@ -263,18 +291,7 @@ static int32_t __exec(thread_t *current, thread_t **new, const int8_t *cmd, uint
     /* create terminals if the program is shell */
     if (!strcmp(argv[0], SHELL)) {
         (*new)->nice = NICE_SHELL;
-
-        if (console->size == console->max) {
-            process_free(*new, pid);
-            return -1;
-        }
-
-        if (!(terminal = terminal_create(*new))) {
-            process_free(*new, pid);
-            return -1;
-        }
-
-        console->terminals[console->size++] = terminal;
+        // TODO
     } else {
         (*new)->nice = NICE_NORMAL;
     }
@@ -389,6 +406,7 @@ static thread_t *process_create(thread_t *current, uint8_t kthread) {
     pid_t pid;
     process_t *p;
     thread_t *t;
+    thread_t **children;
 
     if ((pid = alloc_pid()) < 0) 
         return NULL;
@@ -407,7 +425,23 @@ static thread_t *process_create(thread_t *current, uint8_t kthread) {
 
     /* set the parent pointer */
     t->parent = current;
-    current->child = t;
+
+    /* check if max_children is full */
+    if (current->n_children == current->max_children) {
+        children = kmalloc(current->max_children * 2 * sizeof(thread_t*));
+        memcpy((void*)children, (void*)current->children, current->max_children * sizeof(thread_t *));
+        current->max_children *= 2;
+        kfree(current->children);
+        current->children = children;
+    }   
+
+    /* update parent's children list */
+    current->children[current->n_children++] = t;
+
+    /* create child's children list */
+    t->children = kmalloc(MAXCHILDREN * sizeof(thread_t *));
+    
+    t->n_children = 0;
     
     /* not a kernel thread */
     t->kthread = kthread;
@@ -493,7 +527,6 @@ static void update_tss(pid_t pid) {
  * @return uint32_t kernel esp
  */
 uint32_t get_esp0(pid_t pid) {
-    // return KERNEL_STACK_BEGIN - pid * KERNEL_STACK_SZ - 0x4;
     return 0; // TODO
 }
 
@@ -504,19 +537,16 @@ uint32_t get_esp0(pid_t pid) {
  */
 static void console_init(void) {
     int i;
-    const int num_shell = 3;
-    thread_t **new = kmalloc(sizeof(thread_t *));
+    pid_t pid;
 
     /* create console */
     console = kmalloc(sizeof(console_t));    /* never be freed */
 
-    // /* init three shells */
-    // for (i = 0; i < num_shell; ++i) {
-    //     (void)__exec(init, new, SHELL, 1);
-    //     console->terminals[i]->shell = *new;
-    // }
-
-    kfree(new);
+    /* init three shells */
+    for (i = 0; i < NTERMINAL; ++i) {
+        pid = fork(init, 1);
+        console->terminals[i] = terminal_create(pid);
+    }
 }
 
 

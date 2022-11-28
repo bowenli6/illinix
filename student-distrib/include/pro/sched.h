@@ -95,6 +95,7 @@ void sched_sleep(thread_t *task);
 void sched_wakeup(thread_t *task);
 void task_tick(sched_t *curr);
 void schedule(void);
+void __schedule(void);
 void pause(void);
 
 
