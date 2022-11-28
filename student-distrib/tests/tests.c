@@ -6,7 +6,7 @@
 #include <tests/tests.h>
 #include <vfs/ece391_vfs.h>
 #include <boot/syscall.h>
-
+#include "../include/drivers/VGA_text_mode.h"
 	
 #define PASS 1
 #define FAIL 0
@@ -554,13 +554,25 @@ int testprint () {
 int test_checkpoint3() {
 	// testprint();
 	// test_file_read();
-	char fname[32];
-	int nread;
-	terminal_open(0);
-	nread = terminal_read(0, (void *)fname, 32);
-	printf("%d\n", nread);
-	printf("The filename is: %s\n", fname);
-	return 0;
+	// char fname[32];
+	// int nread;
+	// terminal_open(0);
+	// nread = terminal_read(0, (void *)fname, 32);
+	// printf("%d\n", nread);
+	// printf("The filename is: %s\n", fname);
+	// return 0;
+
+	// test for VGA write and cursor movement
+	VGA_init(720, 480, 16);
+	// test if cursor could be set to a specific posision
+	VGA_text_set_cursor_position(20,15);
+	// test for color set
+	fputs(stdout, "VGA color test");
+	//                     blue  black
+	vga_text_set_color(0,5,0x09, 0x00);
+	// test for VGA write
+	
+	
 }
 
 /* Checkpoint 4 tests */
