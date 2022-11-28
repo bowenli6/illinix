@@ -1,21 +1,16 @@
 #include <drivers/terminal.h>
-#include <vfs/ece391_vfs.h>
+#include <vfs/vfs.h>
 #include <pro/process.h>
 #include <pro/sched.h>
 #include <lib.h>
 #include <io.h>
 
-
-terminal_t terminal;    /* The terminal object. */
-
-
 /* Local functions, see headers for descriptions. */
 
-static void terminal_init();
-static void in(uint32_t scancode, uint8_t caps);
+static void in(uint32_t scancode, uint8_t caps, terminal_t *terminal);
 static void out(const void *buf, int32_t nbytes);
 static void out_tab();
-static void backspace();
+static void backspace(terminal_t *terminal);
 static void bufcpy(void *dest, const void *src, uint32_t nbytes, uint8_t bufhd);
 static int isletter(uint32_t scancode);
 
@@ -23,9 +18,7 @@ static int isletter(uint32_t scancode);
  * @brief create and initialize the terminal.
  * 
  */
-terminal_t *terminal_create(thread_t *shell) {
-    if (!shell) return NULL;
-
+terminal_t *terminal_create(void) {
     /* create a new terminal */
     terminal_t *terminal = kmalloc(sizeof(terminal_t));
 
@@ -39,7 +32,6 @@ terminal_t *terminal_create(thread_t *shell) {
     terminal->size = 0;                         /* No character yet. */
     terminal->exit = 0;                         /* \n is not read. */
     terminal->buffer = kmalloc(TERBUF_SIZE);    /* create buffer */
-    terminal->shell = shell;                    /* store shells for this terminal */
     memset((void*)terminal->buffer, 0, TERBUF_SIZE);
 }
 
@@ -60,49 +52,49 @@ void terminal_free(terminal_t *terminal) {
  * 
  * @param scancode : The scancode of the key.
  */
-void key_press(uint32_t scancode) {
+void key_press(uint32_t scancode, terminal_t *terminal) {
     switch (scancode) {
     case CAPSLOCK:
-        terminal.capslock = !(terminal.capslock);  /* Reverse capslock. */
+        terminal->capslock = !(terminal->capslock);  /* Reverse capslock. */
         return;
     case LSHIFT:
-        terminal.shift = 1;                         
+        terminal->shift = 1;                         
         return;
     case RSHIFT:
-        terminal.shift = 1;
+        terminal->shift = 1;
         return;
     case LALT:
-        terminal.alt = 1;
+        terminal->alt = 1;
     case BACKSPACE:
         backspace(scancode);
         return;
     case CTRL:
-        terminal.ctrl = 1;
+        terminal->ctrl = 1;
         return;
     case TAB:
         out_tab(TAB_SPACE);
     case L:
-        if (terminal.ctrl) {                    /* If ctrl is hold and CTRL-L is pressed. */
-            char buf[terminal.size];
+        if (terminal->ctrl) {                    /* If ctrl is hold and CTRL-L is pressed. */
+            char buf[terminal->size];
             clear(); 
             puts("391OS> ");
-            bufcpy((void*)buf, (void*)terminal.buffer, terminal.size, terminal.bufhd);
-            out(buf, terminal.size);
+            bufcpy((void*)buf, (void*)terminal->buffer, terminal->size, terminal->bufhd);
+            out(buf, terminal->size);
         } else {
-            if (terminal.shift) {                   
-                in(scancode, 1 - (terminal.capslock & isletter(scancode)));
+            if (terminal->shift) {                   
+                in(scancode, 1 - (terminal->capslock & isletter(scancode)), terminal);
             } else {
                 /* Otherwise, output in capslock from. */
-                in(scancode, (terminal.capslock & isletter(scancode)));
+                in(scancode, (terminal->capslock & isletter(scancode)), terminal);
             }      
         }
         return;
     default:
-        if (terminal.shift) {                    /* If Shift is hold, output in capital form. */
-            in(scancode, 1 - (terminal.capslock & isletter(scancode)));
+        if (terminal->shift) {                    /* If Shift is hold, output in capital form. */
+            in(scancode, 1 - (terminal->capslock & isletter(scancode)), terminal);
         } else {
             /* Otherwise, output in capslock from. */
-            in(scancode, (terminal.capslock & isletter(scancode)));
+            in(scancode, (terminal->capslock & isletter(scancode)), terminal);
         }                             
         return;
     }
@@ -114,16 +106,16 @@ void key_press(uint32_t scancode) {
  * 
  * @param scancode : The scancode of the key.
  */
-void key_release(uint32_t scancode) {
+void key_release(uint32_t scancode, terminal_t *terminal) {
     switch (scancode) {
         case LSHIFT:
-            terminal.shift = 0;             /* Uncheck shift. */
+            terminal->shift = 0;             /* Uncheck shift. */
             break;
         case RSHIFT:
-            terminal.shift = 0;             /* Uncheck shift. */
+            terminal->shift = 0;             /* Uncheck shift. */
             break;
         case CTRL:
-            terminal.ctrl = 0;              /* Uncheck ctrl. */
+            terminal->ctrl = 0;              /* Uncheck ctrl. */
             break;
         default:
             break;
@@ -138,20 +130,20 @@ void key_release(uint32_t scancode) {
  * @scancode: The keyboard scancode of the input character.
  * @caps: set to 1 when the character should be stored in capital form.
  */
-static void in(uint32_t scancode, uint8_t caps) {
+static void in(uint32_t scancode, uint8_t caps, terminal_t *terminal) {
     if (scancode >= KEYBOARD_SIZE) return;          /* Should not print. */
     uint8_t character = scancodes[scancode][caps];  /* Get character. */
     if (character == '\r') character = '\n';
     if (character) {
         putc(character);
-        if (terminal.size  == TERBUF_SIZE)   
-            terminal.bufhd = (terminal.bufhd + 1) % TERBUF_SIZE;
+        if (terminal->size  == TERBUF_SIZE)   
+            terminal->bufhd = (terminal->bufhd + 1) % TERBUF_SIZE;
 
-        terminal.buffer[terminal.buftl] = character;
-        terminal.buftl = (terminal.buftl + 1) % TERBUF_SIZE;
+        terminal->buffer[terminal->buftl] = character;
+        terminal->buftl = (terminal->buftl + 1) % TERBUF_SIZE;
 
-        if (terminal.size != TERBUF_SIZE)   
-            terminal.size++;            
+        if (terminal->size != TERBUF_SIZE)   
+            terminal->size++;            
         /* otherwise the size does not change. (always as same as TERBUF_SIZE) */
     }
 }
@@ -190,18 +182,18 @@ static void out_tab(uint32_t n) {
  * @brief Handle the terminal screen when backspace key is pressed. 
  * 
  */
-static void backspace() {
-    if (!terminal.size) {  
+static void backspace(terminal_t *terminal) {
+    if (!terminal->size) {  
         /* No way to backspace. */
         return;
     } else {    
         /* Clear the most recent character. */
         back();
-        terminal.size--;
-        if (terminal.buftl == 0)
-            terminal.buftl = TERBUF_SIZE - 1;
+        terminal->size--;
+        if (terminal->buftl == 0)
+            terminal->buftl = TERBUF_SIZE - 1;
         else
-            terminal.buftl--;
+            terminal->buftl--;
     }
 }
 
@@ -242,6 +234,13 @@ int32_t terminal_read(int32_t fd, void *buf, int32_t nbytes) {
     int32_t nread;
     uint8_t start = 0;
     thread_t *curr;
+    terminal_t *terminal;
+
+    GETPRO(curr);
+    terminal = curr->terminal;
+
+    if (!terminal) return -1;
+
 
     if (fd != stdin)
         return -1;
@@ -256,12 +255,10 @@ int32_t terminal_read(int32_t fd, void *buf, int32_t nbytes) {
         nbytes = TERBUF_SIZE;
 
     /* Init to zero. (read is not stopped) */
-    terminal.exit = 0;
-
-    GETPRO(curr);
+    terminal->exit = 0;
 
 
-    while (!terminal.exit) {
+    while (!terminal->exit) {
 
         /* sleep and waiting for an IO operation */
         sched_sleep(curr);
@@ -271,10 +268,10 @@ int32_t terminal_read(int32_t fd, void *buf, int32_t nbytes) {
         /* Critical section begins. */
         cli_and_save(intr_flag);
 
-        for (nread = 0, start = terminal.bufhd; nread < terminal.size; nread++) {
-            if ((terminal.buffer[start] == '\n') || (terminal.buffer[start] == '\r')) {
+        for (nread = 0, start = terminal->bufhd; nread < terminal->size; nread++) {
+            if ((terminal->buffer[start] == '\n') || (terminal->buffer[start] == '\r')) {
                 nread++;
-                terminal.exit = 1;
+                terminal->exit = 1;
                 break;
             }
             start = (start + 1) % TERBUF_SIZE;
@@ -288,17 +285,17 @@ int32_t terminal_read(int32_t fd, void *buf, int32_t nbytes) {
     /* When the input is larger than the given nbytes. */
     if (nread > nbytes) {
         /* copy nbytes from terminal buffer into user buffer. */
-        bufcpy(buf, (void*)terminal.buffer, nbytes, terminal.bufhd);
+        bufcpy(buf, (void*)terminal->buffer, nbytes, terminal->bufhd);
         nread = nbytes;
 
     } else {
         /* normal case: the nread <= nbytes. */
-        bufcpy(buf, (void*)terminal.buffer, nread, terminal.bufhd);
+        bufcpy(buf, (void*)terminal->buffer, nread, terminal->bufhd);
     }
 
     /* change the bufhd points to next part. */
-    terminal.bufhd = (terminal.bufhd + nread) % TERBUF_SIZE;
-    terminal.size -= nread;
+    terminal->bufhd = (terminal->bufhd + nread) % TERBUF_SIZE;
+    terminal->size -= nread;
     return nread;
 }
 

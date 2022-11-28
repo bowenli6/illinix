@@ -533,7 +533,7 @@ static void console_init(void) {
     /* init three shells */
     for (i = 0; i < NTERMINAL; ++i) {
         pid = fork(init, 1);
-        console->terminals[i] = terminal_create(pid);
+        console->terminals[i] = terminal_create();
     }
 }
 
