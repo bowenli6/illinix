@@ -168,7 +168,9 @@ void entry(unsigned long magic, unsigned long addr) {
 
     /* Virtual Memory */
     kmalloc_init();
+    user_mem_init();
     page_init();                    /* Initialize page tables. */
+
     
     /* Devices */
     keyboard_init();                /* Initialize the Keyboard driver. */

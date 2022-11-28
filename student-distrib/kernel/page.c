@@ -13,7 +13,19 @@
 //static int pde_alloc_index = 2;
 //pd_descriptor_t pdd[ENTRY_NUM];
 
-pte_t* _walk(pagedir_t pd, uint32_t va, int alloc);
+
+
+pte_t* _walk(uint32_t va, uint32_t flag, int alloc);
+buddy* get_buddy(uint32_t addr);
+
+user_page_t u1, u2;
+user_page_t* upage_4mb;
+user_page_t* upage_4kb;
+
+free_area_t ufree_area[MAX_ORDER +1];
+buddy ufree_list[MAX_ORDER + 1];
+
+pd_descriptor_t pdesc[ENTRY_NUM];
 
 void enable_paging()
 {
@@ -53,14 +65,17 @@ void flush_tlb()
 void page_init()
 {
     int i;
-    kmalloc_init();
     /* initialize first 4MB directory */
     page_directory[0] = page_directory[0] | PTE_PRESENT | PTE_RW | ADDR_TO_PTE((int)page_table);
 
     /* initialize 4MB-8MB directory */
     page_directory[1] = page_directory[1] | PTE_PRESENT | PTE_RW | PDE_MB | PTE_GLO | (1 << PDE_OFFSET_4MB);
-    //page_directory[2] = page_directory[2] | PTE_PRESENT | PTE_RW | PDE_MB | PTE_GLO | (1023 << PDE_OFFSET_4MB);
 
+    /* Initialize page directory descriptors */
+    for(i = 0; i < ENTRY_NUM; i++) {
+        pdesc->flags = 0;
+        pdesc->count = 0;
+    }
     /* initialize 8MB-4GB page directories */
 
     for(i = 2; i < 16; i++) {
@@ -118,107 +133,179 @@ int32_t do_vidmap(uint8_t **screen_start) {
 
 
 
-/*
-pte_t* 
-_walk(pagedir_t pd, uint32_t va, int alloc)
+
+buddy* get_buddy(uint32_t addr) 
 {
-    pde_t* pde = &pd[va >> 22];
-    int tempaddr;
-    if(!((*pde) & PTE_PRESENT)) {
-        if(!alloc) 
-            return 0;
-        else {
-            if(tempaddr = (uint32_t)page_alloc() == 0) 
-                return 0;
-            *pde |= PTE_PRESENT | ADDR_TO_PTE(tempaddr);
-        }
-    }
-
-    pagetable_t pagetable = PTE_ADDR(*pde) << 12;
-
-    return &pagetable[ (va >> 12) & 0x3FF ];
+    buddy* b = kmalloc(sizeof(buddy));
+    b->addr = addr;
+    return b;
 }
 
-int 
-_mmap(pagedir_t pd, uint32_t va, uint32_t pa, int size, int flags)
+
+void user_mem_init() 
+{
+    int i = 0;
+    buddy* p;
+
+    /* create space for bitmaps */
+    ufree_area[MAX_ORDER].bmsize = 0;
+    for(i = 0; i < MAX_ORDER; i++) {
+        ufree_area[i].bmsize = ((PAGE_SIZE_4MB * 2) / buddy_size(i) + 31) / 32;
+        ufree_area[i].bit_map = kmalloc(ufree_area[i].bmsize * sizeof(uint32_t));
+    }
+
+    /* Initialize user free lists */
+    for(i = 0; i <= MAX_ORDER; i++) {
+        buddy* fl = &ufree_list[i];
+        ufree_area[i].free_list = fl;
+        fl->last = fl;
+        fl->next = fl; 
+        memset(ufree_area[i].bit_map, 0, ufree_area[i].bmsize * sizeof(uint32_t)); /* All buddys are both free */
+        ufree_area[i].start_addr = KERNEL_PAGES * PAGE_SIZE_4MB;
+        ufree_area[i].user = 1;
+    }
+
+    buddy* fl = ufree_area[MAX_ORDER].free_list;
+    /* index user memory and store in largest free list */
+    for(i = KERNEL_PAGES * PAGE_SIZE_4MB; i < MAX_PHYS_PAGES * PAGE_SIZE_4MB; i += buddy_size(MAX_ORDER - 1)) {
+        p = get_buddy(i);
+        free_list_push(fl, p);
+    }
+}
+
+
+
+/**
+ * @brief Get a free user page using buddy system
+ * 
+ * @param order 
+ * @return void* 
+ */
+uint32_t get_user_page(int order)
+{
+    int i, rtn;
+    buddy* temp;
+    if(order >= MAX_ORDER || order < 0) return NULL;
+
+    for(i = order; i <= MAX_ORDER; i++) {
+        /* find the smallest order that has a free block */ 
+        if((temp = free_list_pop(ufree_area[i].free_list)) == NULL) {
+            continue;
+        }
+        temp = buddy_split(ufree_area, temp, i, order); /* reduce order with split */
+        rtn = temp->addr;
+        kfree(temp);
+        return rtn;
+    }
+
+    return NULL;
+}
+
+void free_user_page(uint32_t addr, int order)
+{   
+    _free_page(ufree_area, get_buddy(addr), order);
+    return;
+}
+
+
+
+pte_t*
+_walk(uint32_t va, uint32_t flags, int alloc)
+{
+    uint32_t pde_i = PDE_MB_ADDR(va);
+    pde_t* pde = &page_directory[pde_i];
+    uint32_t ptaddr;
+
+    if(!(*pde & PTE_PRESENT)) {
+        if(!alloc || (ptaddr = (uint32_t)get_page(0)) == 0)
+            return 0;
+        *pde = PTE_PRESENT | flags | ADDR_TO_PTE(ptaddr);
+    }
+
+    pte_t* pte = (pte_t*) (ADDR_TO_PTE(*pde) << PDE_OFFSET_4KB);
+
+    return &pte[(va >> VA_OFFSET) & GETBIT_10];
+}
+
+
+int mmap(uint32_t va, uint32_t pa, int size, int flags)
 {
     pte_t* pte;
-    int i, walk_addr, length;
+    int i, addr, length;
+    
+    addr = ADDR_TO_PTE(va);
+    length = size / PAGE_SIZE;
 
-    walk_addr = va & 0xFFFFF000;
-    length = ( size / PAGE_SIZE ) + 1;
-
-    for( i = 0; i < length; i++ ){
-
-        if(pte = _walk(pd, walk_addr, 1) == 0) 
+    for(i = 0; i < length; i++ ){
+        if((pte = _walk(addr, flags, 1)) == 0) 
             return -1;
         if((*pte) & PTE_PRESENT) 
-            panic("remmap!"); 
+            return -1;
 
-        pte[0] = pte[0] | ( ADDR_TO_PTE(pa) + i * PAGE_SIZE ) | flags;
-        walk_addr += PAGE_SIZE;
+        *pte = PTE_PRESENT | flags | (ADDR_TO_PTE(pa) + i * PAGE_SIZE);
+        pdesc[PDE_MB_ADDR(addr)].count ++;
+        addr += PAGE_SIZE;
     }
     
     return 0;
 }
 
 int
-_freemap(pagedir_t pd, uint32_t va, int size)
+freemap(uint32_t va, int size)
 {
     pte_t* pte;
-    uint32_t a;
+    uint32_t addr;
 
-    for(a = va; a <= va + size; a++) {
-
-        if(pte = _walk(pd, a, 0) == 0) 
-            panic("free a empty pointer");
+    for(addr = va; addr <= va + size; addr += PAGE_SIZE) {
+        if((pte = _walk(addr, 0, 0)) == 0) 
+            return -1;
         if(!((*pte) & PTE_PRESENT))
-            panic("free invalid memory");
-
-        kfree(PTE_ADDR(*pte) << 12);
+            return -1;
         *pte = 0;
+        if((pdesc[PDE_MB_ADDR(addr)].count--) == 0) {
+            free_page((void*)ADDR_TO_PTE(page_directory[PDE_MB_ADDR(addr)]), 0);
+        }
     }
-}
-
-void 
-kmmap(uint32_t va, uint32_t pa, int size, int flags)
-{
-    if(_mmap(page_directory, va, pa, size, flags) != 0) 
-        panic("kernel mmap error");
-}
-
-
-pagedir_t 
-create_uvmdir()
-{
-    pagedir_t npd;
-    if( npd = (pagedir_t) page_alloc() == 0 ) 
-        return 0;
-    memset(npd, 0, PAGE_SIZE);
-    return npd;
+    return 0;
 }
 
 
 int 
-vmalloc(pagedir_t pd, int oldsize, int newsize, int flags)
+vmalloc(uint32_t start_addr, int oldsize, int newsize, int flags)
 {
     uint32_t startva, endva, va, pa;
 
-    startva = ADDR_TO_PTE(oldsize) + PAGE_SIZE;
-    endva = ADDR_TO_PTE(newsize);
+    if(oldsize > newsize) 
+        return -1;
+    startva = start_addr + ADDR_TO_PTE(oldsize) + PAGE_SIZE * ((oldsize % PAGE_SIZE) == 0);
+    endva = start_addr + ADDR_TO_PTE(newsize + PAGE_SIZE - 1);
 
     for(va = startva; va <= endva; va += PAGE_SIZE) {
-        pa = page_alloc();
-        if(pa == 0) 
+        if((pa = get_user_page(0)) == 0)
             return -1;
-        memset(pa, 0, PAGE_SIZE);
-        if(_mmap(pd, va, pa, PAGE_SIZE, flags | PTE_RW | PTE_US) == -1) 
+        if(mmap(va, pa, PAGE_SIZE, flags) == -1) 
             return -1; 
     }
 
     return 0;
 }
 
+
+
+int sbrk(int incr) 
+{
+    int i, incr_p = (incr + PAGE_SIZE - 1) / PAGE_SIZE;
+    uint32_t pa, va = HEAP_START; /*TODO: use process break*/
+
+    for(i = 0; i < incr_p; i++) {
+        if((pa = (uint32_t)get_user_page(0)) == 0)
+            return -1;
+        mmap(va + i * PAGE_SIZE, pa, PAGE_SIZE, PTE_RW | PTE_US);
+    }
+    return 0;
+}
+
+/*
 
 void 
 vmdealloc(pagedir_t pd, int oldsize, int newsize)
@@ -233,16 +320,4 @@ vmdealloc(pagedir_t pd, int oldsize, int newsize)
 }
 
 
-void free_uvmdir(pagedir_t pd, int size)
-{
-    int i;
-    _freemap(pd, 0, size / PAGE_SIZE);
-    for(i = 0; i < ENTRY_NUM; i++) {
-        if((pd[i] & PTE_PRESENT) && (pd[i] & PTE_US)) {
-            kfree(ADDR_TO_PTE(pd[i]));
-        }
-    }
-    kfree(pd);
-    return;
-}
 */
