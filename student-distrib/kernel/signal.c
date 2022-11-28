@@ -36,7 +36,13 @@ asmlinkage int32_t deliver_signal() {
 
     // According to ULK P.441, if ka.sa.sa_handler is equal to ISG_DFL, we must perform default handler
     if (CURRENT->sig->exe_sig_act[sig_num] == default_arr[sig_num]) {
-        default_arr[sig_num]();    
+        default_arr[sig_num](); 
+
+        // unmask and change previous_mask to the initial state
+        for (i = 0; i < SIG_COUNT; ++ i) {
+            CURRENT->sig->mask_arr[i] = CURRENT->sig->previous_mask_arr[i];
+            CURRENT->sig->previous_mask_arr[i] = 0;
+        }   
     } else {
         do_deliver(CURRENT->context, CURRENT->sig->exe_sig_act[sig_num], sig_num);
     }
