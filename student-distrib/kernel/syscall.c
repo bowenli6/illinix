@@ -178,3 +178,11 @@ asmlinkage int32_t sys_set_handler(int32_t signum, void *handler_addr) {
 asmlinkage int32_t sys_sigreturn(void) {
    return -1;
 }
+
+
+asmlinkage void *sys_sbrk(void) {
+   thread_t *curr;
+
+   GETPRO(curr);
+
+}

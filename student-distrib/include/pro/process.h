@@ -15,6 +15,8 @@
 #define NICE_INIT       10              /* nice value for init process */
 #define NICE_SHELL      0               /* nice value for shell process */
 #define NICE_NORMAL     5               /* nice value for default process */
+#define NTERMINAL       3
+#define MAXCHILDREN     100     
 
 #define task_of(ptr)  container_of(ptr, thread_t, sched_info)
 
@@ -54,22 +56,22 @@ typedef struct thread {
     int8_t             **argv;          /* user command line argument */
     pid_t              pid;             /* process id number */
     struct thread      *parent;         /* parent process addr */
-    struct thread      *child;          /* child process addr */
+    struct thread      **children;      /* child process addr */
+    uint64_t           n_children;      /* number of children */
+    uint64_t           max_children;    /* max number of children */
     context_t          *context;        /* hardware context */
     uint32_t           usreip;          /* user eip */
     uint32_t           usresp;          /* user esp */
+    uint32_t           sbrk;            /* heap pointer */
     files              *fds;            /* opened file descritors */
     uint8_t            kthread;         /* 1 if this thread is belong to the kernel */
     terminal_t         *terminal;       /* terminal for this thread (shell only) */
     int8_t             nice;            /* nice value */
 } thread_t;
 
-
 /* array of terminals for each shells */
 typedef struct {
     terminal_t **terminals;
-    uint32_t max;
-    uint32_t size;
 } console_t;
 
 
@@ -93,6 +95,7 @@ void do_halt(uint32_t status);
 int32_t do_fork(thread_t *parent, uint8_t kthread);
 int32_t do_execute(const int8_t *cmd);
 pid_t do_getpid(void);
+void *do_sbrk(uint32_t size);
 
 uint32_t get_esp0(pid_t pid);
 void context_switch(thread_t *from, thread_t *to);

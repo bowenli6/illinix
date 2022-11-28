@@ -51,13 +51,15 @@ void do_timer(void) {
     GETPRO(current);
 
     /* update vruntime of current task and reschedule when needed */
-    task_tick(&current->sched_info);
+    // task_tick(&current->sched_info);
 
-    if (current->flag == NEED_RESCHED) {
-        restore_flags(intr_flag);
-        schedule();
-        return;
-    }
+    // if (current->flag == NEED_RESCHED) {
+    //     restore_flags(intr_flag);
+    //     schedule();
+    //     return;
+    // }
+
+    __schedule();
 
     /* critical section ends. */
     restore_flags(intr_flag);
