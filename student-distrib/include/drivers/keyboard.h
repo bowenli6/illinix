@@ -12,6 +12,7 @@
 #define RSHIFT          0x36                /* Left shift key */
 #define BACKSPACE       0x0e                /* Backspace key */
 #define CAPSLOCK        0x3a                /* CapsLock key */
+#define SPACE           0x39                /* Space key */
 #define CTRL            0x1d                /* Ctrl key */
 #define LALT            0x38                /* Left alt key */
 #define RALT            0xe0                /* Right alt key */

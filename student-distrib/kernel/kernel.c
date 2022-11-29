@@ -12,6 +12,7 @@
 #include <drivers/rtc.h>
 #include <drivers/fs.h>
 #include <drivers/time.h>
+#include <drivers/vga.h>
 #include <vfs/vfs.h>
 #include <pro/process.h>
 #include <pro/sched.h>
@@ -171,13 +172,10 @@ void entry(unsigned long magic, unsigned long addr) {
     keyboard_init();                /* Initialize the Keyboard driver. */
     rtc_init();                     /* Initialize the RTC driver. */
     pit_init();                     /* Initialize the PIT driver */
+    vga_init();                     /* Initialize the VGA driver */
 
     /* Process */
     sched_init();
-
-    /* Enable interrupts */
-    printf("Enabling Interrupts\n");
-    // sti();
 
 
     /* This is an test for share gitlab. */

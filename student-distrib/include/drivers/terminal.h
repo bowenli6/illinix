@@ -15,8 +15,11 @@ typedef struct {
     uint8_t size;                       /* The current size of the buffer. */
     uint8_t *buffer;                    /* Line buffer input. */
     uint8_t exit;                       /* A flag for stdin, 1 if \n is detected. */
+    uint8_t screen_x;
+    uint8_t screen_y;
 } terminal_t;
 
+extern int8_t terminal_boot;
 
 
 void key_press(uint32_t scancode, terminal_t *terminal);

@@ -1,15 +1,16 @@
 #include <io.h>
 #include <lib.h>
 #include <boot/syscall.h>
+#include <pro/process.h>
+#include <access.h>
+#include <drivers/vga.h>
 #include <drivers/terminal.h>
+
 
 int screen_x = 0;
 int screen_y = 0;
-static char* video_mem = (char *)VIDEO;
-
 
 static void overflow();
-
 
 int32_t fputs(int32_t fd, const int8_t* s) {
     uint32_t size = strlen(s);
@@ -20,13 +21,22 @@ int32_t fputs(int32_t fd, const int8_t* s) {
  * @brief Clears video memory 
  */
 void clear(void) {
-    int32_t i;
-    for (i = 0; i < NUM_ROWS * NUM_COLS; i++) {
-        *(uint8_t *)(video_mem + (i << 1)) = ' ';
-        *(uint8_t *)(video_mem + (i << 1) + 1) = ATTRIB;
+    thread_t *curr;
+    terminal_t *terminal;
+
+    if (!terminal_boot) {
+        vga_clear();
+        screen_x = 0;
+        screen_y = 0;
+        return;
     }
-    screen_x = 0;
-    screen_y = 0;
+
+    GETPRO(curr);
+    terminal = curr->terminal;
+    
+    vga_clear();
+    terminal->screen_x = 0;
+    terminal->screen_y = 0;
 }
 
 
@@ -177,24 +187,45 @@ int32_t puts(int8_t* s) {
  * @param c : character to print.
  */
 void putc(uint8_t c) {
-    if(c == '\n' || c == '\r') {
-        if (screen_y + 1 == NUM_ROWS) 
-            overflow();
-        else
-           screen_y++; 
-        screen_x = 0;
+    thread_t *curr;
+    terminal_t *terminal;
+    int32_t x, y;
+
+    if (!terminal_boot) {
+        x = screen_x;
+        y = screen_y;
     } else {
-        *(uint8_t *)(video_mem + ((NUM_COLS * screen_y + screen_x) << 1)) = c;
-        *(uint8_t *)(video_mem + ((NUM_COLS * screen_y + screen_x) << 1) + 1) = ATTRIB;
-        screen_x++;
-        screen_x %= NUM_COLS;
-        if (screen_x == 0) {
-            if (screen_y + 1 != NUM_ROWS)
-                screen_y++;
+        GETPRO(curr);
+        terminal  = curr->terminal;          
+        x = terminal->screen_x;
+        y = terminal->screen_y;
+    }
+
+    if(c == '\n' || c == '\r') {
+        if (y + 1 == NUM_ROWS) 
+            vga_scrolling();
+        else
+           y++; 
+        x = 0;
+    } else {
+        vga_write(x, y, c);
+        x++;
+        x %= NUM_COLS;
+        if (x == 0) {
+            if (y + 1 != NUM_ROWS)
+                y++;
             else
-                overflow();
+                vga_scrolling();
         }
     }
+    if (!terminal_boot) {
+        screen_x = x;
+        screen_y = y;
+    } else {
+        terminal->screen_x = x;
+        terminal->screen_y = y;
+    }
+    vga_update_cursor(x, y);
 }
 
 
@@ -212,34 +243,17 @@ void test_interrupts(void) {
 /* A tmp function used to backspace one character. 
  * Will be deleted when VGA is supported.
  */
-void back() {
-    if (screen_x == 0 && screen_y == 0) 
+void back(terminal_t *terminal) {
+    if (terminal->screen_x == 0 && terminal->screen_y == 0) 
         return;
-    if (screen_x == 0) {
-        screen_x = NUM_COLS - 1;
-        --screen_y;
-        *(uint8_t *)(video_mem + ((NUM_COLS * screen_y + screen_x) << 1)) = ' ';
-        *(uint8_t *)(video_mem + ((NUM_COLS * screen_y + screen_x) << 1) + 1) = ATTRIB;
+    if (terminal->screen_x == 0) {
+        terminal->screen_x = NUM_COLS - 1;
+        --terminal->screen_y;
     } else {
-        screen_x--;
-        *(uint8_t *)(video_mem + ((NUM_COLS * screen_y + screen_x) << 1)) = ' ';
-        *(uint8_t *)(video_mem + ((NUM_COLS * screen_y + screen_x) << 1) + 1) = ATTRIB;
+        terminal->screen_x--;
     }
+    vga_write(terminal->screen_x, terminal->screen_y, ' ');
+    vga_update_cursor(terminal->screen_x, terminal->screen_y);
 }
 
-/* A tmp function used to vertical scrolling. 
- * Will be deleted when VGA is supported.
- */
-static void overflow() {
-    int32_t i;
-    for (i = 0; i < NUM_COLS * (NUM_ROWS - 1); ++i) {
-        *(uint8_t *)(video_mem + (i << 1)) = *(uint8_t *)(video_mem + ((i + NUM_COLS) << 1));
-        *(uint8_t *)(video_mem + (i << 1) + 1) = ATTRIB;
-    }
-
-    for (i = NUM_COLS * (NUM_ROWS - 1); i < NUM_COLS * NUM_ROWS; ++i) {
-        *(uint8_t *)(video_mem + (i << 1)) = ' ';
-        *(uint8_t *)(video_mem + (i << 1) + 1) = ATTRIB;
-    }
-}
 

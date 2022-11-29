@@ -11,10 +11,15 @@
 
 static void in(uint32_t scancode, uint8_t caps, terminal_t *terminal);
 static void out(const void *buf, int32_t nbytes);
-static void out_tab();
+static void out_tab(uint32_t n, terminal_t *terminal);
 static void backspace(terminal_t *terminal);
 static void bufcpy(void *dest, const void *src, uint32_t nbytes, uint8_t bufhd);
 static int isletter(uint32_t scancode);
+
+
+/* 1 when terminal driver is booted */
+int8_t terminal_boot = 0;
+
 
 /**
  * @brief create and initialize the terminal.
@@ -76,8 +81,9 @@ void key_press(uint32_t scancode, terminal_t *terminal) {
         terminal->ctrl = 1;
         return;
     case TAB:
-        out_tab(TAB_SPACE);
+        out_tab(TAB_SPACE, terminal);
     case L:
+
         if (terminal->ctrl) {                    /* If ctrl is hold and CTRL-L is pressed. */
             char buf[terminal->size];
             clear(); 
@@ -160,13 +166,12 @@ static void in(uint32_t scancode, uint8_t caps, terminal_t *terminal) {
  * @param nbytes : The number of bytes need to print to the screen.
  */
 static void out(const void *buf, int32_t nbytes) {
-    /* The method of outputting data will be changed when connected with VGA. */
     int i;
     char c;
     
     for (i = 0; i < nbytes; ++i) {
         c = ((char*)buf)[i];
-        putc(c);   /* output to the screen. */
+        putc(c);
     }
 }
 
@@ -175,11 +180,12 @@ static void out(const void *buf, int32_t nbytes) {
  * @brief Print n space when a tab is pressed.
  * 
  */
-static void out_tab(uint32_t n) {
+static void out_tab(uint32_t n, terminal_t *terminal) {
     int i;
     for (i = 0; i < n-(NUM_COLS % n); ++i) 
-        putc(' ');
+        in(SPACE, 0, terminal);  
 }
+
 
 
 /**
@@ -192,7 +198,7 @@ static void backspace(terminal_t *terminal) {
         return;
     } else {    
         /* Clear the most recent character. */
-        back();
+        back(terminal);
         terminal->size--;
         if (terminal->buftl == 0)
             terminal->buftl = TERBUF_SIZE - 1;

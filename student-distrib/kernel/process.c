@@ -559,6 +559,8 @@ static void console_init(void) {
     shell = *pshell;
     kfree(pshell);
 
+    terminal_boot = 1;
+
     /* switch to user mode (ring 3) */
     switch_to_user(shell);
 }
