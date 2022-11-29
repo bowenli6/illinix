@@ -199,7 +199,7 @@ static int32_t validate_fname(const int8_t *filename) {
 int32_t fd_init(thread_t *curr) {
     int i;
     
-    curr->fds = kmalloc(sizeof(file_t));
+    curr->fds = kmalloc(sizeof(files));
     
     curr->fds->count = 0;
     curr->fds->max_fd = OPEN_MAX;

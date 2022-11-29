@@ -2,6 +2,7 @@
 #include <boot/page.h>
 #include <kmalloc.h>
 #include <lib.h>
+#include <pro/process.h>
 
 /**
  * @brief Turn on paging related registers.
@@ -13,8 +14,8 @@
 //static int pde_alloc_index = 2;
 //pd_descriptor_t pdd[ENTRY_NUM];
 
-
-
+int vmalloc(vmem_t* vm, uint32_t start_addr, int oldsize, int newsize, int flags);
+int mmap(vmem_t* vm, uint32_t va, uint32_t pa, int size, int flags);
 pte_t* _walk(uint32_t va, uint32_t flag, int alloc);
 buddy* get_buddy(uint32_t addr);
 
@@ -228,7 +229,7 @@ _walk(uint32_t va, uint32_t flags, int alloc)
 }
 
 
-int mmap(uint32_t va, uint32_t pa, int size, int flags)
+int mmap(vmem_t* vm, uint32_t va, uint32_t pa, int size, int flags)
 {
     pte_t* pte;
     int i, addr, length;
@@ -244,6 +245,9 @@ int mmap(uint32_t va, uint32_t pa, int size, int flags)
 
         *pte = PTE_PRESENT | flags | (ADDR_TO_PTE(pa) + i * PAGE_SIZE);
         pdesc[PDE_MB_ADDR(addr)].count ++;
+
+        vm->mmap[i] = *pte;
+
         addr += PAGE_SIZE;
     }
     
@@ -271,26 +275,29 @@ freemap(uint32_t va, int size)
 
 
 int 
-vmalloc(uint32_t start_addr, int oldsize, int newsize, int flags)
+vmalloc(vmem_t* vm, uint32_t start_addr, int oldsize, int newsize, int flags)
 {
     uint32_t startva, endva, va, pa;
+    int i = 0, length;
 
     if(oldsize > newsize) 
         return -1;
     startva = start_addr + ADDR_TO_PTE(oldsize) + PAGE_SIZE * ((oldsize % PAGE_SIZE) != 0);
     endva =  ADDR_TO_PTE(start_addr + newsize + PAGE_SIZE - 1);
-
+    length = (endva - startva) / PAGE_SIZE;
+    //if()
+    //TODO
     for(va = startva; va < endva; va += PAGE_SIZE) {
         if((pa = get_user_page(0)) == 0)
             return -1;
-        if(mmap(va, pa, PAGE_SIZE, flags) == -1) 
+        if(mmap(vm->mmap + i, va, pa, PAGE_SIZE, flags) == -1) 
             return -1; 
+        i++;
     }
     flush_tlb();
     
     return 0;
 }
-
 
 
 int sbrk(int incr) 
@@ -301,10 +308,16 @@ int sbrk(int incr)
     for(i = 0; i < incr_p; i++) {
         if((pa = (uint32_t)get_user_page(0)) == 0)
             return -1;
-        mmap(va + i * PAGE_SIZE, pa, PAGE_SIZE, PTE_RW | PTE_US);
+        
     }
     return 0;
 }
+
+int vmcopy(vmem_t* dest, vmem_t* stc, int size) 
+{
+
+}
+
 
 /*
 

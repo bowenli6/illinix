@@ -44,6 +44,11 @@ typedef struct {
     uint16_t gs;
 } context_t;
 
+typedef struct vmem {
+    uint32_t* mmap;
+    uint32_t size;
+    uint32_t brk;
+} vmem_t;
 
 /* define a thread that run as a process */
 typedef struct thread {
@@ -61,7 +66,7 @@ typedef struct thread {
     context_t          *context;        /* hardware context */
     uint32_t           usreip;          /* user eip */
     uint32_t           usresp;          /* user esp */
-    uint32_t           sbrk;            /* heap pointer */
+    vmem_t             vm;              /* user virtual memory info */
     files              *fds;            /* opened file descritors */
     uint8_t            kthread;         /* 1 if this thread is belong to the kernel */
     terminal_t         *terminal;       /* terminal for this thread (shell only) */

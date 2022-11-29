@@ -589,8 +589,8 @@ void test_kmalloc() {
 	printf("kmalloc 4KB: %x\n", (uint32_t)kmalloc(PAGE_SIZE));
 
 	//int u1, u2, u3;
-	printf("umalloc 4MB, 0 means succeed: %x\n", vmalloc(HEAP_START, 0, PAGE_SIZE_4MB, PTE_US | PTE_RW));
-	printf("umalloc 8KB, 0 means succeed: %x\n", vmalloc(HEAP_START, 0, PAGE_SIZE * 2, PTE_US | PTE_RW));
+	// printf("umalloc 4MB, 0 means succeed: %x\n", vmalloc(HEAP_START, 0, PAGE_SIZE_4MB, PTE_US | PTE_RW));
+	// printf("umalloc 8KB, 0 means succeed: %x\n", vmalloc(HEAP_START, 0, PAGE_SIZE * 2, PTE_US | PTE_RW));
 	// free_user_page(u1, 10);
 	// printf("umalloc 2MB: %x\n", get_user_page(9));
 	// printf("umalloc 1MB: %x\n", get_user_page(8));

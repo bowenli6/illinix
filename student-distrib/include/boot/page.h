@@ -50,14 +50,12 @@ void page_init();
 void enable_paging();
 void flush_tlb();
 
-int mmap(uint32_t va, uint32_t pa, int size, int flags);
 
 void kmmap(uint32_t va, uint32_t pa, int size, int flags);
 
 int freemap(uint32_t va, int size);
 void free_uvmdir(int size);
 
-int vmalloc(uint32_t start_addr, int oldsize, int newsize, int flags);
 void vmdealloc(pagedir_t pd, int oldsize, int newsize);
 
 int32_t do_vidmap(uint8_t **screen_start);
