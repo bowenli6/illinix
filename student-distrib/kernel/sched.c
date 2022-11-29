@@ -133,8 +133,8 @@ static inline int32_t nice_to_index(int32_t nice);
  */
 void sched_init(void) {
     /* allocate memory spaces for kernel threads */
-    process_t *idlep = (process_t *) alloc_kstack(0);
-    process_t *initp = (process_t *) alloc_kstack(1);
+    process_t *idlep = (process_t *) alloc_kstack();
+    process_t *initp = (process_t *) alloc_kstack();
 
     /* set up process 0 */
     idle = &idlep->thread;
@@ -150,6 +150,7 @@ void sched_init(void) {
     init->parent = idle;
     init->children = kmalloc(MAXCHILDREN * sizeof(thread_t*));
     init->n_children = 0;
+    init->max_children = MAXCHILDREN;
     init->nice = NICE_INIT;
     init->kthread = 1;
     init->argc = 1;

@@ -261,7 +261,7 @@ static int32_t __exec(thread_t *current, thread_t **new, const int8_t *cmd, uint
     uint32_t EIP_reg;
     // terminal_t *terminal;
 
-    /* temp arguments array */
+    /* arguments array for child */
     int8_t **argv = kmalloc(MAXARGS * sizeof(int8_t*));
     for (i = 0; i < MAXARGS; ++i)
         argv[i] = kmalloc(ARGSIZE);
@@ -410,8 +410,6 @@ static thread_t *process_create(thread_t *current, uint8_t kthread) {
     /* set the parent pointer */
     t->parent = current;
 
-    
-
     /* check if max_children is full */
     if (current->n_children == current->max_children) {
         children = kmalloc(current->max_children * 2 * sizeof(thread_t*));
@@ -428,6 +426,8 @@ static thread_t *process_create(thread_t *current, uint8_t kthread) {
     t->children = kmalloc(MAXCHILDREN * sizeof(thread_t *));
     
     t->n_children = 0;
+
+    t->max_children = MAXCHILDREN;
     
     /* not a kernel thread */
     t->kthread = kthread;
@@ -525,7 +525,7 @@ static void console_init(void) {
     console->terminals = kmalloc(NTERMINAL * sizeof(terminal_t*));
     console->size = 0;
 
-    shell = kmalloc(sizeof(thread_t*));
+    pshell = kmalloc(sizeof(thread_t*));
 
     /* init three shells */
     // for (i = 0; i < NTERMINAL; ++i) {
@@ -536,11 +536,10 @@ static void console_init(void) {
     /* test one shell */
     (void) __exec(init, pshell, SHELL, 1);
     shell = *pshell;
-    free_kstack(shell);
+    // kfree(pshell);
 
     /* switch to user mode (ring 3) */
     switch_to_user(shell);
-
 }
 
 

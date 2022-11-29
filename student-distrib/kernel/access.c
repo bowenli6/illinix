@@ -35,7 +35,7 @@ void user_mem_unmap(pid_t pid) {
  * @param pid process id (start at 2)
  * @return void* pointer to the process kernel stack
  */
-void *alloc_kstack() {
+void *alloc_kstack(void) {
     return get_page(1);
 }
 

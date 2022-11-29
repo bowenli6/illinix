@@ -89,9 +89,12 @@ void bminit()
  * @return void* pointer to allocated memory space. NULL means failed.
  */
 void* kmalloc(int size) 
-{
+{   
     int order = 0, temp = 1;
     char* pt;
+
+    if (size <= 0) return NULL;
+
     if(size > PAGE_SIZE_4MB) /* larger than upper limit */
         return NULL;
 
@@ -142,6 +145,10 @@ int add_header(void* pt, int order)
 void kfree(void* p)
 {
     int t;
+
+    /* do nothing when p is NULL */
+    if (!p) return;
+    
     if((t = pop_header((uint32_t)p)) != -1) {   /* try to use free_page */
         free_page(p, t);
         return;
