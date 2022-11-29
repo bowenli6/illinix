@@ -2,7 +2,7 @@
 
 .text
 
-.global do_deliver
+.global do_deliver sys_sig_return
 
 sig_return:
     int $0x80
@@ -19,18 +19,18 @@ do_deliver:
     pushl %esi 
     pushl %edi
 
-    movl %esp, %eax             # eax = kernel_esp
-    movl %ebp, %ebx             # ebx = kernel_ebp
-    movl 8(%ebp), %ecx          # ecx = sig_num
-    movl 12(%ebp), %edx         # edx = *hw_context
-    movl 16(%ebp), %esi         # esi = handler
+    movl %esp, %eax                 # eax = kernel_esp
+    movl %ebp, %ebx                 # ebx = kernel_ebp
+    movl 8(%ebp), %ecx              # ecx = sig_num
+    movl 12(%ebp), %edx             # edx = *hw_context
+    movl 16(%ebp), %esi             # esi = handler
 
 
     movl    12(%ebp), %edx
     movl    60(%edx), %esp         # esp = user_esp
     movl    20(%edx), %ebp         # ebp = user_ebp
 
-    movl   %esp, %edi               # edi = curr_esp
+    movl   %esp, %edi               # edi = curr_usr_esp
     # put the handler
     pushl   sig_return
 
@@ -58,7 +58,15 @@ do_deliver:
 
     # put the return addr
     pushl  %edi
+    
+    # transfer the control to uesr mode
+    # especially the value of eip
+    movl %esp, 60(%edx)
+    movl %esi, %eip
 
+
+    # when gets back from usr, reset the kernel esp and kernel ebp
+    movl 
 
     popl %edi
     popl %esi
@@ -69,3 +77,5 @@ do_deliver:
 
     leav 
     ret 
+
+do_syssig_return:
