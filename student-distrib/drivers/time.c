@@ -14,7 +14,7 @@ timespec sys_clock;           /* current time and date */
  * frequency (that is, once every 1 ms)
  * 
  */
-void PIT_init(void) {
+void pit_init(void) {
     /* init sys_time */
     // TODO
 

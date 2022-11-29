@@ -467,19 +467,19 @@ int test_RTC_ReadWrite(){
 	int fd;
 	int32_t freq;
 	// initalize the RTC
-	fd = RTC_open ("RTC");	
+	fd = rtc_open ("RTC");	
 	// every time frequency = frequency * 2	
 	for(freq = RTC_MIN_freq; freq <= RTC_MAX_freq; freq *= 2) {
 		for(i = 0; i < freq; i++) {
 			// wait on interrupt generation
-			RTC_read(fd, NULL, 0);
+			rtc_read(fd, NULL, 0);
 			printf("%d", 1);
 		}
 		// set new frequency
-		RTC_write(fd, (void*)(&freq), sizeof(int32_t));
+		rtc_write(fd, (void*)(&freq), sizeof(int32_t));
 		clear();
 	}
-	RTC_close(NULL);
+	rtc_close(NULL);
 	return PASS;
 }
 

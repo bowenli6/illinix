@@ -36,7 +36,7 @@ typedef struct {
 } timespec;
 
 
-void PIT_init(void);
+void pit_init(void);
 void do_timer(void);
 
 

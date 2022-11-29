@@ -108,8 +108,10 @@ int32_t do_fork(thread_t *parent, uint8_t kthread) {
         return -1;
 
     /* clone thread info of child from parent */
-    if (process_clone(parent, child) < 0)
+    if (process_clone(parent, child) < 0) {
+        process_free(child, parent->pid);
         return -1;
+    }
         
     /* set up sched info for child */
     sched_fork(child); 
@@ -151,25 +153,27 @@ parent_ret:
 
 
 /**
- * @brief 
+ * @brief clone parent's state into child
  * 
- * @param parent 
- * @param child 
- * @return int32_t 
+ * @param parent : parent thread
+ * @param child : child thread
+ * @return int32_t : positive or 0 denote success, negative values denote an error condition
  */
 static int32_t process_clone(thread_t *parent, thread_t *child) {
-    // COPY 4MB 
-    // FILE 
+    // copy physical memory 
+
+    // copy file descirptors
+
     return 0;
-    
 }
 
 
 /**
- * @brief Get the eip user object
+ * @brief get task's user eip by lookup kernel stack
+ * (CPU pushed this value onto kernel stack when switching from user space to kernel space)
  * 
  * @param task 
- * @return uint32_t 
+ * @return uint32_t : task's user eip
  */
 static uint32_t get_eip_user(thread_t *task) {
     return 0;
@@ -246,7 +250,7 @@ int32_t do_execute(const int8_t *cmd) {
 
 
 /**
- * @brief lower operation for executing a process
+ * @brief low-level operation for executing a program
  * 
  * @param t: the new thread 
  * @param cmd : command line arguments
@@ -255,11 +259,9 @@ int32_t do_execute(const int8_t *cmd) {
  */
 static int32_t __exec(thread_t *current, thread_t **new, const int8_t *cmd, uint8_t kthread) {
     int i;
-    pid_t pid;
     int32_t errno;
     int32_t argc;
     uint32_t EIP_reg;
-    // terminal_t *terminal;
 
     /* arguments array for child */
     int8_t **argv = kmalloc(MAXARGS * sizeof(int8_t*));
@@ -284,12 +286,11 @@ static int32_t __exec(thread_t *current, thread_t **new, const int8_t *cmd, uint
 
     /* executable check and load program image into user's memory */
     if ((errno = pro_loader(argv[0], &EIP_reg, *new)) < 0) {
-        process_free(current, pid);
+        process_free((*new), current->pid);
         kfree(argv);
         return errno;
     }
     
-
     /* create terminals if the program is shell */
     if (!strcmp(argv[0], SHELL)) {
         (*new)->nice = NICE_SHELL;
@@ -410,6 +411,12 @@ static thread_t *process_create(thread_t *current, uint8_t kthread) {
     /* set the parent pointer */
     t->parent = current;
 
+    /* allocate memory for context */
+    t->context = kmalloc(sizeof(context_t));
+
+    if (!current->children)
+        current->children = children_create();
+    
     /* check if max_children is full */
     if (current->n_children == current->max_children) {
         children = kmalloc(current->max_children * 2 * sizeof(thread_t*));
@@ -422,9 +429,8 @@ static thread_t *process_create(thread_t *current, uint8_t kthread) {
     /* update parent's children list */
     current->children[current->n_children++] = t;
 
-    /* create child's children list */
-    t->children = kmalloc(MAXCHILDREN * sizeof(thread_t *));
-    
+    t->children = NULL;
+
     t->n_children = 0;
 
     t->max_children = MAXCHILDREN;
@@ -441,7 +447,22 @@ static thread_t *process_create(thread_t *current, uint8_t kthread) {
  * 
  */
 static void process_free(thread_t *current, pid_t pid) {
+    int i;
+
     kill_pid(pid);
+    kfree(current->context);
+    kfree(current->fds);
+
+    for (i = 0; i < MAXARGS; ++i)
+        kfree(current->argv[i]);
+    kfree(current->argv);
+
+    if (current->children) {
+        for (i = 0; i < current->max_children; ++i)
+            kfree(current->children[i]);
+        kfree(current->children);
+    }
+
     free_kstack((void*)current);
     user_mem_unmap(pid);
     update_tss(current);
@@ -536,7 +557,7 @@ static void console_init(void) {
     /* test one shell */
     (void) __exec(init, pshell, SHELL, 1);
     shell = *pshell;
-    // kfree(pshell);
+    kfree(pshell);
 
     /* switch to user mode (ring 3) */
     switch_to_user(shell);
@@ -553,4 +574,20 @@ void context_switch(thread_t *from, thread_t *to) {
     if (from) user_mem_unmap(from->pid);
     user_mem_map(to->pid);
     swtch(from->context, to->context);
+}
+
+
+/**
+ * @brief create a children list
+ * 
+ * @return thread_t** : children list
+ */
+thread_t **children_create(void) {
+    int i;
+    thread_t **children = kmalloc(sizeof(MAXCHILDREN * sizeof(thread_t*)));
+    
+    for (i = 0; i < MAXCHILDREN; ++i) {
+        children[i] = kmalloc(sizeof(thread_t));
+    }
+    return children;
 }

@@ -143,13 +143,14 @@ void sched_init(void) {
     idle->kthread = 1;
     idle->sched_info.load.weight = WEIGHT_IDLE;
     idle->sched_info.load.inv_weight = WMULT_IDLE;
+    idle->context = kmalloc(sizeof(context_t));
     
     /* set up process 1 */
     init = &initp->thread;
     init->state = RUNNABLE;  
     init->parent = idle;
-    init->children = kmalloc(MAXCHILDREN * sizeof(thread_t*));
     init->n_children = 0;
+    init->children = NULL;
     init->max_children = MAXCHILDREN;
     init->nice = NICE_INIT;
     init->kthread = 1;
@@ -157,6 +158,7 @@ void sched_init(void) {
     init->argv = kmalloc(sizeof(int8_t*));
     init->argv[0] = kmalloc(5);
     strcpy(init->argv[0], "init");
+    init->context = kmalloc(sizeof(context_t));
     
     /* create task queue */
     task_queue = &(idle->task_node);

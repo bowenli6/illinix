@@ -169,8 +169,8 @@ void entry(unsigned long magic, unsigned long addr) {
 
     /* Devices */
     keyboard_init();                /* Initialize the Keyboard driver. */
-    RTC_init();                     /* Initialize the RTC driver. */
-    PIT_init();                     /* Initialize the PIT driver */
+    rtc_init();                     /* Initialize the RTC driver. */
+    pit_init();                     /* Initialize the PIT driver */
 
     /* Process */
     sched_init();

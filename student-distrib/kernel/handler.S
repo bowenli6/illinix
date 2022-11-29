@@ -261,7 +261,7 @@ keyboard_handler:
 rtc_handler:
     pushfl  
     pushal
-    call    do_RTC 
+    call    do_rtc
     popal
     popfl
     iret

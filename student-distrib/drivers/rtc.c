@@ -13,22 +13,22 @@
 volatile int global_interrupt_flag;
 
 /* local helper functions*/
-static void set_RTC_freq(int32_t frequency);
+static void set_rtc_freq(int32_t frequency);
 static char log2_of(int32_t frequency);
 
 /* RTC operation. */
 static file_op rtc_op = {
-    .open = RTC_open,
-    .close = RTC_close,
-    .read = RTC_read,
-    .write = RTC_write
+    .open = rtc_open,
+    .close = rtc_close,
+    .read = rtc_read,
+    .write = rtc_write
 };
 
 /**
  * @brief Initialize RTC and enable RTC interrupt.
  * 
  */
-void RTC_init() {
+void rtc_init() {
     /* Reference from https://wiki.osdev.org/RTC#Turning_on_IRQ_8 and Linux source code.
      * might neeed to turn off interrupts if multiprocessor involved
      */
@@ -37,7 +37,7 @@ void RTC_init() {
     outb(RTC_B_reg, RTC_CMD_port);	    /* Set the index again (a read will reset the index to register D) */
     outb(prev | 0x40, RTC_DATA_port);   /* Write the previous value ORed with 0x40. This turns on bit 6 of register B */
     enable_irq(RTC_IRQ);
-    set_RTC_freq(RTC_MAX_freq);
+    set_rtc_freq(RTC_MAX_freq);
     global_interrupt_flag = 0;
 }
 
@@ -45,7 +45,7 @@ void RTC_init() {
  * @brief Read data from register C and handle it
  * 
  */
-void do_RTC() {
+void do_rtc() {
     uint32_t interrupt_flag;
     cli_and_save(interrupt_flag);       /* Disable interrupts and store flags into local variable. */
     global_interrupt_flag = 1;
@@ -63,12 +63,12 @@ void do_RTC() {
  * @param filename : A filename.
  * @return int32_t : 0 on success, -1 otherwise.
  */
-int32_t RTC_open(const int8_t* filename) {
+int32_t rtc_open(const int8_t* filename) {
     thread_t *curr;
     GETPRO(curr);
     /* initialize the RTC and set initial frequency to 2 as instructed */
-    RTC_init();
-    set_RTC_freq(2);
+    rtc_init();
+    set_rtc_freq(2);
     return __open(2, filename, RTC, &rtc_op, curr);
 }
 
@@ -78,7 +78,7 @@ int32_t RTC_open(const int8_t* filename) {
  * @param fd : The file descriptor
  * @return int32_t : 0 on success, -1 otherwise.
 */
-int32_t RTC_close(int32_t fd) {
+int32_t rtc_close(int32_t fd) {
     return file_close(fd);
 }
 
@@ -92,7 +92,7 @@ int32_t RTC_close(int32_t fd) {
  * @return int32_t : 0 on success, -1 otherwise.
  * 
 */
-int32_t RTC_read(int32_t fd, void* buffer, int32_t nbytes) {
+int32_t rtc_read(int32_t fd, void* buffer, int32_t nbytes) {
     /* wait on interrupt generation */
     while(!global_interrupt_flag);
     global_interrupt_flag = 0;
@@ -110,7 +110,7 @@ int32_t RTC_read(int32_t fd, void* buffer, int32_t nbytes) {
  * @return int32_t : 0 on success, -1 otherwise.
  * 
 */
-int32_t RTC_write(int32_t fd, const void* buffer, int32_t nbytes){
+int32_t rtc_write(int32_t fd, const void* buffer, int32_t nbytes){
     /* Sanity check on new frequency */
     if (buffer == NULL || nbytes != sizeof(int32_t)) {
         return -1;
@@ -125,7 +125,7 @@ int32_t RTC_write(int32_t fd, const void* buffer, int32_t nbytes){
         return -1;
     }
 
-	set_RTC_freq(new_freq);
+	set_rtc_freq(new_freq);
     return 0;
 }
 
@@ -134,7 +134,7 @@ int32_t RTC_write(int32_t fd, const void* buffer, int32_t nbytes){
 /**
  * @brief Local helper function that set the RTC frequency to the given value.
 */
-static void set_RTC_freq(int32_t frequency) {
+static void set_rtc_freq(int32_t frequency) {
     // frequency =  32768 >> (rate-1)
     char rate = 15 - log2_of(frequency) + 1;
     rate &= rate_mask;

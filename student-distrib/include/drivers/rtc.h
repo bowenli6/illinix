@@ -20,10 +20,10 @@
 #include <types.h>
 
 
-void RTC_init();
-void do_RTC();
-int32_t RTC_open(const int8_t* filename);
-int32_t RTC_close(int32_t fd);
+void rtc_init();
+void do_rtc();
+int32_t rtc_open(const int8_t* filename);
+int32_t rtc_close(int32_t fd);
 
 /*
  * RTC_read(int32_t fd, const void* buffer, int32_t nbytes)
@@ -33,7 +33,7 @@ int32_t RTC_close(int32_t fd);
  *        int32_t nbytes -- number of bytes, should be 4
  * Output: 0 on success, -1 otherwise
 */
-int32_t RTC_read(int32_t fd, void* buffer, int32_t nbytes);
+int32_t rtc_read(int32_t fd, void* buffer, int32_t nbytes);
 
 /*
  * RTC_write(int32_t fd, const void* buffer, int32_t nbytes)
@@ -43,6 +43,6 @@ int32_t RTC_read(int32_t fd, void* buffer, int32_t nbytes);
  *        int32_t nbytes -- number of bytes, should be 4
  * Output: 0 on success, -1 otherwise
 */
-int32_t RTC_write(int32_t fd, const void* buffer, int32_t nbytes);
+int32_t rtc_write(int32_t fd, const void* buffer, int32_t nbytes);
 
 #endif /* _RTC_H */

@@ -56,7 +56,7 @@ int32_t do_open(const int8_t *filename) {
    if (*filename == '.') 
       return directory_open(filename);
    if (!strcmp(filename, "rtc")) 
-      return RTC_open(filename);
+      return rtc_open(filename);
    return file_open(filename);
 }
 

@@ -105,6 +105,7 @@ void *do_sbrk(uint32_t size);
 uint32_t get_esp0(thread_t *curr);
 void context_switch(thread_t *from, thread_t *to);
 int32_t file_init(int32_t fd, file_t *file, dentry_t *dentry, file_op *op, thread_t *curr);
+thread_t **children_create(void);
 
 /* implemented in fs.c */
 
