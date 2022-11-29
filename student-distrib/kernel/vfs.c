@@ -271,6 +271,8 @@ int32_t file_read(int32_t fd, void *buf, int32_t nbytes) {
     thread_t *curr;
     int32_t nread;
 
+    GETPRO(curr);
+
     file_t *file = &(curr->fds->fd[fd]);
     if (!file->f_count) {
         return -1;

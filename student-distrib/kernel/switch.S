@@ -12,10 +12,8 @@ EBP = 24
 ESP = 28
 EFLAGS = 32
 ES = 36
-CS = 40
-DS = 44
-FS = 48
-GS = 52
+FS = 40
+GS = 44
 
 .text
 
@@ -50,8 +48,6 @@ save_context:
     popl    %ecx
     movl    %ecx,    EFLAGS(%eax)
     movw    %es,     ES(%eax)
-    movw    %cs,     CS(%eax)
-    movw    %ds,     DS(%eax)
     movw    %fs,     FS(%eax)
     movw    %gs,     GS(%eax)
 
@@ -95,8 +91,6 @@ swtch:
     popl    %ecx
     movl    %ecx,    EFLAGS(%eax)
     movw    %es,     ES(%eax)
-    movw    %cs,     CS(%eax)
-    movw    %ds,     DS(%eax)
     movw    %fs,     FS(%eax)
     movw    %gs,     GS(%eax)
 
@@ -114,8 +108,6 @@ to:
     pushl   EFLAGS(%edx)
     popfl
     movw    ES(%edx),  %es
-    movw    CS(%edx),  %cs
-    movw    DS(%edx),  %ds
     movw    FS(%edx),  %fs
     movw    GS(%edx),  %gs
     movl    EDX(%edx), %edx

@@ -453,6 +453,7 @@ static void dequeue_entity(sched_t *prev, int8_t sleep) {
  * @param s : sched info to remove
  */
 static void __dequeue_entity(sched_t *s) {
+    
     // rb_remove(s->node);
 }
 

@@ -35,11 +35,8 @@ typedef struct {
     uint32_t edi;
     uint32_t ebp;
     uint32_t esp;
-    uint32_t eip;
     uint32_t eflags;
     uint16_t es;
-    uint16_t cs;
-    uint16_t ds;
     uint16_t fs;
     uint16_t gs;
 } context_t;
@@ -69,9 +66,10 @@ typedef struct thread {
     vmem_t             vm;              /* user virtual memory info */
     files              *fds;            /* opened file descritors */
     uint8_t            kthread;         /* 1 if this thread is belong to the kernel */
-    terminal_t         *terminal;       /* terminal for this thread (shell only) */
+    terminal_t         *terminal;       /* terminal for this thread */
     int32_t            nice;            /* nice value */
 } thread_t;
+
 
 /* array of terminals for each shells */
 typedef struct {

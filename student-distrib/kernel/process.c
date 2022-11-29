@@ -42,11 +42,11 @@ list_head *wait_queue;          /* list of sleeping tasks (idle -> {sleeping use
 
 
 /* local helper functions */
-static int32_t __exec(thread_t *current, thread_t **new, const int8_t *cmd, uint8_t kthread);
-static thread_t *process_create(thread_t *current, uint8_t kthread);
+static int32_t __exec(thread_t *current, const int8_t *cmd, uint8_t kthread);
+static int32_t process_create(thread_t *current, uint8_t kthread);
 static int32_t process_clone(thread_t *parent, thread_t *child);
 static uint32_t get_eip_user(thread_t *task);
-static void process_free(thread_t *current, pid_t pid);
+static void process_free(thread_t *current);
 static int32_t parse_arg(int8_t *cmd, int8_t *argv[]);
 static void switch_to_user(thread_t *curr);
 static void console_init(void);
@@ -75,11 +75,11 @@ void init_task(void) {
     /* the real task of the init process
      * scheduled actively by process 0 */
     while (1) {
-        /* init start running */
+        /* init start running here */
 
-        // DO SOMETHING HERE IN THE FUTURE..
+        // DO SOMETHING HERE IN THE FUTURE
 
-        /* yield the CPU to process 0 again */
+        /* yield the CPU */
         schedule();
     }
 }
@@ -88,6 +88,7 @@ void init_task(void) {
 /**
  * @brief clone a new process from the current one
  * 
+ * @param parent : current process
  * @param kthread : is the new thread a kernel thread?
  * @return int32_t : 0 - to child
  *                 < 0 - error number
@@ -102,14 +103,17 @@ void init_task(void) {
 int32_t do_fork(thread_t *parent, uint8_t kthread) {
     uint32_t *ebp, *eip;
     thread_t *child;
+    int32_t errno;
 
     /* create child process */
-    if ((child = process_create(parent, kthread)) < 0)
-        return -1;
+    if ((errno = process_create(parent, kthread)) < 0)
+        return errno;
+
+    child = parent->children[parent->n_children - 1];
 
     /* clone thread info of child from parent */
     if (process_clone(parent, child) < 0) {
-        process_free(child, parent->pid);
+        process_free(child);
         return -1;
     }
         
@@ -172,7 +176,7 @@ static int32_t process_clone(thread_t *parent, thread_t *child) {
  * @brief get task's user eip by lookup kernel stack
  * (CPU pushed this value onto kernel stack when switching from user space to kernel space)
  * 
- * @param task 
+ * @param task : thread info
  * @return uint32_t : task's user eip
  */
 static uint32_t get_eip_user(thread_t *task) {
@@ -187,21 +191,17 @@ static uint32_t get_eip_user(thread_t *task) {
  * @param status : the status of the exit syscall
  */
 void do_exit(uint32_t status) {
-    thread_t *t;
-    thread_t **new; 
+    thread_t *child;
+    thread_t *parent; 
 
-    GETPRO(t);
-    new = kmalloc(sizeof(thread_t *));
+    GETPRO(child);
 
     /* check if the current process is running a system thread */
-    if (t->kthread && strcmp(t->argv[0], SHELL)) {
-        // TODO       
-    }
+    if (child->kthread && strcmp(child->argv[0], SHELL)) return;      
 
     /* free the current task */
-    thread_t *parent = t->parent;
-    parent->children = NULL;
-    process_free(parent, t->pid);
+    parent = child->parent;
+    process_free(child);
 
     ntask--;
 
@@ -209,7 +209,9 @@ void do_exit(uint32_t status) {
     // TODO
     
     /* when wait syscall is implement, the parent will get the exit status */
-    sched_exit();
+    // sched_exit();
+
+    context_switch(NULL, parent);
 }
 
 
@@ -220,27 +222,23 @@ void do_exit(uint32_t status) {
  * @return int32_t : positive or 0 denote success, negative values denote an error condition
  */
 int32_t do_execute(const int8_t *cmd) {
-    thread_t **new; 
-    thread_t *current, *child;  
+    thread_t *parent, *child;  
     int32_t errno;
 
-    GETPRO(current);
-    new = kmalloc(sizeof(thread_t *));
+    GETPRO(parent);
 
     /* call _exec to create the new thread and execute it
      * (only return here when error occurs) */
-    if ((errno = __exec(current, new, cmd, 0)) < 0) {
-        kfree(new);
+    if ((errno = __exec(parent, cmd, 0)) < 0) {
         return errno;
     }
 
-    if (!(*new)->kthread) {
-        /* save the kernel stack of the current process */
-        save_context(current->context);
-    }
+    child = parent->children[parent->n_children - 1];
 
-    child = *new;
-    kfree(new);
+    if (!child->kthread) {
+        /* save the kernel stack of the current process */
+        save_context(parent->context);
+    }
 
     /* switch to user mode (ring 3) */
     switch_to_user(child);
@@ -252,13 +250,14 @@ int32_t do_execute(const int8_t *cmd) {
 /**
  * @brief low-level operation for executing a program
  * 
- * @param t: the new thread 
+ * @param parent: the new thread 
  * @param cmd : command line arguments
  * @param kthread : 1 if it is kernel thread, 0 otherwie
  * @return int32_t : positive or 0 denote success, negative values denote an error condition
  */
-static int32_t __exec(thread_t *current, thread_t **new, const int8_t *cmd, uint8_t kthread) {
+static int32_t __exec(thread_t *parent, const int8_t *cmd, uint8_t kthread) {
     int i;
+    thread_t *child;
     int32_t errno;
     int32_t argc;
     uint32_t EIP_reg;
@@ -275,41 +274,46 @@ static int32_t __exec(thread_t *current, thread_t **new, const int8_t *cmd, uint
     }
 
     /* create process */
-    if (!(*new = process_create(current, kthread))) {
+    if ((errno = process_create(parent, kthread)) < 0) {
         kfree(argv);
-        return -1;
+        return errno;
     }
 
+    /* get child thread */
+    child = parent->children[parent->n_children - 1];
+
     /* get process and set its arguments */
-    (*new)->argc = argc;
-    (*new)->argv = argv;    
+    child->argc = argc;
+    child->argv = argv;    
 
     /* executable check and load program image into user's memory */
-    if ((errno = pro_loader(argv[0], &EIP_reg, *new)) < 0) {
-        process_free((*new), current->pid);
-        kfree(argv);
+    if ((errno = pro_loader(argv[0], &EIP_reg, child)) < 0) {
+        process_free(child);
+        return errno;
+    }
+
+    /* init file array */
+    if ((errno = fd_init(child)) < 0) {
+        process_free(child);
         return errno;
     }
     
     /* create terminals if the program is shell */
-    if (!strcmp(argv[0], SHELL)) {
-        (*new)->nice = NICE_SHELL;
-        
-        if (kthread) {
-            /* create a new terminal for this shell */
-            (*new)->terminal = terminal_create();
-            console->terminals[console->size++] = (*new)->terminal;
-        } else {
-            /* get the terminal from its parent */
-            (*new)->terminal = current->terminal;
-        }
+    if (!strcmp(argv[0], SHELL))
+        child->nice = NICE_SHELL;
+    else
+        child->nice = NICE_NORMAL;
 
+    /* set up terminal for process */
+    if (kthread) {
+        /* create a new terminal for this kthread */
+        child->terminal = terminal_create();
+        console->terminals[console->size++] = child->terminal;
     } else {
-        (*new)->nice = NICE_NORMAL;
+        /* get the terminal from its parent */
+        child->terminal = parent->terminal;
     }
-
-    /* init file array */
-    fd_init(*new);
+    
 
     /* set up sched info */
     // sched_fork(*new);
@@ -317,8 +321,8 @@ static int32_t __exec(thread_t *current, thread_t **new, const int8_t *cmd, uint
     // TODO
 
     /* store registers */
-    (*new)->usreip = EIP_reg;
-    (*new)->usresp = USER_STACK_ADDR;
+    child->usreip = EIP_reg;
+    child->usresp = USER_STACK_ADDR;
 
     /* increment number of tasks */
     ntask++;
@@ -389,11 +393,10 @@ static int32_t parse_arg(int8_t *cmd, int8_t *argv[]) {
  * @brief Create a process_t for a new process
  * 
  * @param current : the current thread
- * @param child : the thread to be created
  * @param kthread : is the thread a kernel thread?
  * @return int32_t : positive or 0 denote success, negative values denote an error condition
  */
-static thread_t *process_create(thread_t *current, uint8_t kthread) {
+static int32_t process_create(thread_t *current, uint8_t kthread) {
     pid_t pid;
     process_t *p;
     thread_t *t;
@@ -438,18 +441,24 @@ static thread_t *process_create(thread_t *current, uint8_t kthread) {
     /* not a kernel thread */
     t->kthread = kthread;
 
-    return t;
+    return 0;
 }
 
 
 /**
  * @brief Free a existing process_t
  * 
+ * @param current : the process to be freed
  */
-static void process_free(thread_t *current, pid_t pid) {
+static void process_free(thread_t *current) {
     int i;
+    thread_t *parent;
+    
+    if (!current) return;
 
-    kill_pid(pid);
+    parent = current->parent;
+
+    kill_pid(current->pid);
     kfree(current->context);
     kfree(current->fds);
 
@@ -463,10 +472,12 @@ static void process_free(thread_t *current, pid_t pid) {
         kfree(current->children);
     }
 
+    user_mem_unmap(current->pid);
     free_kstack((void*)current);
-    user_mem_unmap(pid);
-    update_tss(current);
-    user_mem_map(current->pid);
+
+    parent->children[--parent->n_children] = NULL;
+    update_tss(parent);
+    user_mem_map(parent->pid);
 }
 
 
@@ -527,8 +538,8 @@ static void update_tss(thread_t *curr) {
  * @return uint32_t kernel esp
  */
 uint32_t get_esp0(thread_t *curr) {
-    process_t *process = (process_t *)curr;
-    return (uint32_t)(((void*)process) + sizeof(process_t) - 4);
+    void *process = (void *)curr;
+    return (uint32_t)(process + sizeof(process_t) - 4);
 }
 
 
@@ -538,7 +549,6 @@ uint32_t get_esp0(thread_t *curr) {
  */
 static void console_init(void) {
     // int i;
-    thread_t **pshell;
     thread_t *shell;
 
     /* create console */
@@ -546,18 +556,10 @@ static void console_init(void) {
     console->terminals = kmalloc(NTERMINAL * sizeof(terminal_t*));
     console->size = 0;
 
-    pshell = kmalloc(sizeof(thread_t*));
-
-    /* init three shells */
-    // for (i = 0; i < NTERMINAL; ++i) {
-    //     pid = do_fork(init, 1);
-    //     console->terminals[i] = terminal_create();
-    // }
-
     /* test one shell */
-    (void) __exec(init, pshell, SHELL, 1);
-    shell = *pshell;
-    kfree(pshell);
+    (void) __exec(init, SHELL, 1);
+
+    shell = init->children[init->n_children - 1];
 
     terminal_boot = 1;
 
@@ -573,9 +575,18 @@ static void console_init(void) {
  * @param to : jump to this process
  */
 void context_switch(thread_t *from, thread_t *to) {
-    if (from) user_mem_unmap(from->pid);
+    context_t *c1, *c2;
+
+    if (from) {
+        user_mem_unmap(from->pid);
+        c1 = from->context;
+    } else {
+        c1 = NULL;
+    }
+    
+    c2 = to->context;
     user_mem_map(to->pid);
-    swtch(from->context, to->context);
+    swtch(c1, c2);
 }
 
 

@@ -10,7 +10,6 @@
 int screen_x = 0;
 int screen_y = 0;
 
-static void overflow();
 
 int32_t fputs(int32_t fd, const int8_t* s) {
     uint32_t size = strlen(s);

@@ -217,7 +217,6 @@ int32_t pro_loader(int8_t *fname, uint32_t *EIP, thread_t *curr) {
     user_mem_map(curr->pid);
 
     if ((errno = read_data(inode, 0, (uint8_t *)PROGRAM_IMG_BEGIN, file.size)) < 0) {
-        user_mem_unmap(curr->pid);
         return errno;
     }
     
