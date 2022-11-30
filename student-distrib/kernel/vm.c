@@ -337,15 +337,15 @@ int vmcopy(vmem_t* dest, vmem_t* src)
     for(i = 0; i < length; i++) {
         if((pte = _walk(ADDR_TO_4MB(USER_MEM) + ((i % ENTRY_NUM) << VA_OFFSET), 0, 0)) == 0) {
             kfree(cache);
-            return -1;
+            panic("walk error");
         }
         if((*pte & PTE_PRESENT) == 0) {
             kfree(cache);
-            return -1;
+            panic("src not present");
         }
         if((pa = get_user_page(0)) == 0) {
             kfree(cache);
-            return -1;
+            panic("get user page failed");
         }
         
         va = USER_MEM + i * PAGE_SIZE;

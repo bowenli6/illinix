@@ -286,6 +286,7 @@ int buddy_size(int order)
 void free_page(void* p, int order)
 {
     buddy* b = (buddy*) p;
+    b->addr = (uint32_t) b;
     _free_page(free_area, b, order);
     return;    
 }
@@ -551,4 +552,3 @@ void slab_list_remove(slab_t* b)
 }
 
 
-/* TODO: modify buddy system to support user memory alloc */
