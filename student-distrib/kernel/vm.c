@@ -357,7 +357,7 @@ int vmcopy(vmem_t* dest, vmem_t* src)
             kfree(cache);
             return -1;
         }
-        dest->mmap[i] = src->mmap[i];
+        dest->mmap[i] = PTE_PRESENT | GETBIT_12(src->mmap[i]) | (ADDR_TO_PTE(pa));
         memcpy((char*)va, cache, PAGE_SIZE);
     }
 
