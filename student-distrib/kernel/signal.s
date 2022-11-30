@@ -4,8 +4,9 @@
 
 .global do_deliver sys_sig_return
 
-sig_return:
-    int $0x80
+linkage_for_sigreturn:
+    movl    $10, %eax          # value for sys_sigreturn is 10
+    int     $0x80
 
 # CURRENT->context, CURRENT->sig->exe_sig_act[sig_num], sig_num
 do_deliver:
@@ -19,20 +20,19 @@ do_deliver:
     pushl %esi 
     pushl %edi
 
-    movl %esp, %eax                 # eax = kernel_esp
-    movl %ebp, %ebx                 # ebx = kernel_ebp
+    movl %esp, %edi                 # edi = kernel_esp
+    movl %ebp, %esi                 # esi = kernel_ebp
     movl 8(%ebp), %ecx              # ecx = sig_num
     movl 12(%ebp), %edx             # edx = *hw_context
-    movl 16(%ebp), %esi             # esi = handler
+    movl 16(%ebp), %eax             # eax = handler
 
 
-    movl    12(%ebp), %edx
     movl    60(%edx), %esp         # esp = user_esp
     movl    20(%edx), %ebp         # ebp = user_ebp
+    movl    %esp, %ebx              # ebx = curr_usr_esp
 
-    movl   %esp, %edi               # edi = curr_usr_esp
-    # put the handler
-    pushl   sig_return
+    # put the assembly linkage on the stack
+    pushl   linkage_for_sigreturn
 
     # put the hw context
     pushl   64(%edx)
@@ -55,18 +55,16 @@ do_deliver:
 
     # put the sig_num
     pushl  %ecx
-
-    # put the return addr
-    pushl  %edi
+    # put the return addr which is curr_usr_esp
+    pushl  %ebx
     
-    # transfer the control to uesr mode
-    # especially the value of eip
+    # update esp of hw context and eip of hw context
     movl %esp, 60(%edx)
-    movl %esi, %eip
+    movl %eax, %eip
 
-
-    # when gets back from usr, reset the kernel esp and kernel ebp
-    movl 
+    # esp = kernel_esp, ebp = kernel_ebp
+    movl %edi, %esp
+    movl %esi, %ebp
 
     popl %edi
     popl %esi
