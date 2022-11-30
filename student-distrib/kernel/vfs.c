@@ -338,13 +338,13 @@ int32_t directory_read(int32_t fd, void *buf, int32_t nbytes) {
         return -1;
     }
 
-    if (curr->fds->fd[fd].f_pos >= fs.boot->n_dir) 
+    if (curr->fds->fd[fd].f_pos >= fs->boot->n_dir) 
         return 0;
     if (nbytes > NAMESIZE)
         nread = NAMESIZE;
     else
         nread = nbytes;
-    memcpy(buf, (void*)(fs.boot->dirs[curr->fds->fd[fd].f_pos++].fname), nread);
+    memcpy(buf, (void*)(fs->boot->dirs[curr->fds->fd[fd].f_pos++].fname), nread);
     return nread;
 }
 

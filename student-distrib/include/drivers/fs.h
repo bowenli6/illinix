@@ -65,7 +65,7 @@ typedef struct {
 } fs_t;
 
 
-extern fs_t fs;
+extern fs_t *fs;
 
 void fs_init(uint32_t start_addr);
 int32_t read_dentry_by_name(const int8_t *fname, dentry_t *dentry);

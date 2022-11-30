@@ -413,7 +413,7 @@ void test_file_read() {
 			continue;
 		}
 		read_dentry_by_name(fname, &d);
-		size = fs.inodes[d.inode].size;
+		size = fs->inodes[d.inode].size;
 		printf("The file you have just open is: %s\n", fname);
 		printf("The type of this file is(0: RTC, 1: Directory, 2: Regular file): %d\n", d.type);
 		printf("The correct size of this file is : %d\n", size);

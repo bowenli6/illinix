@@ -196,8 +196,12 @@ void do_exit(uint32_t status) {
 
     GETPRO(child);
 
-    /* check if the current process is running a system thread */
-    if (child->kthread && strcmp(child->argv[0], SHELL)) return;      
+    /* check if the current process is running a system thread and it is a shell */
+    if ((child->kthread) && (!strcmp(child->argv[0], SHELL))) {
+        user_mem_map(child);
+        switch_to_user(child);
+    }
+
 
     /* free the current task */
     parent = child->parent;

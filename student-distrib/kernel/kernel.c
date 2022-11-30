@@ -157,13 +157,14 @@ void entry(unsigned long magic, unsigned long addr) {
     intr_init();                    /* Initialize the interrupt handlers for IDT. */
     i8259_init();                   /* Initialize the PIC */
 
+    /* Dynamic Memory Allocation */
+    kmalloc_init();
 
     /* File System */
     module_t *mod = (module_t *)mbi->mods_addr;
     fs_init(mod->mod_start);        /* Initialize the file system driver. */ 
 
     /* Virtual Memory */
-    kmalloc_init();
     user_mem_init();
     page_init();                    /* Initialize page tables. */
 
@@ -174,7 +175,7 @@ void entry(unsigned long magic, unsigned long addr) {
     // pit_init();                     /* Initialize the PIT driver */
     vga_init();                     /* Initialize the VGA driver */
 
-    /* Process */
+    /* Process management Unit */
     sched_init();
 
 
