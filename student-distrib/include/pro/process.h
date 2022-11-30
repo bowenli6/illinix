@@ -114,6 +114,11 @@ int32_t pro_loader(int8_t *fname, uint32_t *EIP, thread_t *curr);
 void save_context(context_t *context);
 void swtch(context_t *from, context_t *to);
 
+/* implemented in access.c */
+
+void user_mem_map(thread_t* t);
+void user_mem_unmap(thread_t* t);
+
 /* implemented in vfs.c */
 
 int32_t fd_init(thread_t *curr);

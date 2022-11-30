@@ -284,10 +284,12 @@ static int32_t __exec(thread_t *parent, const int8_t *cmd, uint8_t kthread) {
 
     /* get process and set its arguments */
     child->argc = argc;
-    child->argv = argv;    
+    child->argv = argv;
 
+    user_mem_unmap(parent);
     /* executable check and load program image into user's memory */
     if ((errno = pro_loader(argv[0], &EIP_reg, child)) < 0) {
+        user_mem_map(parent);
         process_free(child);
         return errno;
     }
@@ -472,12 +474,12 @@ static void process_free(thread_t *current) {
         kfree(current->children);
     }
 
-    user_mem_unmap(current->pid);
+    user_mem_unmap(current);
     free_kstack((void*)current);
 
     parent->children[--parent->n_children] = NULL;
     update_tss(parent);
-    user_mem_map(parent->pid);
+    //user_mem_map(parent);
 }
 
 
@@ -496,7 +498,7 @@ static void process_free(thread_t *current) {
 static void switch_to_user(thread_t *curr) {
     
     update_tss(curr);
-    user_mem_map(curr->pid);
+    user_mem_map(curr);
 
     sti();
 
@@ -578,14 +580,14 @@ void context_switch(thread_t *from, thread_t *to) {
     context_t *c1, *c2;
 
     if (from) {
-        user_mem_unmap(from->pid);
+        user_mem_unmap(from);
         c1 = from->context;
     } else {
         c1 = NULL;
     }
     
     c2 = to->context;
-    user_mem_map(to->pid);
+    user_mem_map(to);
     swtch(c1, c2);
 }
 
@@ -597,7 +599,7 @@ void context_switch(thread_t *from, thread_t *to) {
  */
 thread_t **children_create(void) {
     int i;
-    thread_t **children = kmalloc(sizeof(MAXCHILDREN * sizeof(thread_t*)));
+    thread_t **children = kmalloc(MAXCHILDREN * sizeof(thread_t*));
     
     for (i = 0; i < MAXCHILDREN; ++i) {
         children[i] = kmalloc(sizeof(thread_t));

@@ -214,7 +214,7 @@ int32_t pro_loader(int8_t *fname, uint32_t *EIP, thread_t *curr) {
     *EIP = *(uint32_t*)eip_buf;
 
     /* map user virtual memory to process pid's physical memory */
-    user_mem_map(curr->pid);
+    user_mem_map(curr);
 
     if ((errno = read_data(inode, 0, (uint8_t *)PROGRAM_IMG_BEGIN, file.size)) < 0) {
         return errno;

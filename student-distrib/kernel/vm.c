@@ -3,6 +3,7 @@
 #include <kmalloc.h>
 #include <lib.h>
 #include <pro/process.h>
+#include <io.h>
 
 /**
  * @brief Turn on paging related registers.
@@ -14,8 +15,7 @@
 //static int pde_alloc_index = 2;
 //pd_descriptor_t pdd[ENTRY_NUM];
 
-int vmalloc(vmem_t* vm, uint32_t start_addr, int oldsize, int newsize, int flags);
-int mmap(vmem_t* vm, uint32_t va, uint32_t pa, int size, int flags);
+//int vmalloc(vmem_t* vm, uint32_t start_addr, int oldsize, int newsize, int flags);
 pte_t* _walk(uint32_t va, uint32_t flag, int alloc);
 buddy* get_buddy(uint32_t addr);
 
@@ -220,6 +220,7 @@ _walk(uint32_t va, uint32_t flags, int alloc)
     if(!(*pde & PTE_PRESENT)) {
         if(!alloc || (ptaddr = (uint32_t)get_page(0)) == 0)
             return 0;
+        memset((void*)ptaddr, 0, PAGE_SIZE);
         *pde = PTE_PRESENT | flags | ADDR_TO_PTE(ptaddr);
     }
 
@@ -229,7 +230,7 @@ _walk(uint32_t va, uint32_t flags, int alloc)
 }
 
 
-int mmap(vmem_t* vm, uint32_t va, uint32_t pa, int size, int flags)
+int mmap(uint32_t va, uint32_t pa, int size, int flags)
 {
     pte_t* pte;
     int i, addr, length;
@@ -246,8 +247,6 @@ int mmap(vmem_t* vm, uint32_t va, uint32_t pa, int size, int flags)
         *pte = PTE_PRESENT | flags | (ADDR_TO_PTE(pa) + i * PAGE_SIZE);
         pdesc[PDE_MB_ADDR(addr)].count ++;
 
-        vm->mmap[i] = *pte;
-
         addr += PAGE_SIZE;
     }
     
@@ -260,7 +259,7 @@ freemap(uint32_t va, int size)
     pte_t* pte;
     uint32_t addr;
 
-    for(addr = va; addr <= va + size; addr += PAGE_SIZE) {
+    for(addr = va; addr < va + size; addr += PAGE_SIZE) {
         if((pte = _walk(addr, 0, 0)) == 0) 
             return -1;
         if(!((*pte) & PTE_PRESENT))
@@ -275,27 +274,37 @@ freemap(uint32_t va, int size)
 
 
 int 
-vmalloc(vmem_t* vm, uint32_t start_addr, int oldsize, int newsize, int flags)
+vmalloc(vmem_t* vm, int oldsize, int newsize, int flags)
 {
     uint32_t startva, endva, va, pa;
     int i = 0, length;
+    uint32_t* temp;
 
     if(oldsize > newsize) 
         return -1;
-    startva = start_addr + ADDR_TO_PTE(oldsize) + PAGE_SIZE * ((oldsize % PAGE_SIZE) != 0);
-    endva =  ADDR_TO_PTE(start_addr + newsize + PAGE_SIZE - 1);
-    length = (endva - startva) / PAGE_SIZE;
-    //if()
-    //TODO
+
+    length = (newsize + PAGE_SIZE - 1) / PAGE_SIZE;
+    if((temp = kmalloc(length * sizeof(uint32_t*))) == 0)
+        return -1;
+    if(oldsize) {
+        memcpy(temp, vm->mmap, length * sizeof(uint32_t*));
+        kfree(vm->mmap);
+    }
+    vm->mmap = temp;
+    
+    startva = USER_MEM + ADDR_TO_PTE(oldsize) + PAGE_SIZE * ((oldsize % PAGE_SIZE) != 0);
+    endva =  ADDR_TO_PTE(USER_MEM + newsize + PAGE_SIZE - 1);
+    
     for(va = startva; va < endva; va += PAGE_SIZE) {
         if((pa = get_user_page(0)) == 0)
             return -1;
-        if(mmap(vm->mmap + i, va, pa, PAGE_SIZE, flags) == -1) 
-            return -1; 
+        if(mmap(va, pa, PAGE_SIZE, flags) == -1) 
+            panic("mmap error");
+        vm->mmap[i] = PTE_PRESENT | flags | (ADDR_TO_PTE(pa));
         i++;
     }
-    flush_tlb();
     
+    flush_tlb();
     return 0;
 }
 
@@ -313,9 +322,46 @@ int sbrk(int incr)
     return 0;
 }
 
-int vmcopy(vmem_t* dest, vmem_t* stc, int size) 
+int vmcopy(vmem_t* dest, vmem_t* src) 
 {
+    uint32_t i, length, pa, va;
+    pte_t* pte;
+    char* cache;
+    if((cache = kmalloc(PAGE_SIZE)) == 0)
+        return -1;
+    dest->size = src->size;
+    dest->brk = src->brk;
+    dest->mmap = kmalloc(sizeof(uint32_t*) * (dest->size / PAGE_SIZE));
 
+    length = (src->size + PAGE_SIZE - 1) / PAGE_SIZE;
+    for(i = 0; i <= length; i++) {
+        if((pte = _walk(src->mmap[i], 0, 0)) == 0) {
+            kfree(cache);
+            return -1;
+        }
+        if((*pte & PTE_PRESENT) == 0) {
+            kfree(cache);
+            return -1;
+        }
+        if((pa = get_user_page(0)) == 0) {
+            kfree(cache);
+            return -1;
+        }
+        
+        va = USER_MEM + i * PAGE_SIZE;
+        memcpy(cache, (char*)va, PAGE_SIZE);
+
+        if(mmap(va, pa, PAGE_SIZE, GETBIT_12(src->mmap[i])) == -1){
+            free_user_page(pa, 0);
+            kfree(cache);
+            return -1;
+        }
+        dest->mmap[i] = src->mmap[i];
+        memcpy((char*)va, cache, PAGE_SIZE);
+    }
+
+    kfree(cache);
+    return 0;
 }
 
 

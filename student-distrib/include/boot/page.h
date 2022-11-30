@@ -1,6 +1,8 @@
 #ifndef _PAGE_H
 #define _PAGE_H
 
+#include<pro/process.h>
+
 #define PDE_OFFSET_4KB      12
 #define PDE_OFFSET_4MB      22
 #define VA_OFFSET           12
@@ -9,6 +11,7 @@
 #define CR4_EXTENSION_FLAG  0x10
 #define CR0_PAGE_FLAG       0x80000000
 #define KERNEL_INDEX        1
+#define USER_MEM            0x8000000
 #define VIR_VID_MEM         0x8400000
 #define HEAP_START          0x8800000
 #define KERNEL_PAGES        16
@@ -36,7 +39,6 @@
 
 #define INDEX_TO_DIR(x) ((x) << 22)
 
-
 typedef uint32_t* pagetable_t;
 typedef uint32_t* pagedir_t;
 
@@ -51,12 +53,14 @@ void enable_paging();
 void flush_tlb();
 
 
-void kmmap(uint32_t va, uint32_t pa, int size, int flags);
 
+int mmap(uint32_t va, uint32_t pa, int size, int flags);
 int freemap(uint32_t va, int size);
 void free_uvmdir(int size);
 
-void vmdealloc(pagedir_t pd, int oldsize, int newsize);
+int vmalloc(vmem_t* vm, int oldsize, int newsize, int flags);
+void vmdealloc(vmem_t* vm, int oldsize, int newsize);
+int vmcopy(vmem_t* dest, vmem_t* src);
 
 int32_t do_vidmap(uint8_t **screen_start);
 

@@ -255,4 +255,10 @@ void back(terminal_t *terminal) {
     vga_update_cursor(terminal->screen_x, terminal->screen_y);
 }
 
-
+void panic(int8_t *s)
+{
+    cli();
+    puts(s);
+    printf("\n");
+    while(1);
+}
