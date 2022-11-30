@@ -1,11 +1,12 @@
 #include <drivers/fs.h>
 #include <pro/process.h>
 #include <access.h>
+#include <kmalloc.h>
 #include <errno.h>
 #include <lib.h>
 
 
-fs_t fs;        /* Stores the file system. */
+fs_t *fs;        /* Stores the file system. */
 
 
 static int32_t validate_inode(uint32_t inode);
@@ -18,11 +19,12 @@ static int32_t validate_fname(int8_t *fname);
  * @param start_addr : The start address of the file system in the memory.
  */
 void fs_init(uint32_t start_addr) {
+    fs = kmalloc(sizeof(fs_t));
     boot_block *addr = (boot_block *)start_addr;
-    fs.boot = addr++;                           /* Load the boot block. */
-    fs.inodes = (inode_t *)addr;                /* Load the inodes blocks. */
-    addr += fs.boot->n_inode;                   /* Get the address of the first data block. */
-    fs.data_block_addr = (data_block *)addr;    /* Load the data blocks. */
+    fs->boot = addr++;                           /* Load the boot block. */
+    fs->inodes = (inode_t *)addr;                /* Load the inodes blocks. */
+    addr += fs->boot->n_inode;                   /* Get the address of the first data block. */
+    fs->data_block_addr = (data_block *)addr;    /* Load the data blocks. */
 }
 
 
@@ -40,10 +42,10 @@ int32_t read_dentry_by_name(const int8_t *fname, dentry_t *dentry) {
         return -1;
     }
     int i;    
-    for (i = 0; i < fs.boot->n_dir; ++i) {
+    for (i = 0; i < fs->boot->n_dir; ++i) {
 
         /* The current file name stored in the boot block. */
-        int8_t *_fname = (int8_t *)(fs.boot->dirs[i].fname);
+        int8_t *_fname = (int8_t *)(fs->boot->dirs[i].fname);
         if (!strncmp(fname, _fname, NAMESIZE)) {
 
             /* Two file names are equal. */
@@ -68,12 +70,12 @@ int32_t read_dentry_by_index(uint32_t index, dentry_t *dentry) {
         return -1;
     }
 
-    if ((index >= FILES_MAX) || (index >= fs.boot->n_dir)) {
+    if ((index >= FILES_MAX) || (index >= fs->boot->n_dir)) {
         return -1;
     }
 
     /* Copy dentry from boot block to the given dentry pointer. */
-    *dentry = fs.boot->dirs[index];
+    *dentry = fs->boot->dirs[index];
     
     return 0;
 }
@@ -104,7 +106,7 @@ int32_t read_data(uint32_t inode, uint32_t offset, uint8_t *buf, uint32_t length
 
     if (!buf) return -1;
     
-    file = &fs.inodes[inode];            /* Get the file inode. */
+    file = &fs->inodes[inode];            /* Get the file inode. */
         
     if (offset >= file->size) return 0;
     
@@ -119,7 +121,7 @@ int32_t read_data(uint32_t inode, uint32_t offset, uint8_t *buf, uint32_t length
     vir_pos.iblock = file->data_block[vir_pos.nblock];
 
     /* The data block object of the starting data block we need to read. */
-    vir_pos.datab = &fs.data_block_addr[vir_pos.iblock];
+    vir_pos.datab = &fs->data_block_addr[vir_pos.iblock];
 
     /* The index of the data we want to read. */
     vir_pos.idx = phy_pos % BLOCK_SIZE;
@@ -150,10 +152,10 @@ int32_t read_data(uint32_t inode, uint32_t offset, uint8_t *buf, uint32_t length
             nread_needed -= nread_each;
             /* Update vir_pos to the next data block used by the file inode. */
             vir_pos.iblock = file->data_block[++vir_pos.nblock];
-            if (vir_pos.iblock >= fs.boot->n_datab) {
+            if (vir_pos.iblock >= fs->boot->n_datab) {
                 return -1;
             }
-            vir_pos.datab = &fs.data_block_addr[vir_pos.iblock];
+            vir_pos.datab = &fs->data_block_addr[vir_pos.iblock];
             vir_pos.idx = 0;    /* Start from beginning of the new data block. */
         }
     }
@@ -172,7 +174,7 @@ uint32_t get_size(uint32_t index) {
     read_dentry_by_index(index, &dentry);
     if (dentry.type < 2) 
         return 0;
-    return fs.inodes[dentry.inode].size;
+    return fs->inodes[dentry.inode].size;
 }
 
 
@@ -198,7 +200,7 @@ int32_t pro_loader(int8_t *fname, uint32_t *EIP, thread_t *curr) {
         return inode;
     
     /* get the file inode */
-    file = fs.inodes[inode];            /* Get the file inode. */
+    file = fs->inodes[inode];            /* Get the file inode. */
 
     /* read header from the program image */
     if ((errno = read_data(inode, 0, header, 40)) < 0)
@@ -244,7 +246,7 @@ static int32_t validate_fname(int8_t *fname) {
  * @return int32_t : positive or 0 denote success, negative values denote an error condition
  */
 static int32_t validate_inode(uint32_t inode) {
-    if (inode >= fs.boot->n_inode)
+    if (inode >= fs->boot->n_inode)
         return -1;
     return 0;
 }
