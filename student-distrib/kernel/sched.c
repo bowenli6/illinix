@@ -157,7 +157,7 @@ void sched_init(void) {
     init->argc = 1;
     init->argv = kmalloc(sizeof(int8_t*));
     init->argv[0] = kmalloc(5);
-    strcpy(init->argv[0], "init");
+    strcpy(init->argv[0], INIT);
     init->context = kmalloc(sizeof(context_t));
     
     /* create task queue */

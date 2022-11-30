@@ -187,7 +187,7 @@ uint32_t get_size(uint32_t index) {
 int32_t pro_loader(int8_t *fname, uint32_t *EIP, thread_t *curr) {
     int i;
     int32_t errno;
-    uint32_t inode;
+    int32_t inode;
     inode_t file;
     uint8_t header[40];
     uint8_t eip_buf[4];
@@ -213,8 +213,6 @@ int32_t pro_loader(int8_t *fname, uint32_t *EIP, thread_t *curr) {
 
     *EIP = *(uint32_t*)eip_buf;
 
-    /* map user virtual memory to process pid's physical memory */
-    user_mem_map(curr);
 
     if ((errno = read_data(inode, 0, (uint8_t *)PROGRAM_IMG_BEGIN, file.size)) < 0) {
         return errno;

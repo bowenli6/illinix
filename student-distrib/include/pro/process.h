@@ -11,6 +11,7 @@
 #define ARGSIZE         33              /* max size of a command argument*/           
 #define MAXARGS         10              /* max number of arguments */
 #define SHELL           "shell"         /* shell program */
+#define INIT            "init"          /* init program */
 #define TASKSTART       2               /* user tasks starts from 2 */
 #define NICE_INIT       10              /* nice value for init process */
 #define NICE_SHELL      0               /* nice value for shell process */

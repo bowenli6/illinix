@@ -211,6 +211,9 @@ void do_exit(uint32_t status) {
     /* when wait syscall is implement, the parent will get the exit status */
     // sched_exit();
 
+    /* change parent return value to status */
+    parent->context->eax = status;
+
     context_switch(NULL, parent);
 }
 
@@ -243,7 +246,7 @@ int32_t do_execute(const int8_t *cmd) {
     /* switch to user mode (ring 3) */
     switch_to_user(child);
 
-    return 0;   /* never reach here */
+    return parent->context->eax;
 }
 
 
@@ -286,10 +289,9 @@ static int32_t __exec(thread_t *parent, const int8_t *cmd, uint8_t kthread) {
     child->argc = argc;
     child->argv = argv;
 
-    user_mem_unmap(parent);
+
     /* executable check and load program image into user's memory */
     if ((errno = pro_loader(argv[0], &EIP_reg, child)) < 0) {
-        user_mem_map(parent);
         process_free(child);
         return errno;
     }
@@ -443,6 +445,11 @@ static int32_t process_create(thread_t *current, uint8_t kthread) {
     /* not a kernel thread */
     t->kthread = kthread;
 
+    /* unmap parent user space */
+    if (strcmp(current->argv[0], INIT))     /* only unmap if it's not the init process */
+        user_mem_unmap(current);
+    user_mem_map(t);
+
     return 0;
 }
 
@@ -479,7 +486,8 @@ static void process_free(thread_t *current) {
 
     parent->children[--parent->n_children] = NULL;
     update_tss(parent);
-    //user_mem_map(parent);
+
+    user_mem_map(parent);
 }
 
 
@@ -498,7 +506,6 @@ static void process_free(thread_t *current) {
 static void switch_to_user(thread_t *curr) {
     
     update_tss(curr);
-    user_mem_map(curr);
 
     sti();
 
@@ -582,12 +589,12 @@ void context_switch(thread_t *from, thread_t *to) {
     if (from) {
         user_mem_unmap(from);
         c1 = from->context;
+        user_mem_map(to);
     } else {
         c1 = NULL;
     }
     
     c2 = to->context;
-    user_mem_map(to);
     swtch(c1, c2);
 }
 
