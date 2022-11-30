@@ -49,7 +49,6 @@ asmlinkage int32_t sys_fork(void) {
     /* check for preemption */
     // if (current->flag == NEED_RESCHED)
     //     schedule();
-    // context_switch(current, current->children[current->n_children - 1]);
 
     return pid;
 }

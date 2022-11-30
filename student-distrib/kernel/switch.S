@@ -10,10 +10,11 @@ ESI = 16
 EDI = 20
 EBP = 24
 ESP = 28
-EFLAGS = 32
-ES = 36
-FS = 40
-GS = 44
+EIP = 32
+EFLAGS = 36
+ES = 40
+FS = 44
+GS = 48
 
 .text
 
@@ -44,6 +45,8 @@ save_context:
     movl    %edi,    EDI(%eax)
     movl    %ebp,    EBP(%eax)
     movl    %esp,    ESP(%eax)
+    movl    4(%ebp), %edx
+    movl    %edx,    EIP(%eax)
     pushfl
     popl    %ecx
     movl    %ecx,    EFLAGS(%eax)
@@ -56,7 +59,7 @@ save_context:
 
 
 # arg0: the hardware context of the thread that wants to switch
-# arg0: the hardware context of the thread that will be switched with
+# arg1: the hardware context of the thread that will be switched with
 .globl swtch
 swtch:
     pushl   %ebp;
@@ -87,6 +90,8 @@ swtch:
     movl    %edi,    EDI(%eax)
     movl    %ebp,    EBP(%eax)
     movl    %esp,    ESP(%eax)
+    movl    4(%ebp), %edx
+    movl    %edx,    EIP(%eax)
     pushfl
     popl    %ecx
     movl    %ecx,    EFLAGS(%eax)
@@ -99,7 +104,6 @@ to:
     movl    12(%ebp), %edx 
 
     # load edx to the current hardware context 
-    movl    EAX(%edx), %eax
     movl    EBX(%edx), %ebx
     movl    ESI(%edx), %esi
     movl    EDI(%edx), %edi
@@ -110,6 +114,9 @@ to:
     movw    ES(%edx),  %es
     movw    FS(%edx),  %fs
     movw    GS(%edx),  %gs
+    movl    EIP(%edx), %eax
+    movl    %eax,      4(%ebp)
+    movl    EAX(%edx), %eax
     movl    EDX(%edx), %edx
 
     leave

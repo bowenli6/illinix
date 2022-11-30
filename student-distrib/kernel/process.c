@@ -103,8 +103,8 @@ void init_task(void) {
  * used by the user.
  */
 int32_t do_fork(thread_t *parent, uint8_t kthread) {
-    uint32_t *ebp, *eip;
     thread_t *child;
+    uint32_t *eip;
     int32_t errno;
 
     /* create child process */
@@ -125,34 +125,39 @@ int32_t do_fork(thread_t *parent, uint8_t kthread) {
     /* save child hardware context */
     save_context(child->context);
 
-    ntask++;
+    /* child return 0 */
+    child->context->eax = 0;
 
-    /* get ebp (contains old ebp : 0(%ebp) and eip : 4(%ebp))*/
-    ebp = (uint32_t*) child->context->ebp;
-    eip = ebp + 1;
-
-    /* set saved eip to the address of label child_ret;
-     * GCC includes a non-standard extension for saving labels 
-     * as values by using && + label; 
-     * I tried to avoid doing this but for now, this is the only 
-     * way to do it. */
-    *eip = (uint32_t)(&&child_ret);
-
-    /* parent will jump to parent_ret */
-    goto parent_ret;
-
-child_ret:
     /* get shared eip in user space */
     child->usreip = get_eip_user(parent);
 
     /* shared user esp */
     child->usresp = USER_STACK_ADDR;
 
-    /* context switch to child's user space (ring 3) */
-    switch_to_user(child);
+    ntask++;
 
-parent_ret:
+    eip = (uint32_t*)(&child->context->eip);
+ 
+    /* set up child's return path */
+    asm volatile ("                             \n\
+                    movl  $child_ret, (%%eax)   \n\
+                    jmp   parent_ret            \n\
+                    child_ret:                  \n\
+                    pushl %%ecx                 \n\
+                    pushl %%edx                 \n\
+                    addl  $4, %%esp             \n\
+                    call  __umap                \n\
+                    call switch_to_user         \n\
+                    parent_ret:                 \n\
+                  "                               \
+                  : "=a" (eip)                    \
+                  : "c" (child), "d" (parent)     \
+                  : "cc", "memory"   
+    );      
+
     /* map to parent's address space */
+    __umap(child, parent);
+    // context_switch(parent, child);
     return child->pid;
 }
 
@@ -166,12 +171,25 @@ parent_ret:
  * @return int32_t : positive or 0 denote success, negative values denote an error condition
  */
 static int32_t process_clone(thread_t *parent, thread_t *child) {
+    int i;
     int32_t errno;
     
     /* copy physical memory */
     if ((errno = vmcopy(&child->vm, &parent->vm)) < 0)
         return errno;
     
+    /* copy arguments */
+    child->argc = parent->argc;
+    child->argv = kmalloc(MAXARGS * sizeof(int8_t*));
+
+    for (i = 0; i < MAXARGS; ++i)
+        child->argv[i] = kmalloc(ARGSIZE);    
+
+    for (i = 0; i < child->argc; ++i)
+        strcpy(child->argv[i], parent->argv[i]);
+    
+    child->nice = NICE_NORMAL;
+
     /* child will get real copied when it tries to open a file */
     child->fds = NULL;
 
@@ -240,6 +258,7 @@ void do_exit(uint32_t status) {
  */
 int32_t do_execute(const int8_t *cmd) {
     thread_t *parent, *child;  
+    uint32_t *eip;
     int32_t errno;
 
     GETPRO(parent);
@@ -257,8 +276,19 @@ int32_t do_execute(const int8_t *cmd) {
         save_context(parent->context);
     }
 
-    /* switch to user mode (ring 3) */
-    switch_to_user(child);
+    eip = (uint32_t*)(&parent->context->eip);
+
+    /* set up child's return path */
+    asm volatile ("                             \n\
+                    movl  $parent, (%%eax)      \n\
+                    pushl %%ecx                 \n\
+                    call switch_to_user         \n\
+                    parent:                     \n\
+                  "                               \
+                  : "=a" (eip)                    \
+                  : "c" (child), "d" (parent)     \
+                  : "cc", "memory"   
+    );      
 
     return parent->context->eax;
 }
@@ -303,8 +333,6 @@ static int32_t __exec(thread_t *parent, const int8_t *cmd, uint8_t kthread) {
     child->argc = argc;
     child->argv = argv;
 
-    (void) get_eip_user(parent);
-
     /* map the virtual memory space to to child */
     __umap(parent, child);
 
@@ -325,16 +353,6 @@ static int32_t __exec(thread_t *parent, const int8_t *cmd, uint8_t kthread) {
         child->nice = NICE_SHELL;
     else
         child->nice = NICE_NORMAL;
-
-    /* set up terminal for process */
-    if (kthread) {
-        /* create a new terminal for this kthread */
-        child->terminal = terminal_create();
-        console->terminals[console->size++] = child->terminal;
-    } else {
-        /* get the terminal from its parent */
-        child->terminal = parent->terminal;
-    }
     
 
     /* set up sched info */
@@ -462,6 +480,16 @@ static int32_t process_create(thread_t *current, uint8_t kthread) {
     
     /* not a kernel thread */
     t->kthread = kthread;
+
+    /* set up terminal for process */
+    if (kthread) {
+        /* create a new terminal for this kthread */
+        t->terminal = terminal_create();
+        console->terminals[console->size++] = current->terminal;
+    } else {
+        /* get the terminal from its parent */
+        t->terminal = current->terminal;
+    }
 
     return 0;
 }
@@ -598,13 +626,10 @@ static void console_init(void) {
 void context_switch(thread_t *from, thread_t *to) {
     context_t *c1, *c2;
 
-    if (from) {
-        user_mem_unmap(from);
+    if (from) 
         c1 = from->context;
-        user_mem_map(to);
-    } else {
+    else 
         c1 = NULL;
-    }
     
     c2 = to->context;
     swtch(c1, c2);

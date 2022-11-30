@@ -37,6 +37,7 @@ typedef struct {
     uint32_t edi;
     uint32_t ebp;
     uint32_t esp;
+    uint32_t eip;
     uint32_t eflags;
     uint16_t es;
     uint16_t fs;

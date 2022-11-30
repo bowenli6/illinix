@@ -138,6 +138,7 @@ void sched_init(void) {
 
     /* set up process 0 */
     idle = &idlep->thread;
+    idle->pid = 0;
     idle->state = RUNNABLE;
     idle->parent = NULL;
     idle->kthread = 1;
@@ -147,6 +148,7 @@ void sched_init(void) {
     
     /* set up process 1 */
     init = &initp->thread;
+    init->pid = 1;
     init->state = RUNNABLE;  
     init->parent = idle;
     init->n_children = 0;
