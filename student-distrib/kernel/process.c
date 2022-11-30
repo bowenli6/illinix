@@ -491,6 +491,8 @@ static int32_t process_create(thread_t *current, uint8_t kthread) {
         t->terminal = current->terminal;
     }
 
+    t->vm.size = 0;
+
     return 0;
 }
 

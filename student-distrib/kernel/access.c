@@ -5,14 +5,16 @@
 #include <boot/page.h>
 #include <lib.h>
 #include <kmalloc.h>
+#include <io.h>
 
 
 
-void _user_mem_mmap(thread_t* t) {
-    int i;
+int _user_mem_mmap(thread_t* t) {
+    int i, rtn = 0;
     for(i = 0; i < t->vm.size / PAGE_SIZE; i++) {
-        mmap(USER_MEM + i * PAGE_SIZE, ADDR_TO_PTE(t->vm.mmap[i]), PAGE_SIZE, GETBIT_12(t->vm.mmap[i]));
+        rtn += mmap(USER_MEM + i * PAGE_SIZE, ADDR_TO_PTE(t->vm.mmap[i]), PAGE_SIZE, GETBIT_12(t->vm.mmap[i]));
     }  
+    return rtn;
 }
 
 /**
@@ -21,14 +23,20 @@ void _user_mem_mmap(thread_t* t) {
  * @param pid process id (start at 2)
  */
 void user_mem_map(thread_t* t) {
+    int rtn = 0;
     if(t->vm.size == 0) {
         t->vm.size = PAGE_SIZE_4MB;
-        vmalloc(&t->vm, 0, t->vm.size, PTE_RW | PTE_US);
+        rtn = vmalloc(&t->vm, 0, t->vm.size, PTE_RW | PTE_US);
+        if(rtn == 0) printf(">>>>>map process pid = %d succeed!\n", t->pid);
+        else printf(">>>>>map process pid = %d FAILED, vmalloc error\n", t->pid);
     }
     else {
-          _user_mem_mmap(t);
+        rtn = _user_mem_mmap(t);
+        if(rtn == 0) printf(">>>>>map process pid = %d succeed!\n", t->pid);
+        else printf(">>>>>map process pid = %d FAILED, mapping has existed\n", t->pid);
     }
     flush_tlb();
+    
 }
 
 
@@ -50,8 +58,11 @@ void user_mem_map(thread_t* t) {
  * @param pid process id (start at 2)
  */
 void user_mem_unmap(thread_t* t) {
-    freemap(USER_MEM, t->vm.size);
+    int rtn;
+    rtn = freemap(USER_MEM, t->vm.size);
     flush_tlb();
+    if(rtn == 0) printf("<<<<<unmap process pid = %d succeed!\n", t->pid);
+    else printf("<<<<<unmap process pid = %d FAILED!\n", t->pid);
 }
 
 /**

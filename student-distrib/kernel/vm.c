@@ -240,7 +240,7 @@ int mmap(uint32_t va, uint32_t pa, int size, int flags)
 
     for(i = 0; i < length; i++ ){
         if((pte = _walk(addr, flags, 1)) == 0) 
-            return -1;
+            panic("walk error");
         if((*pte) & PTE_PRESENT) 
             return -1;
 
