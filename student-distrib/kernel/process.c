@@ -23,6 +23,7 @@
 
 
 #include <pro/process.h>
+#include <boot/page.h>
 #include <pro/sched.h>
 #include <boot/x86_desc.h>
 #include <pro/pid.h>
@@ -51,6 +52,7 @@ static int32_t parse_arg(int8_t *cmd, int8_t *argv[]);
 static void switch_to_user(thread_t *curr);
 static void console_init(void);
 static void update_tss(thread_t *curr);
+static void __umap(thread_t *from, thread_t *to);
 
 
 /**
@@ -118,7 +120,7 @@ int32_t do_fork(thread_t *parent, uint8_t kthread) {
     }
         
     /* set up sched info for child */
-    sched_fork(child); 
+    // sched_fork(child); 
 
     /* save child hardware context */
     save_context(child->context);
@@ -150,7 +152,7 @@ child_ret:
     switch_to_user(child);
 
 parent_ret:
-    /* parent return child's pid */
+    /* map to parent's address space */
     return child->pid;
 }
 
@@ -164,9 +166,14 @@ parent_ret:
  * @return int32_t : positive or 0 denote success, negative values denote an error condition
  */
 static int32_t process_clone(thread_t *parent, thread_t *child) {
-    // copy physical memory 
-
-    // copy file descirptors
+    int32_t errno;
+    
+    /* copy physical memory */
+    if ((errno = vmcopy(&child->vm, &parent->vm)) < 0)
+        return errno;
+    
+    /* child will get real copied when it tries to open a file */
+    child->fds = NULL;
 
     return 0;
 }
@@ -180,7 +187,9 @@ static int32_t process_clone(thread_t *parent, thread_t *child) {
  * @return uint32_t : task's user eip
  */
 static uint32_t get_eip_user(thread_t *task) {
-    return 0;
+    process_t *process = (process_t *)task;
+    uint32_t *stack = (uint32_t*)(&process->stack);
+    return stack[STACKEIP];
 } 
 
 
@@ -205,6 +214,7 @@ void do_exit(uint32_t status) {
 
     /* free the current task */
     parent = child->parent;
+
     process_free(child);
 
     ntask--;
@@ -293,6 +303,10 @@ static int32_t __exec(thread_t *parent, const int8_t *cmd, uint8_t kthread) {
     child->argc = argc;
     child->argv = argv;
 
+    (void) get_eip_user(parent);
+
+    /* map the virtual memory space to to child */
+    __umap(parent, child);
 
     /* executable check and load program image into user's memory */
     if ((errno = pro_loader(argv[0], &EIP_reg, child)) < 0) {
@@ -449,11 +463,6 @@ static int32_t process_create(thread_t *current, uint8_t kthread) {
     /* not a kernel thread */
     t->kthread = kthread;
 
-    /* unmap parent user space */
-    if (strcmp(current->argv[0], INIT))     /* only unmap if it's not the init process */
-        user_mem_unmap(current);
-    user_mem_map(t);
-
     return 0;
 }
 
@@ -485,13 +494,12 @@ static void process_free(thread_t *current) {
         kfree(current->children);
     }
 
-    user_mem_unmap(current);
+    __umap(current, current->parent);
+
     free_kstack((void*)current);
 
     parent->children[--parent->n_children] = NULL;
     update_tss(parent);
-
-    user_mem_map(parent);
 }
 
 
@@ -552,7 +560,7 @@ static void update_tss(thread_t *curr) {
  */
 uint32_t get_esp0(thread_t *curr) {
     void *process = (void *)curr;
-    return (uint32_t)(process + sizeof(process_t) - 4);
+    return (uint32_t)(process + sizeof(process_t));
 }
 
 
@@ -616,4 +624,17 @@ thread_t **children_create(void) {
         children[i] = kmalloc(sizeof(thread_t));
     }
     return children;
+}
+
+
+/**
+ * @brief map user virtual memory space
+ * 
+ * @param from : source process
+ * @param to : dest process
+ */
+static void __umap(thread_t *from, thread_t *to) {
+    if (strcmp(from->argv[0], INIT))     /* only unmap if it's not the init process */
+        user_mem_unmap(from);
+    user_mem_map(to);
 }

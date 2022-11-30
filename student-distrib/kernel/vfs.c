@@ -385,3 +385,19 @@ int32_t __open(int32_t fd, const int8_t *fname, file_type_t type, file_op *op, t
     memcpy((void*)&(curr->fds->fd[fd]), (void*)&file, sizeof(file_t));
     return fd;
 }
+
+
+
+/**
+ * @brief copy file descriptor only when a child process first accessing its
+ * file descriptors
+ * 
+ */
+void fdcopy(void) {
+    thread_t *curr;
+    GETPRO(curr);
+
+    /* copy file descriptor when it first tried to open a file */
+    if (!curr->fds)
+        memcpy((void*)curr->parent, (void*)curr, sizeof(files));
+}
