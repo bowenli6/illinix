@@ -2,7 +2,7 @@
 
 .text
 
-.global do_deliver sys_sig_return
+.global do_deliver do_syssig_return
 
 linkage_for_sigreturn:
     movl    $10, %eax          # value for sys_sigreturn is 10
