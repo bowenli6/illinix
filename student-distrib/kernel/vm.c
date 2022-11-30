@@ -334,8 +334,8 @@ int vmcopy(vmem_t* dest, vmem_t* src)
     dest->mmap = kmalloc(sizeof(uint32_t*) * (dest->size / PAGE_SIZE));
 
     length = (src->size + PAGE_SIZE - 1) / PAGE_SIZE;
-    for(i = 0; i <= length; i++) {
-        if((pte = _walk(src->mmap[i], 0, 0)) == 0) {
+    for(i = 0; i < length; i++) {
+        if((pte = _walk(ADDR_TO_4MB(USER_MEM) + ((i % ENTRY_NUM) << VA_OFFSET), 0, 0)) == 0) {
             kfree(cache);
             return -1;
         }
@@ -351,6 +351,7 @@ int vmcopy(vmem_t* dest, vmem_t* src)
         va = USER_MEM + i * PAGE_SIZE;
         memcpy(cache, (char*)va, PAGE_SIZE);
 
+        freemap(va, PAGE_SIZE);
         if(mmap(va, pa, PAGE_SIZE, GETBIT_12(src->mmap[i])) == -1){
             free_user_page(pa, 0);
             kfree(cache);
