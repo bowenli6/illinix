@@ -139,7 +139,6 @@ int32_t do_fork(thread_t *parent, uint8_t kthread) {
 
     /* map to parent's address space */
     __umap(child, parent);
-    // context_switch(parent, child);
     return child->pid;
 }
 
@@ -190,7 +189,7 @@ static int32_t process_clone(thread_t *parent, thread_t *child) {
      * stack[2049] : hardware reserved
      */
 
-    for (i = 0; i < 5; ++i)
+    for (i = 0; i < NCONTEXT; ++i)
         child_stack[STACK + i] = parent_stack[STACK + i];
 
     return 0;
