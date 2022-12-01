@@ -52,6 +52,8 @@ static void switch_to_user(thread_t *curr);
 static void console_init(void);
 static void update_tss(thread_t *curr);
 static void __umap(thread_t *from, thread_t *to);
+static void place_children(thread_t *task);
+static void overflow_children(thread_t *task);
 
 
 /**
@@ -216,12 +218,15 @@ void do_exit(uint32_t status) {
     /* free the current task */
     parent = child->parent;
 
+    /* if it has children runnable/sleeping */
+    if (child->n_children) {
+        /* leave its children to init */
+        place_children(child);
+    }
+
     process_free(child);
 
     ntask--;
-
-    /* leave its children to init */
-    // TODO
     
     /* when wait syscall is implement, the parent will get the exit status */
     // sched_exit();
@@ -261,6 +266,7 @@ int32_t do_execute(const int8_t *cmd) {
     }
 
     child = parent->children[parent->n_children - 1];
+
 
     eip = (uint32_t*)(&parent->context->eip);
 
@@ -446,13 +452,7 @@ static int32_t process_create(thread_t *current, uint8_t kthread) {
         current->children = children_create();
     
     /* check if max_children is full */
-    if (current->n_children == current->max_children) {
-        children = kmalloc(current->max_children * 2 * sizeof(thread_t*));
-        memcpy((void*)children, (void*)current->children, current->max_children * sizeof(thread_t *));
-        current->max_children *= 2;
-        kfree(current->children);
-        current->children = children;
-    }   
+    overflow_children(current);
 
     /* update parent's children list */
     current->children[current->n_children++] = t;
@@ -475,6 +475,9 @@ static int32_t process_create(thread_t *current, uint8_t kthread) {
         /* get the terminal from its parent */
         t->terminal = current->terminal;
     }
+
+    /* add child to task queue */
+    list_add(&t->task_node, task_queue);
 
     t->vm.size = 0;
 
@@ -508,6 +511,8 @@ static void process_free(thread_t *current) {
             kfree(current->children[i]);
         kfree(current->children);
     }
+
+    list_del(&current->task_node);
 
     __umap(current, current->parent);
 
@@ -631,4 +636,38 @@ static void __umap(thread_t *from, thread_t *to) {
     if (strcmp(from->argv[0], INIT))     /* only unmap if it's not the init process */
         user_mem_unmap(from);
     user_mem_map(to);
+}
+
+
+
+/**
+ * @brief place task's children to init
+ * 
+ * @param task : a thread
+ */
+static void place_children(thread_t *task) {
+    int i;
+
+    for (i = 0; i < task->n_children; ++i) {
+        overflow_children(init);
+        init->children[init->n_children++] = task->children[i];
+    }
+}
+
+
+/**
+ * @brief reallocate children list when size reaches max_children
+ * 
+ * @param task : a thread
+ */
+static void overflow_children(thread_t *task) {
+    thread_t **children; 
+
+    if (task->n_children == task->max_children) {
+        children = kmalloc(task->max_children * 2 * sizeof(thread_t*));
+        memcpy((void*)children, (void*)task->children, task->max_children * sizeof(thread_t *));
+        task->max_children *= 2;
+        kfree(task->children);
+        task->children = children;
+    } 
 }
