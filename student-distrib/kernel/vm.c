@@ -249,7 +249,7 @@ int mmap(uint32_t va, uint32_t pa, int size, int flags)
 
         addr += PAGE_SIZE;
     }
-    
+    flush_tlb();
     return 0;
 }
 
@@ -269,6 +269,7 @@ freemap(uint32_t va, int size)
             free_page((void*)ADDR_TO_PTE(page_directory[PDE_MB_ADDR(addr)]), 0);
         }
     }
+    flush_tlb();
     return 0;
 }
 
@@ -327,8 +328,12 @@ int vmcopy(vmem_t* dest, vmem_t* src)
     uint32_t i, length, pa, va;
     pte_t* pte;
     char* cache;
-    if((cache = kmalloc(PAGE_SIZE)) == 0)
-        return -1;
+
+    // if((cache = kmalloc(PAGE_SIZE)) == 0)
+    //     return -1;
+    cache = (char*)get_user_page(0);
+    mmap(0x7F00000, (uint32_t)cache, PAGE_SIZE, PTE_US | PTE_RW);
+
     dest->size = src->size;
     dest->brk = src->brk;
     dest->mmap = kmalloc(sizeof(uint32_t*) * (dest->size / PAGE_SIZE));
@@ -336,40 +341,41 @@ int vmcopy(vmem_t* dest, vmem_t* src)
     length = (src->size + PAGE_SIZE - 1) / PAGE_SIZE;
     for(i = 0; i < length; i++) {
         if((pte = _walk(ADDR_TO_4MB(USER_MEM) + ((i % ENTRY_NUM) << VA_OFFSET), 0, 0)) == 0) {
-            kfree(cache);
+            //kfree(cache);
             panic("walk error");
         }
         if((*pte & PTE_PRESENT) == 0) {
-            kfree(cache);
+            //kfree(cache);
             panic("src not present");
         }
         if((pa = get_user_page(0)) == 0) {
-            kfree(cache);
+            //kfree(cache);
             panic("get user page failed");
         }
         
         va = USER_MEM + i * PAGE_SIZE;
-        memcpy(cache, (char*)va, PAGE_SIZE);
+        memcpy((char*)0x7F00000, (char*)va, PAGE_SIZE);
 
         freemap(va, PAGE_SIZE);
-        if(mmap(va, pa, PAGE_SIZE, GETBIT_12(src->mmap[i])) == -1){
+        if(mmap(va, pa, PAGE_SIZE, GETBIT_12(src->mmap[i])) == -1) {
             free_user_page(pa, 0);
-            kfree(cache);
+            //kfree(cache);
             return -1;
         }
         dest->mmap[i] = PTE_PRESENT | GETBIT_12(src->mmap[i]) | (ADDR_TO_PTE(pa));
-        memcpy((char*)va, cache, PAGE_SIZE);
+        memcpy((char*)va, (char*)0x7F00000, PAGE_SIZE);
     }
 
-    kfree(cache);
+    freemap(0x7F00000, PAGE_SIZE);
+    //kfree(cache);
+    free_user_page((uint32_t)cache, 0);
+
     return 0;
 }
 
 
 /*
-
-void 
-vmdealloc(pagedir_t pd, int oldsize, int newsize)
+int vmdealloc(vmem_t* vm, int oldsize, int newsize)
 {
     uint32_t startva, endva, va, pa;
     startva = ADDR_TO_PTE(newsize) + PAGE_SIZE;
@@ -379,6 +385,5 @@ vmdealloc(pagedir_t pd, int oldsize, int newsize)
 
     return;
 }
-
-
 */
+

@@ -61,6 +61,9 @@ void user_mem_unmap(thread_t* t) {
     int rtn;
     rtn = freemap(USER_MEM, t->vm.size);
     flush_tlb();
+    if(t->vm.size == 0){
+        printf("<<<<<unmap process pid = %d FAILED: empty map!\n", t->pid);
+    }
     if(rtn == 0) printf("<<<<<unmap process pid = %d succeed!\n", t->pid);
     else printf("<<<<<unmap process pid = %d FAILED!\n", t->pid);
 }

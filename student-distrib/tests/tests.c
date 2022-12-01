@@ -590,8 +590,10 @@ void test_kmalloc() {
 
 	//int u1, u2, u3;
 	vmem_t vm1, vm2;
-	vm1.size = PAGE_SIZE_4MB;
-	printf("umalloc 4MB, 0 means succeed: %x\n", vmalloc(&vm1, 0, PAGE_SIZE_4MB, PTE_US | PTE_RW));
+	int* addr = (int*)USER_MEM;
+	vm1.size = PAGE_SIZE * 4;
+	printf("umalloc 4MB, 0 means succeed: %x\n", vmalloc(&vm1, 0, PAGE_SIZE * 4, PTE_US | PTE_RW));
+	*addr = 0x1234;
 	vmcopy(&vm2, &vm1);
 	// printf("umalloc 8KB, 0 means succeed: %x\n", vmalloc(HEAP_START, 0, PAGE_SIZE * 2, PTE_US | PTE_RW));
 	// free_user_page(u1, 10);
