@@ -397,7 +397,12 @@ void fdcopy(void) {
     thread_t *curr;
     GETPRO(curr);
 
+
     /* copy file descriptor when it first tried to open a file */
-    if (!curr->fds)
-        memcpy((void*)curr->parent, (void*)curr, sizeof(files));
+    if (!curr->fds) {
+        curr->fds = kmalloc(sizeof(files));
+        curr->fds->count = 0;
+        curr->fds->max_fd = OPEN_MAX;
+        memcpy((void*)curr->fds, (void*)curr->parent->fds, sizeof(files));
+    }
 }

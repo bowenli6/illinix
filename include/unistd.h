@@ -4,7 +4,9 @@
 #include "types.h"
 
 pid_t fork(void);
+int open(const char *pathname, int flags);
 
-int a = 10;
+
+
 
 #endif /* _UNISTD_H_ */
