@@ -46,7 +46,6 @@ list_head *wait_queue;          /* list of sleeping tasks (idle -> {sleeping use
 static int32_t __exec(thread_t *current, const int8_t *cmd, uint8_t kthread);
 static int32_t process_create(thread_t *current, uint8_t kthread);
 static int32_t process_clone(thread_t *parent, thread_t *child);
-static uint32_t get_eip_user(thread_t *task);
 static void process_free(thread_t *current);
 static int32_t parse_arg(int8_t *cmd, int8_t *argv[]);
 static void switch_to_user(thread_t *curr);
@@ -87,6 +86,19 @@ void init_task(void) {
 }
 
 
+
+/**
+ * @brief switch process from prev to next
+ * 
+ * @param prev : process switch from
+ * @param next : process switch to
+ */
+void inline context_switch(thread_t *prev, thread_t *next) {
+    __umap(prev, next);
+    update_tss(next);
+    swtch(prev, next);
+}
+
 /**
  * @brief clone a new process from the current one
  * 
@@ -104,7 +116,6 @@ void init_task(void) {
  */
 int32_t do_fork(thread_t *parent, uint8_t kthread) {
     thread_t *child;
-    uint32_t *eip;
     int32_t errno;
 
     /* create child process */
@@ -122,38 +133,9 @@ int32_t do_fork(thread_t *parent, uint8_t kthread) {
     /* set up sched info for child */
     // sched_fork(child); 
 
-    /* save child hardware context */
-    save_context(child->context);
+    ntask++;  
 
-    /* child return 0 */
-    child->context->eax = 0;
-
-    /* get shared eip in user space */
-    child->usreip = get_eip_user(parent);
-
-    /* shared user esp */
-    child->usresp = USER_STACK_ADDR;
-
-    ntask++;
-
-    eip = (uint32_t*)(&child->context->eip);
- 
-    /* set up child's return path */
-    asm volatile ("                             \n\
-                    movl  $child_ret, (%%eax)   \n\
-                    jmp   parent_ret            \n\
-                    child_ret:                  \n\
-                    pushl %%ecx                 \n\
-                    pushl %%edx                 \n\
-                    addl  $4, %%esp             \n\
-                    call  __umap                \n\
-                    call switch_to_user         \n\
-                    parent_ret:                 \n\
-                  "                               \
-                  : "=a" (eip)                    \
-                  : "c" (child), "d" (parent)     \
-                  : "cc", "memory"   
-    );      
+    child->context->eax = 0;    
 
     /* map to parent's address space */
     __umap(child, parent);
@@ -173,6 +155,8 @@ int32_t do_fork(thread_t *parent, uint8_t kthread) {
 static int32_t process_clone(thread_t *parent, thread_t *child) {
     int i;
     int32_t errno;
+    uint32_t *parent_stack;
+    uint32_t *child_stack;
     
     /* copy physical memory */
     if ((errno = vmcopy(&child->vm, &parent->vm)) < 0)
@@ -193,22 +177,25 @@ static int32_t process_clone(thread_t *parent, thread_t *child) {
     /* child will get real copied when it tries to open a file */
     child->fds = NULL;
 
+    parent_stack = (uint32_t*)(&((process_t*)parent)->stack);
+    child_stack = (uint32_t*)(&((process_t*)child)->stack);
+
+    /* copy CPU pre-pushed user context
+     * stack[2043] : user eip register
+     * stack[2044] : user code segment 
+     * stack[2045] : user eflags 
+     * stack[2046] : user esp
+     * stack[2047] : user data segment
+     * stack[2048] : hardware reserved
+     * stack[2049] : hardware reserved
+     */
+
+    for (i = 0; i < 5; ++i)
+        child_stack[STACK + i] = parent_stack[STACK + i];
+
     return 0;
 }
 
-
-/**
- * @brief get task's user eip by lookup kernel stack
- * (CPU pushed this value onto kernel stack when switching from user space to kernel space)
- * 
- * @param task : thread info
- * @return uint32_t : task's user eip
- */
-static uint32_t get_eip_user(thread_t *task) {
-    process_t *process = (process_t *)task;
-    uint32_t *stack = (uint32_t*)(&process->stack);
-    return stack[STACKEIP];
-} 
 
 
 /**
@@ -224,11 +211,8 @@ void do_exit(uint32_t status) {
     GETPRO(child);
 
     /* check if the current process is running a system thread and it is a shell */
-    if ((child->kthread) && (!strcmp(child->argv[0], SHELL))) {
-        user_mem_map(child);
+    if ((child->kthread) && (!strcmp(child->argv[0], SHELL)))
         switch_to_user(child);
-    }
-
 
     /* free the current task */
     parent = child->parent;
@@ -243,10 +227,18 @@ void do_exit(uint32_t status) {
     /* when wait syscall is implement, the parent will get the exit status */
     // sched_exit();
 
-    /* change parent return value to status */
-    parent->context->eax = status;
+    asm volatile ("                         \n\
+                    movl %%edx, %%ebp       \n\
+                    movl %%ebx, %%eax       \n\
+                    leave                   \n\
+                    ret                     \n\
+                  "
+                  :
+                  : "d"(parent->context->ebp), "b"(status)
+                  : "memory"
+    );    
 
-    context_switch(NULL, parent);
+
 }
 
 
@@ -271,26 +263,20 @@ int32_t do_execute(const int8_t *cmd) {
 
     child = parent->children[parent->n_children - 1];
 
-    if (!child->kthread) {
-        /* save the kernel stack of the current process */
-        save_context(parent->context);
-    }
-
     eip = (uint32_t*)(&parent->context->eip);
 
-    /* set up child's return path */
-    asm volatile ("                             \n\
-                    movl  $parent, (%%eax)      \n\
-                    pushl %%ecx                 \n\
-                    call switch_to_user         \n\
-                    parent:                     \n\
-                  "                               \
-                  : "=a" (eip)                    \
-                  : "c" (child), "d" (parent)     \
-                  : "cc", "memory"   
-    );      
+    
+    /* save the kernel stack of the current process */
+    asm volatile("movl %%ebp, %0"
+                :
+                : "m"(parent->context->ebp)             
+                : "memory" 
+    );
 
-    return parent->context->eax;
+    switch_to_user(child);
+
+    /* never reach here */
+    return 0;
 }
 
 
@@ -618,24 +604,6 @@ static void console_init(void) {
     switch_to_user(shell);
 }
 
-
-/**
- * @brief change process's context from one process to the other
- * 
- * @param from : switch from this process
- * @param to : jump to this process
- */
-void context_switch(thread_t *from, thread_t *to) {
-    context_t *c1, *c2;
-
-    if (from) 
-        c1 = from->context;
-    else 
-        c1 = NULL;
-    
-    c2 = to->context;
-    swtch(c1, c2);
-}
 
 
 /**

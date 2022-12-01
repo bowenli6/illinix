@@ -244,7 +244,7 @@ void sched_exit(void) {
 
     torun->state = RUNNING;
 
-    context_switch(NULL, torun);
+    // context_switch(NULL, torun);
 }
 
 

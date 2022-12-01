@@ -18,7 +18,8 @@
 #define NICE_NORMAL     5               /* nice value for default process */
 #define NTERMINAL       3               /* max number of terminals supported */
 #define MAXCHILDREN     100             /* default max number of children for a process */
-#define STACKEIP        2043            /* CPU pushs eip on stack at this offset */
+#define STACK           2043            /* CPU pushs user registers on stack starting at this offset */
+#define NCONTEXT        7               /* 7 CPU pre-pushed user info needed to be copied */
 
 #define task_of(ptr)  container_of(ptr, thread_t, sched_info)
 
@@ -27,14 +28,42 @@
 typedef enum { UNUSED, RUNNING, RUNNABLE, SLEEPING, EXITED, ZOMIBIE } pro_state;
 
 
-/* hardware context */
+#define swtch(prev, next)                             \
+do {                                                  \
+    asm volatile (" pushfl                          \n\t"   /* push eflags */               \
+                  " pushl %%ebp                     \n\t"   /* push ebp */                  \
+                  " movl  %%esp, %[prev_esp]        \n\t"   /* save esp to prev */          \
+                  " movl  %[next_esp], %%esp        \n\t"   /* restore esp from next */     \
+                  " movl  $1f, %[prev_eip]          \n\t"   /* save eip to prev */          \
+                  " pushl %[next_eip]               \n\t"   /* push eip from next */        \
+                  " pushl %[next_con]               \n\t"   /* push next's context */       \
+                  " pushl %[prev_con]               \n\t"   /* push prev's context */       \
+                  " jmp   __swtch                   \n\t"   /* jump to swtch (switch.S) */  \
+                  " 1:                              \n\t"   /* eip address for prev */      \
+                  " popl  %%ebp                     \n\t"   /* restore ebp */               \
+                  " popfl                           \n\t"   /* restore eflags */            \
+                                                             \
+                  /* output */                               \
+                  : [prev_esp] "=m"(prev->context->esp),     \
+                    [prev_eip] "=m"(prev->context->eip)      \
+                                                             \
+                  /* input */                                \
+                  : [next_esp] "m"(next->context->esp),      \
+                    [next_eip] "m"(next->context->eip),      \
+                    [prev_con] "m"(prev->context),           \
+                    [next_con] "m"(next->context)            \
+                                                             \
+                  : "memory"                                 \
+    );                                                       \
+} while (0)                                                  \
+
+
+
+/* hardware context (callee saved registers and part of segment registers) */
 typedef struct {
     uint32_t eax;
-    uint32_t ebx;
     uint32_t ecx;
     uint32_t edx;
-    uint32_t esi;
-    uint32_t edi;
     uint32_t ebp;
     uint32_t esp;
     uint32_t eip;
@@ -95,6 +124,7 @@ extern list_head *wait_queue;
 
 void swapper(void);
 void init_task(void);
+void inline context_switch(thread_t *prev, thread_t *next);
 
 void do_exit(uint32_t status);
 void do_halt(uint32_t status);
@@ -104,7 +134,6 @@ pid_t do_getpid(void);
 void *do_sbrk(uint32_t size);
 
 uint32_t get_esp0(thread_t *curr);
-void context_switch(thread_t *from, thread_t *to);
 int32_t file_init(int32_t fd, file_t *file, dentry_t *dentry, file_op *op, thread_t *curr);
 thread_t **children_create(void);
 
@@ -115,7 +144,7 @@ int32_t pro_loader(int8_t *fname, uint32_t *EIP, thread_t *curr);
 /* implemented in switch.S */
 
 void save_context(context_t *context);
-void swtch(context_t *from, context_t *to);
+void __swtch(context_t *from, context_t *to);
 
 /* implemented in access.c */
 

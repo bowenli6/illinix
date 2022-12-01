@@ -34,7 +34,7 @@ asmlinkage int32_t sys_exit(uint8_t status) {
  */
 asmlinkage int32_t sys_fork(void) {
     pid_t pid;
-    thread_t *current;
+    thread_t *current, *child;
 
     cli();
 
@@ -44,12 +44,30 @@ asmlinkage int32_t sys_fork(void) {
     /* get pid of child */
     pid = do_fork(current, 0);
 
+    /* get child thread */
+    child = current->children[current->n_children-1];
+
+    /* child return 0 */
+    child->context->eax = 0;
+
+    /* copy ebp from parent to child */
+    asm volatile("movl %%ebp, %0"
+                :
+                : "m"(child->context->ebp)       
+                : "memory" 
+    );
+
+    /* copy eip from parent to child */
+    child->context->eip = *(((uint32_t*)(child->context->ebp)) + 1);
+
+    /* copy esp from parent to child */
+    child->context->esp = (child->context->ebp) + 8;
+
     sti();
 
     /* check for preemption */
     // if (current->flag == NEED_RESCHED)
     //     schedule();
-
     return pid;
 }
 
