@@ -1,35 +1,35 @@
-# SRC_DIR = src
-# LIB_DIR = lib
-# ELF_DIR = elf
+SRC_DIR = src
+LIB_DIR = lib
+ELF_DIR = elf
 
-# CFLAGS += -g -Wall -nostdlib -ffreestanding -Iinclude
-# LDFLAGS += -g -nostdlib -ffreestanding
-# CC = gcc
+CFLAGS += -g -Wall -nostdlib -ffreestanding -Iinclude
+LDFLAGS += -g -nostdlib -ffreestanding
+CC = gcc
 
-# LIB = stdio.o stdlib.o string.o unistd.o syscall.o
+LIB = stdio.o stdlib.o string.o unistd.o syscall.o
 
-# ALL: 
+ALL: 
 
-# %.o: $(LIB_DIR)/%.c
-# 	$(CC) $(CFLAGS) -c -o $@ $<
+%.o: $(LIB_DIR)/%.c
+	$(CC) $(CFLAGS) -c -o $@ $<
 
-# %.o: $(LIB_DIR)/%.S
-# 	$(CC) $(CFLAGS) -c -o $@ $<
+%.o: $(LIB_DIR)/%.S
+	$(CC) $(CFLAGS) -c -o $@ $<
 
-# %.o: $(SRC_DIR)/%.c
-# 	$(CC) $(CFLAGS) -c -o $@ $<
+%.o: $(SRC_DIR)/%.c
+	$(CC) $(CFLAGS) -c -o $@ $<
 
-# %.exe: %.o stdio.o unistd.o syscall.o
-# 	$(CC) $(LDFLAGS) -o $@ $^
+%.exe: %.o stdio.o stdlib.o unistd.o string.o main.o 
+	$(CC) $(LDFLAGS) -o $@ $^
 
-# %: %.exe
-# 	./elfconvert $<
-# 	mv $<.converted bin/$@
+%: %.exe
+	./elfconvert $<
+	mv $<.converted bin/$@
 
-# clean::
-# 	rm -f *~ *.o
+clean::
+	rm -f *~ *.o
 
-# clear: clean
-# 	rm -f *.converted
-# 	rm -f *.exe
-# 	rm -f to_fsdir/*
+clear: clean
+	rm -f *.converted
+	rm -f *.exe
+	rm -f to_fsdir/*
