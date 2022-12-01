@@ -1,5 +1,4 @@
-#include "../include/string.h"
-#include "../include/stdlib.h"
+#include <stdlib.h>
 
 
 #define START 5     // 5 is the first size of base 2 allocation can be made.
@@ -32,6 +31,7 @@ static void clear_flag(void *ptr);
 static int check_flag(void *ptr);
 static void set_up_free_list();
 static void *allocate(size_t size);
+static void transferring_data(void *src, void *dst, size_t size);
 
 
 

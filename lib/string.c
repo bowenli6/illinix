@@ -9,10 +9,8 @@
  */
 
 
-#include "../include/string.h"
-#include "../include/stdio.h"
-#include "../include/stdlib.h"
-
+#include <string.h>
+#include <stdlib.h>
 
 
 /**
@@ -255,6 +253,7 @@ char *strdup(const char *s) {
     size_t size = strlen(s);
     char *d = malloc(size + 1);
     return strcpy(d, s);
+    return NULL;
 }
 
 

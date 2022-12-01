@@ -1,7 +1,7 @@
 #ifndef _STDLIB_H_
 #define	_STDLIB_H_
 
-#include "types.h"
+#include <type.h>
 
 void *malloc(size_t size);
 void *calloc(size_t nmemb, size_t size);

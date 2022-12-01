@@ -431,7 +431,6 @@ static int32_t process_create(thread_t *current, uint8_t kthread) {
     pid_t pid;
     process_t *p;
     thread_t *t;
-    thread_t **children;
 
     if ((pid = alloc_pid()) < 0) 
         return NULL;
