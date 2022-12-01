@@ -18,14 +18,10 @@ static void bufcpy(void *dest, const void *src, uint32_t nbytes, uint8_t bufhd);
 static int isletter(uint32_t scancode);
 
 /**
- * @brief create and initialize the terminal.
+ * @brief Initialize the terminal.
  * 
  */
-terminal_t *terminal_create(pid_t pid) {
-    /* create a new terminal */
-    //TODO with kmalloc
-
-    /* init terminal state */
+static void terminal_init() {
     terminal.capslock = 0;              /* CapsLock is not pressed. */
     terminal.shift = 0;                 /* Shift is not pressed. */
     terminal.ctrl = 0;                  /* Ctrl is not pressed. */
@@ -37,15 +33,6 @@ terminal_t *terminal_create(pid_t pid) {
     memset((void*)terminal.buffer, 0, TERBUF_SIZE);
 }
 
-
-/**
- * @brief free the terminal.
- * 
- */
-void terminal_free(terminal_t *terminal) {
-    /* free the terminal */
-    
-}
 
 
 /**
@@ -206,6 +193,7 @@ static void backspace() {
  * @return int32_t : 0.
  */
 int32_t terminal_open(const int8_t *fname) {
+    terminal_init();
     return 0;
 }
 

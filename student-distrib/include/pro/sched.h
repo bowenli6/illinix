@@ -4,9 +4,9 @@
 
 #include <types.h>
 
-void sched_init(void);
-int32_t schedule(void);
-void pause(void);
+int32_t schedule();
+void pause();
+
 
 
 #endif /* _SCHED_H_ */

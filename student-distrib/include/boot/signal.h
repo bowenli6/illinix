@@ -22,20 +22,8 @@
 #define ACT_CONTINUE    5
 #define ACT_CATCH       6
 
-#define get_sig
-        
-typedef int32_t (*default_action)(void);
 
-typedef struct signal {
-    int8_t          pending_sig_count;
-    int8_t          curr_sig;                                    /* signal index the thread is using; -1 means we are not using any */
-    int8_t          mask_arr[SIG_COUNT];                         /* 0 means not mask, 1 means mask */
-    int8_t          previous_mask_arr[SIG_COUNT];                /* previous mask, we need to store them before */
-    int8_t          pen_arr[SIG_COUNT];                          /* 0 means not pending, 1 means pending */
-    default_action  exe_sig_act[SIG_COUNT];                    /* use signal as index, and corrosponding value indicates the handler */
-} signal_struct_t;  
-
-typedef struct hardware_context{
+typedef struct hardware_context_t{
     int32_t EBX;
     int32_t ECX;
     int32_t EDX;
@@ -55,14 +43,25 @@ typedef struct hardware_context{
     int16_t SS;    
 } hardware_context_t;
 
+typedef int32_t (*default_action)(void);
+
+typedef struct signal_struct_t {
+    int8_t          pending_sig_count;
+    int8_t          curr_sig;                                    /* signal index the thread is using; -1 means we are not using any */
+    int8_t          mask_arr[SIG_COUNT];                         /* 0 means not mask, 1 means mask */
+    int8_t          previous_mask_arr[SIG_COUNT];                /* previous mask, we need to store them before */
+    int8_t          pen_arr[SIG_COUNT];                          /* 0 means not pending, 1 means pending */
+    default_action  exe_sig_act[SIG_COUNT];                    /* use signal as index, and corrosponding value indicates the handler */
+} signal_struct_t;  
+        
+
 default_action default_arr[SIG_COUNT];
 
-extern int32_t sig_init();
-
-extern int32_t thread_sig_init(thread_t* thread);
-
-extern int32_t send_signal(thread_t* thread, int8_t signum);
+int32_t sig_init();
 
 asmlinkage extern int32_t deliver_signal();
 
+
+
 #endif 
+

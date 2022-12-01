@@ -4,15 +4,19 @@
 #include <pro/pid.h>
 #include <pro/sched.h>
 #include <lib.h>
+#include <pro/process.h>
 
 static int32_t add_mask(int signum);
 static int32_t remove_mask(int signum);
 static int32_t div_zero_handler();
 static int32_t segfault_handler();
 static int32_t interrupt_handler();
-static int32_t alarm_handler(); 
+static int32_t alarm_handler();     
 static int32_t user1_handler();
 
+int32_t thread_sig_init(process_t *thread);
+
+int32_t send_signal(process_t *thread, int8_t signum);
 
 /** 
  * @brief occurs when Kernel ----> Usr 
@@ -76,7 +80,7 @@ asmlinkage int32_t sys_set_handler(int32_t signum, void *handler_addr) {
     int flags;
     cli_and_save(flags);
     if (handler_addr != NULL) {
-        CURRENT->sig->exe_sig_act[signum] = (default_action*) handler_addr;
+        CURRENT->sig->exe_sig_act[signum] = (default_action) handler_addr;
     } else {
         CURRENT->sig->exe_sig_act[signum] = default_arr[signum];
     }
@@ -124,7 +128,7 @@ int32_t remove_mask(int signum) {
  * 
  * 
 */
-int32_t send_signal(thread_t* thread, int8_t signum) {
+int32_t send_signal(process_t *thread, int8_t signum) {
     if (thread == NULL) return -1;
 
     if (signum >= SIG_COUNT || signum < 0) return -1;
@@ -190,7 +194,7 @@ int32_t sig_init(){
  * 
  * 
 */
-int32_t thread_sig_init(thread_t* thread) {
+int32_t thread_sig_init(process_t *thread) {
     int i;
 
     if (thread == NULL) return -1;
@@ -202,7 +206,7 @@ int32_t thread_sig_init(thread_t* thread) {
         thread->sig->mask_arr[i] = 0;
         thread->sig->pen_arr[i] = 0;
         thread->sig->previous_mask_arr[i] = 0;
-        thread->sig->exe_sig_act[i] = (default_action*)NULL;
+        thread->sig->exe_sig_act[i] = (default_action)NULL;
     }
 
     return 0;

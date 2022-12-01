@@ -2,7 +2,11 @@
 
 .text
 
-.global do_deliver do_syssig_return
+.global do_deliver 
+.global do_syssig_return
+kernel_hw_context_ptr: .long 0
+user_hw_context_ptr: .long 0
+
 
 linkage_for_sigreturn:
     movl    $10, %eax          # value for sys_sigreturn is 10
@@ -77,3 +81,39 @@ do_deliver:
     ret 
 
 do_syssig_return:
+
+      movl 64(%esp), %edi
+      addl $4, %edi
+      movl %esp, %esi
+      addl $4, %esi
+
+      movl %esi, kernel_hw_context_ptr
+      movl %edi, user_hw_context_ptr
+
+
+      xorl %ebx, %ebx
+
+copy_loop:
+
+      movl  (%edi,%ebx,4), %ecx
+      movl  %ecx, (%esi,%ebx,4)
+      addl  $1,  %ebx
+      cmpl  $17, %ebx
+      jne   copy_loop
+
+
+      pushl %edx
+      pushl %ecx
+      pushl %eax
+
+      call restore_signal
+
+      popl  %eax
+      popl  %ecx
+      popl  %edx
+
+      movl kernel_hw_context_ptr, %esi
+
+      movl 24(%esi), %eax
+
+      ret
