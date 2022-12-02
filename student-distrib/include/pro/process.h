@@ -19,7 +19,7 @@
 #define NTERMINAL       3               /* max number of terminals supported */
 #define MAXCHILDREN     100             /* default max number of children for a process */
 #define STACK           2043            /* CPU pushs user registers on stack starting at this offset */
-#define NCONTEXT        5               /* 5 CPU pre-pushed user info needed to be copied */
+#define NCONTEXT        5               /* CPU pre-pushed user info needed to be copied */
 
 #define task_of(ptr)  container_of(ptr, thread_t, sched_info)
 
@@ -117,6 +117,7 @@ typedef struct thread {
 /* array of terminals for each shells */
 typedef struct {
     terminal_t **terminals;
+    thread_t **kshells;
     int32_t    size;
 } console_t;
 

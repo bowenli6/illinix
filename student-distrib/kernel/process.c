@@ -72,6 +72,7 @@ void swapper(void) {
  */
 void init_task(void) {
     thread_t *curr;
+
     /* only execute once during system boot */
     ntask = 0;
     pidmap_init();
@@ -79,7 +80,7 @@ void init_task(void) {
     
     GETPRO(curr);
 
-    /* kernel shell can also be here when they first created */
+    /* kernel shells can also be here when they first created */
     if (curr != init)
         switch_to_user(curr);
 
@@ -273,6 +274,8 @@ int32_t do_execute(const int8_t *cmd) {
 
     child = parent->children[parent->n_children - 1];
 
+    /* set up sched info */
+    // sched_fork(child);
 
     eip = (uint32_t*)(&parent->context->eip);
 
@@ -351,9 +354,6 @@ static int32_t __exec(thread_t *parent, const int8_t *cmd, uint8_t kthread) {
     else
         child->nice = NICE_NORMAL;
     
-
-    /* set up sched info */
-    // sched_fork(*new);
 
     // TODO
 
@@ -475,7 +475,8 @@ static int32_t process_create(thread_t *current, uint8_t kthread) {
     if (kthread) {
         /* create a new terminal for this kthread */
         t->terminal = terminal_create();
-        console->terminals[console->size++] = current->terminal;
+        console->terminals[console->size++] = t->terminal;
+        console->kshells[console->size] = t;
     } else {
         /* get the terminal from its parent */
         t->terminal = current->terminal;
@@ -595,43 +596,28 @@ uint32_t get_esp0(thread_t *curr) {
  */
 static void console_init(void) {
     int i;
-    uint32_t ebp, eip;
-    thread_t **shells;
-    thread_t *first_shell;
+    thread_t *shell;
 
     /* create console */
     console = kmalloc(sizeof(console_t));    /* never be freed */
-    console->terminals = kmalloc(NTERMINAL * sizeof(terminal_t*));
+    console->terminals = kmalloc(NTERMINAL * sizeof(terminal_t *));
+    console->kshells = kmalloc(NTERMINAL * sizeof(thread_t *));
     console->size = 0;  
 
-    /* create init shells */
-    shells = kmalloc(NTERMINAL * sizeof(thread_t*));
-
-    asm volatile("movl %%ebp, %0"
-                :
-                : "m"(ebp)       
-                : "memory" 
-    );
-
-    eip = *(((uint32_t*)ebp) + 1);
-
+    /* create kernel shells */
     for (i = 0; i < NTERMINAL; ++i) {
         (void) __exec(init, SHELL, 1);
-        shells[i] = init->children[init->n_children - 1];
-        shells[i]->context->esp = get_esp0(shells[i]);
-        shells[i]->context->eip = eip;
     }
-    first_shell = shells[0];
 
-    kfree(shells);
+    shell = init->children[0];
 
     terminal_boot = 1;
 
     /* give the first shell vga memory */
-    first_shell->terminal->vidmem = video_mem;
+    shell->terminal->vidmem = video_mem;
 
     /* switch to the first shell */
-    switch_to_user(first_shell);
+    switch_to_user(shell);
 }
 
 
