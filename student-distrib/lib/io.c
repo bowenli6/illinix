@@ -24,7 +24,7 @@ void clear(void) {
     terminal_t *terminal;
 
     if (!terminal_boot) {
-        vga_clear();
+        vga_clear(video_mem);
         screen_x = 0;
         screen_y = 0;
         return;
@@ -33,7 +33,7 @@ void clear(void) {
     GETPRO(curr);
     terminal = curr->terminal;
     
-    vga_clear();
+    vga_clear(terminal->vidmem);
     terminal->screen_x = 0;
     terminal->screen_y = 0;
 }
@@ -189,32 +189,35 @@ void putc(uint8_t c) {
     thread_t *curr;
     terminal_t *terminal;
     int32_t x, y;
+    uint8_t *vidmem;
 
     if (!terminal_boot) {
         x = screen_x;
         y = screen_y;
+        vidmem = (uint8_t*)video_mem;
     } else {
         GETPRO(curr);
-        terminal  = curr->terminal;          
+        terminal = curr->terminal;          
         x = terminal->screen_x;
         y = terminal->screen_y;
+        vidmem = terminal->vidmem;
     }
 
     if(c == '\n' || c == '\r') {
         if (y + 1 == NUM_ROWS) 
-            vga_scrolling();
+            vga_scrolling(vidmem);
         else
            y++; 
         x = 0;
     } else {
-        vga_write(x, y, c);
+        vga_write(vidmem, x, y, c);
         x++;
         x %= NUM_COLS;
         if (x == 0) {
             if (y + 1 != NUM_ROWS)
                 y++;
             else
-                vga_scrolling();
+                vga_scrolling(vidmem);
         }
     }
     if (!terminal_boot) {
@@ -251,7 +254,7 @@ void back(terminal_t *terminal) {
     } else {
         terminal->screen_x--;
     }
-    vga_write(terminal->screen_x, terminal->screen_y, ' ');
+    vga_write(terminal->vidmem, terminal->screen_x, terminal->screen_y, ' ');
     vga_update_cursor(terminal->screen_x, terminal->screen_y);
 }
 

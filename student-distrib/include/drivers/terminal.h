@@ -4,6 +4,7 @@
 #include <drivers/keyboard.h>
 
 #define TERBUF_SIZE 128                 /* max buffer size */
+#define VIDMEM_SIZE 4096                /* video memory size */
 
 typedef struct {
     uint8_t capslock;                   /* 0 if capslock is not pressed, 1 otherwise. */
@@ -15,8 +16,10 @@ typedef struct {
     uint8_t size;                       /* The current size of the buffer. */
     uint8_t *buffer;                    /* Line buffer input. */
     uint8_t exit;                       /* A flag for stdin, 1 if \n is detected. */
-    uint8_t screen_x;
-    uint8_t screen_y;
+    uint8_t screen_x;                   /* cursor column index */
+    uint8_t screen_y;                   /* cursor row index */
+    uint8_t *vidmem;                    /* 4KB video memory for this terminal */ 
+    uint8_t *saved_vidmem;              /* saved video memory address for backing up */
 } terminal_t;
 
 extern int8_t terminal_boot;

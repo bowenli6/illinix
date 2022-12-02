@@ -89,8 +89,6 @@ extern const uint32_t sched_prio_to_wmult[40];
 
 
 void sched_init(void);
-void sched_exit(void);
-
 void task_tick(sched_t *curr);
 void schedule(void);
 void __schedule(void);

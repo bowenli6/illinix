@@ -29,6 +29,7 @@
 #include <pro/pid.h>
 #include <lib.h>
 #include <drivers/fs.h>
+#include <drivers/vga.h>
 #include <kmalloc.h>
 #include <access.h>
 #include <errno.h> 
@@ -48,12 +49,12 @@ static int32_t process_create(thread_t *current, uint8_t kthread);
 static int32_t process_clone(thread_t *parent, thread_t *child);
 static void process_free(thread_t *current);
 static int32_t parse_arg(int8_t *cmd, int8_t *argv[]);
-static void switch_to_user(thread_t *curr);
+static inline void switch_to_user(thread_t *curr);
 static void console_init(void);
-static void update_tss(thread_t *curr);
-static void __umap(thread_t *from, thread_t *to);
-static void place_children(thread_t *task);
-static void overflow_children(thread_t *task);
+static inline void update_tss(thread_t *curr);
+static inline void __umap(thread_t *from, thread_t *to);
+static inline void place_children(thread_t *task);
+static inline void overflow_children(thread_t *task);
 
 
 /**
@@ -70,10 +71,17 @@ void swapper(void) {
  * 
  */
 void init_task(void) {
+    thread_t *curr;
     /* only execute once during system boot */
+    ntask = 0;
     pidmap_init();
     console_init();
-    ntask = 0;
+    
+    GETPRO(curr);
+
+    /* kernel shell can also be here when they first created */
+    if (curr != init)
+        switch_to_user(curr);
 
     /* the real task of the init process
      * scheduled actively by process 0 */
@@ -187,8 +195,6 @@ static int32_t process_clone(thread_t *parent, thread_t *child) {
      * stack[2045] : user eflags 
      * stack[2046] : user esp
      * stack[2047] : user data segment
-     * stack[2048] : hardware reserved
-     * stack[2049] : hardware reserved
      */
 
     for (i = 0; i < NCONTEXT; ++i)
@@ -534,7 +540,7 @@ static void process_free(thread_t *current) {
  * (3) movl 0 to EAX because child always return 0
  * 
  */
-static void switch_to_user(thread_t *curr) {
+static inline void switch_to_user(thread_t *curr) {
     
     update_tss(curr);
 
@@ -565,7 +571,7 @@ static void switch_to_user(thread_t *curr) {
  * 
  * @param _pid : process id
  */
-static void update_tss(thread_t *curr) {
+static inline void update_tss(thread_t *curr) {
     tss.ss0 = KERNEL_DS;
     tss.esp0 = get_esp0(curr);
 }
@@ -588,23 +594,40 @@ uint32_t get_esp0(thread_t *curr) {
  * 
  */
 static void console_init(void) {
-    // int i;
-    thread_t *shell;
+    int i;
+    uint32_t ebp, eip;
+    thread_t **shells;
 
     /* create console */
     console = kmalloc(sizeof(console_t));    /* never be freed */
     console->terminals = kmalloc(NTERMINAL * sizeof(terminal_t*));
-    console->size = 0;
+    console->size = 0;  
 
-    /* test one shell */
-    (void) __exec(init, SHELL, 1);
+    /* create init shells */
+    shells = kmalloc(NTERMINAL * sizeof(thread_t*));
 
-    shell = init->children[init->n_children - 1];
+    asm volatile("movl %%ebp, %0"
+                :
+                : "m"(ebp)       
+                : "memory" 
+    );
 
+    eip = *(((uint32_t*)ebp) + 1);
+
+    for (i = 0; i < NTERMINAL; ++i) {
+        (void) __exec(init, SHELL, 1);
+        shells[i] = init->children[init->n_children - 1];
+        shells[i]->context->esp = get_esp0(shells[i]);
+        shells[i]->context->eip = eip;
+    }
+
+    kfree(shells);
     terminal_boot = 1;
+    /* give the first shell vga memory */
+    shells[0]->terminal->vidmem = video_mem;
 
-    /* switch to user mode (ring 3) */
-    switch_to_user(shell);
+    /* switch to the first shell */
+    switch_to_user(shells[0]);
 }
 
 
@@ -631,7 +654,7 @@ thread_t **children_create(void) {
  * @param from : source process
  * @param to : dest process
  */
-static void __umap(thread_t *from, thread_t *to) {
+static inline void __umap(thread_t *from, thread_t *to) {
     if (strcmp(from->argv[0], INIT))     /* only unmap if it's not the init process */
         user_mem_unmap(from);
     user_mem_map(to);
@@ -644,7 +667,7 @@ static void __umap(thread_t *from, thread_t *to) {
  * 
  * @param task : a thread
  */
-static void place_children(thread_t *task) {
+static inline void place_children(thread_t *task) {
     int i;
 
     for (i = 0; i < task->n_children; ++i) {
@@ -659,7 +682,7 @@ static void place_children(thread_t *task) {
  * 
  * @param task : a thread
  */
-static void overflow_children(thread_t *task) {
+static inline void overflow_children(thread_t *task) {
     thread_t **children; 
 
     if (task->n_children == task->max_children) {

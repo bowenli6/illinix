@@ -220,32 +220,6 @@ void sched_fork(thread_t *task) {
 }
 
 
-/**
- * @brief invoked when a thread is exited
- * 
- */
-void sched_exit(void) {
-    sched_t *next;
-    thread_t *torun;
-
-    /* get next sched entity */
-    next = pick_next_entity();
-
-    /* remove the picked task from the run queue */
-    __dequeue_entity(next);
-
-    rq->current = next;
-
-    next->exec_start = rq->clock;
-
-    next->prev_sum_exec_time = next->sum_exec_time;
-    
-    torun = task_of(next);
-
-    torun->state = RUNNING;
-
-    // context_switch(NULL, torun);
-}
 
 
 /**

@@ -39,8 +39,10 @@ terminal_t *terminal_create(void) {
     terminal->size = 0;                         /* No character yet. */
     terminal->exit = 0;                         /* \n is not read. */
     terminal->buffer = kmalloc(TERBUF_SIZE);    /* create buffer */
+    terminal->vidmem = kmalloc(VIDMEM_SIZE);    /* create video memory */
+    terminal->saved_vidmem = terminal->vidmem;  /* save back up video memory */
     memset((void*)terminal->buffer, 0, TERBUF_SIZE);
-
+    memset((void*)terminal->vidmem, 0, VIDMEM_SIZE);
     return terminal;
 }
 
