@@ -123,7 +123,7 @@ void page_init()
  * @return int32_t : positive or 0 denote success, negative values denote an error condition
  */
 int32_t do_vidmap(uint8_t **screen_start) {
-    if(((uint32_t)screen_start) < VIR_MEM_BEGIN || ((uint32_t)screen_start) > (VIR_MEM_BEGIN + PAGE_SIZE_4MB)) {
+    if(*(_walk((uint32_t)screen_start, 0, 0)) & PTE_US) {
         return -1;
     }
     *screen_start = (uint8_t*) (VIR_VID_MEM + VIDEO);
@@ -131,7 +131,31 @@ int32_t do_vidmap(uint8_t **screen_start) {
     return 0;
 }
 
+/**
+ * @brief Expand the current thread's heap size.
+ * 
+ * @param incrsize The size(# bytes) of the heap expansion requested by the user. 
+ */
+void do_mmap(int incrsize) {
+    thread_t* curr;
+    vm_area_t *heap;
+    
+    GETPRO(curr);
 
+    curr->vm.brk += (incrsize + PAGE_SIZE - 1) / PAGE_SIZE;
+
+    heap = curr->vm.map_list;
+
+    while(heap != 0) {
+        if(heap->vmflag & VM_HEAP) {
+            vmalloc(heap, incrsize, PTE_US | PTE_RW);
+            return;
+        }
+        heap = heap->next;
+    }
+
+    panic("Where is my heap??");
+}
 
 
 
@@ -274,29 +298,70 @@ freemap(uint32_t va, int size)
 }
 
 
-int 
-vmalloc(vmem_t* vm, int oldsize, int newsize, int flags)
+
+void process_vm_init(vmem_t* vm)
 {
-    uint32_t startva, endva, va, pa;
-    int i = 0, length;
+    vm_area_t *file = kmalloc(sizeof(vm_area_t));
+    vm_area_t *heap = kmalloc(sizeof(vm_area_t));
+    vm_area_t *stack = kmalloc(sizeof(vm_area_t));
+
+    vm->size = 0;
+    vm->file_length = 16;
+    vm->start_brk = vm->brk = 0x8800000;
+    vm->count = 0;
+
+    file->next = heap;
+    file->vmstart = PROGRAM_IMG_BEGIN;
+    file->vmend = PROGRAM_IMG_BEGIN + PAGE_SIZE * vm->file_length;
+    // file->vmstart = USER_MEM;
+    // file->vmend = USER_MEM + PAGE_SIZE_4MB;
+    file->vmflag = VM_READ | VM_WRITE | VM_EXEC;
+    
+    heap->vmstart = heap->vmend = vm->brk;
+    heap->vmflag = VM_READ | VM_WRITE | VM_HEAP;
+    heap->next = stack;
+
+    stack->vmend = 0xC000000;
+    stack->vmstart = stack->vmend - 16 * PAGE_SIZE;
+    stack->next = 0;
+    stack->vmflag = VM_READ | VM_WRITE | VM_STACK;
+
+    vm->map_list = file;
+    
+}
+
+
+int 
+vmalloc(vm_area_t* vm, int incrsize, int flags)
+{
+    uint32_t startva, va, pa;
+    int i = 0, length, incrlength;
     uint32_t* temp;
 
-    if(oldsize > newsize) 
+    if(incrsize < 0) 
         return -1;
+    if(incrsize == 0)
+        return 0;
 
-    length = (newsize + PAGE_SIZE - 1) / PAGE_SIZE;
-    if((temp = kmalloc(length * sizeof(uint32_t*))) == 0)
+    incrlength = (incrsize + PAGE_SIZE - 1) / PAGE_SIZE;
+
+    length = (vm->vmend - vm->vmstart) / PAGE_SIZE;
+
+    if((temp = kmalloc((length + incrlength) * sizeof(uint32_t*))) == 0)
         return -1;
-    if(oldsize) {
+    if(length) {
         memcpy(temp, vm->mmap, length * sizeof(uint32_t*));
         kfree(vm->mmap);
     }
     vm->mmap = temp;
+
+    startva = vm->vmend;
+    // startva = USER_MEM + ADDR_TO_PTE(oldsize) + PAGE_SIZE * ((oldsize % PAGE_SIZE) != 0);
+    // endva =  ADDR_TO_PTE(USER_MEM + newsize + PAGE_SIZE - 1);
     
-    startva = USER_MEM + ADDR_TO_PTE(oldsize) + PAGE_SIZE * ((oldsize % PAGE_SIZE) != 0);
-    endva =  ADDR_TO_PTE(USER_MEM + newsize + PAGE_SIZE - 1);
-    
-    for(va = startva; va < endva; va += PAGE_SIZE) {
+    vm->vmend = vm->vmend + ADDR_TO_PTE(incrsize + PAGE_SIZE - 1);
+
+    for(va = startva; va < vm->vmend; va += PAGE_SIZE) {
         if((pa = get_user_page(0)) == 0)
             return -1;
         if(mmap(va, pa, PAGE_SIZE, flags) == -1) 
@@ -304,71 +369,89 @@ vmalloc(vmem_t* vm, int oldsize, int newsize, int flags)
         vm->mmap[i] = PTE_PRESENT | flags | (ADDR_TO_PTE(pa));
         i++;
     }
-    
+
     flush_tlb();
     return 0;
 }
 
 
-int sbrk(int incr) 
-{
-    int i, incr_p = (incr + PAGE_SIZE - 1) / PAGE_SIZE;
-    uint32_t pa, va = HEAP_START; /*TODO: use process break*/
-
-    for(i = 0; i < incr_p; i++) {
-        if((pa = (uint32_t)get_user_page(0)) == 0)
-            return -1;
-        
-    }
-    return 0;
-}
 
 int vmcopy(vmem_t* dest, vmem_t* src) 
 {
     uint32_t i, length, pa, va;
     pte_t* pte;
-    char* cache;
+    char *cache, cachepa;
+    vm_area_t* srcarea, *destarea, *nextarea;
 
-    // if((cache = kmalloc(PAGE_SIZE)) == 0)
-    //     return -1;
-    cache = (char*)get_user_page(0);
-    mmap(0x7F00000, (uint32_t)cache, PAGE_SIZE, PTE_US | PTE_RW);
+    cachepa = get_user_page(0);
+    cache = (char*) 0x7F00000;
+    mmap((uint32_t)cache, cachepa, PAGE_SIZE, PTE_US | PTE_RW);
 
     dest->size = src->size;
+    dest->start_brk = src->start_brk;
+    dest->file_length = src->file_length;
     dest->brk = src->brk;
-    dest->mmap = kmalloc(sizeof(uint32_t*) * (dest->size / PAGE_SIZE));
+    //dest->count = ++src->count;
 
-    length = (src->size + PAGE_SIZE - 1) / PAGE_SIZE;
-    for(i = 0; i < length; i++) {
-        if((pte = _walk(ADDR_TO_4MB(USER_MEM) + ((i % ENTRY_NUM) << VA_OFFSET), 0, 0)) == 0) {
-            //kfree(cache);
-            panic("walk error");
-        }
-        if((*pte & PTE_PRESENT) == 0) {
-            //kfree(cache);
-            panic("src not present");
-        }
-        if((pa = get_user_page(0)) == 0) {
-            //kfree(cache);
-            panic("get user page failed");
-        }
-        
-        va = USER_MEM + i * PAGE_SIZE;
-        memcpy((char*)0x7F00000, (char*)va, PAGE_SIZE);
+    srcarea = src->map_list;
 
-        freemap(va, PAGE_SIZE);
-        if(mmap(va, pa, PAGE_SIZE, GETBIT_12(src->mmap[i])) == -1) {
-            free_user_page(pa, 0);
-            //kfree(cache);
-            return -1;
-        }
-        dest->mmap[i] = PTE_PRESENT | GETBIT_12(src->mmap[i]) | (ADDR_TO_PTE(pa));
-        memcpy((char*)va, (char*)0x7F00000, PAGE_SIZE);
+    destarea = dest->map_list;
+    while(destarea != 0) {
+        nextarea = destarea->next;
+        kfree(destarea);
+        destarea = nextarea;
     }
 
-    freemap(0x7F00000, PAGE_SIZE);
-    //kfree(cache);
-    free_user_page((uint32_t)cache, 0);
+    destarea = kmalloc(sizeof(vm_area_t));
+    dest->map_list = destarea;
+
+    while(srcarea != 0) {
+        length = (srcarea->vmend - srcarea->vmstart) / PAGE_SIZE;
+
+        destarea->mmap = kmalloc(sizeof(uint32_t*) * length);
+        
+        destarea->vmstart = srcarea->vmstart;
+        destarea->vmend = srcarea->vmend;
+        destarea->vmflag = srcarea->vmflag;
+
+        i = 0;
+        for(va = srcarea->vmstart; va < srcarea->vmend; va += PAGE_SIZE) {
+            if((pte = _walk(va, 0, 0)) == 0) {
+                panic("vmcopy: walk error");
+            }
+            if((*pte & PTE_PRESENT) == 0) {
+                panic("vmcopy: src not present");
+            }
+            if((pa = get_user_page(0)) == 0) {
+                panic("vmcopy: get user page failed");
+            }
+            
+            memcpy(cache, (char*)va, PAGE_SIZE);
+
+            freemap(va, PAGE_SIZE);
+
+            if(mmap(va, pa, PAGE_SIZE, GETBIT_12(srcarea->mmap[i])) == -1) {
+                free_user_page(pa, 0);
+                panic("vmcopy: remap failed");
+            }
+            memcpy((char*)va, cache, PAGE_SIZE);
+
+            destarea->mmap[i] = PTE_PRESENT | GETBIT_12(srcarea->mmap[i]) | (ADDR_TO_PTE(pa));
+            i ++;
+        }
+
+        srcarea = srcarea->next;
+        if(srcarea != 0) {
+            nextarea = kmalloc(sizeof(vm_area_t));
+            destarea->next = nextarea;
+            destarea = nextarea;
+        }
+    }
+
+    destarea->next = 0;
+
+    freemap((uint32_t)cache, PAGE_SIZE);
+    free_user_page(cachepa, 0);
 
     return 0;
 }

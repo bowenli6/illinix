@@ -29,6 +29,12 @@
 #define PDE_MB 0x80
 #define PTE_GLO 0x100
 
+#define VM_EXEC 0x01
+#define VM_WRITE 0x02
+#define VM_READ 0x04
+#define VM_HEAP 0x08
+#define VM_STACK 0x010
+
 #define PTE_ADDR(x) ((x) >> 12)
 #define PDE_MB_ADDR(x) ((x) >> 22)
 
@@ -52,13 +58,14 @@ void page_init();
 void enable_paging();
 void flush_tlb();
 
-
+void do_mmap(int size);
 
 int mmap(uint32_t va, uint32_t pa, int size, int flags);
 int freemap(uint32_t va, int size);
 void free_uvmdir(int size);
 
-int vmalloc(vmem_t* vm, int oldsize, int newsize, int flags);
+void process_vm_init(vmem_t* vm);
+int vmalloc(vm_area_t* vm, int incrsize, int flags);
 int vmdealloc(vmem_t* vm, int oldsize, int newsize);
 int vmcopy(vmem_t* dest, vmem_t* src);
 

@@ -478,7 +478,7 @@ static int32_t process_create(thread_t *current, uint8_t kthread) {
     /* add child to task queue */
     list_add(&t->task_node, task_queue);
 
-    t->vm.size = 0;
+    process_vm_init(&t->vm);
 
     return 0;
 }

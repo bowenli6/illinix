@@ -73,10 +73,21 @@ typedef struct {
     uint16_t gs;
 } context_t;
 
+typedef struct vm_area {
+    uint32_t*           mmap;      
+    uint32_t            vmstart;
+    uint32_t            vmend;
+    uint32_t            vmflag;
+    struct vm_area      *next;
+} vm_area_t;
+
 typedef struct vmem {
-    uint32_t* mmap;
-    uint32_t size;
-    uint32_t brk;
+    struct vm_area      *map_list;
+    uint32_t            size;
+    uint32_t            file_length;
+    uint32_t            start_brk;
+    uint32_t            brk;
+    int                 count;
 } vmem_t;
 
 /* define a thread that run as a process */
