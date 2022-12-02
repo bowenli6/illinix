@@ -597,6 +597,7 @@ static void console_init(void) {
     int i;
     uint32_t ebp, eip;
     thread_t **shells;
+    thread_t *first_shell;
 
     /* create console */
     console = kmalloc(sizeof(console_t));    /* never be freed */
@@ -620,14 +621,17 @@ static void console_init(void) {
         shells[i]->context->esp = get_esp0(shells[i]);
         shells[i]->context->eip = eip;
     }
+    first_shell = shells[0];
 
     kfree(shells);
+
     terminal_boot = 1;
+
     /* give the first shell vga memory */
-    shells[0]->terminal->vidmem = video_mem;
+    first_shell->terminal->vidmem = video_mem;
 
     /* switch to the first shell */
-    switch_to_user(shells[0]);
+    switch_to_user(first_shell);
 }
 
 
