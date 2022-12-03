@@ -53,21 +53,13 @@ asmlinkage int32_t deliver_signal() {
             CURRENT->sig->previous_mask_arr[i] = 0;
         }   
     } else {
-        do_deliver(CURRENT->context, CURRENT->sig->exe_sig_act[sig_num], sig_num);
+        do_deliver((void*) &(CURRENT->esp), CURRENT->sig->exe_sig_act[sig_num], sig_num);
     }
 
     restore(flags);
     return 0;
 }
 
-/**
- * @brief set the sigreturn, using assmbly to set the stack 
- * @return return 0 indicates succeed, otherwise -1
-*/
-asmlinkage int32_t sys_sigreturn(void) {
-   do_syssig_return();
-   return 0;
-}
 
 /**
  * @brief syscall for set specific signal handler to the Current thread

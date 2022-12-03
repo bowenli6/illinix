@@ -60,7 +60,7 @@ default_action default_arr[SIG_COUNT];
 int32_t sig_init();
 
 asmlinkage extern int32_t deliver_signal();
-
+void do_deliver(void *reg, default_action func, int32_t num);
 
 
 #endif 
