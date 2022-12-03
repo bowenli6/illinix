@@ -76,7 +76,8 @@ typedef struct {
     uint32_t nr_running;    /* number of runnable tasks in the queue */
     uint64_t min_vruntime;  /* current min vruntime in the queue */
     uint32_t clock;         /* time clock in nanosecond */
-    rb_node *left_most;     /* current leftmost rb-tree node */
+    rb_root rb_tree;        /* root of the red-black tree*/
+    rb_node *left_most;     /* current leftmost red-black tree node */
     rb_node root;           /* root of the red-black tree */
     sched_t *current;       /* current running task's sched info (NULL when no process is running) */
 } cfs_rq;

@@ -22,8 +22,8 @@ static void __rb_rotate_left(rb_node *node, rb_root *root) {
 }
 
 static void __rb_rotate_right(rb_node *node, rb_root *root) {
-    struct rb_node *left = node->rb_left;
-    struct rb_node *parent = rb_parent(node);
+    rb_node *left = node->rb_left;
+    rb_node *parent = rb_parent(node);
 
     if ((node->rb_left = left->rb_right))
         rb_set_parent(left->rb_right, node);
@@ -102,7 +102,7 @@ void rb_insert_color(rb_node *node, rb_root *root) {
 }
 
 static void __rb_erase_color(rb_node *node, rb_node *parent, rb_root *root) {
-    struct rb_node *other;
+    rb_node *other;
 
     while ((!node || rb_is_black(node)) && node != root->rb_node){
         if (parent->rb_left == node) {
@@ -179,7 +179,7 @@ void rb_erase(rb_node *node, rb_root *root) {
     else if (!node->rb_right)
         child = node->rb_left;
     else {
-        struct rb_node *old = node, *left;
+        rb_node *old = node, *left;
 
         node = node->rb_right;
         while ((left = node->rb_left) != NULL)
@@ -232,4 +232,81 @@ void rb_erase(rb_node *node, rb_root *root) {
  color:
     if (color == RB_BLACK)
         __rb_erase_color(child, parent, root);
+}
+
+
+/*
+ * This function returns the first node (in sort order) of the tree.
+ */
+rb_node *rb_first(const rb_root *root) {
+    rb_node *n;
+
+    n = root->rb_node;
+    if (!n)
+        return NULL;
+    while (n->rb_left)
+        n = n->rb_left;
+    return n;
+}
+
+
+rb_node *rb_last(const rb_root *root) {
+    rb_node    *n;
+
+    n = root->rb_node;
+    if (!n)
+        return NULL;
+    while (n->rb_right)
+        n = n->rb_right;
+    return n;
+}
+
+rb_node *rb_next(const rb_node *node) {
+    rb_node *parent;
+
+    if (rb_parent(node) == node)
+        return NULL;
+
+    /* If we have a right-hand child, go down and then left as far
+       as we can. */
+    if (node->rb_right) {
+        node = node->rb_right; 
+        while (node->rb_left)
+            node=node->rb_left;
+        return (struct rb_node *)node;
+    }
+
+    /* No right-hand children.  Everything down and left is
+       smaller than us, so any 'next' node must be in the general
+       direction of our parent. Go up the tree; any time the
+       ancestor is a right-hand child of its parent, keep going
+       up. First time it's a left-hand child of its parent, said
+       parent is our 'next' node. */
+    while ((parent = rb_parent(node)) && node == parent->rb_right)
+        node = parent;
+
+    return parent;
+}
+
+rb_node *rb_prev(const rb_node *node) {
+    rb_node *parent;
+
+    if (rb_parent(node) == node)
+        return NULL;
+
+    /* If we have a left-hand child, go down and then right as far
+       as we can. */
+    if (node->rb_left) {
+        node = node->rb_left; 
+        while (node->rb_right)
+            node=node->rb_right;
+        return (struct rb_node *)node;
+    }
+
+    /* No left-hand children. Go up till we find an ancestor which
+       is a right-hand child of its parent */
+    while ((parent = rb_parent(node)) && node == parent->rb_left)
+        node = parent;
+
+    return parent;
 }

@@ -342,6 +342,10 @@ static int32_t __exec(thread_t *parent, const int8_t *cmd, uint8_t kthread) {
         return errno;
     }
 
+    /* unmap user space when creating kernel threads */
+    if (kthread)
+        user_mem_unmap(child);
+
     /* init file array */
     if ((errno = fd_init(child)) < 0) {
         process_free(child);
@@ -611,10 +615,14 @@ static void console_init(void) {
 
     shell = init->children[0];
 
-    terminal_boot = 1;
-
     /* give the first shell vga memory */
     shell->terminal->vidmem = video_mem;
+
+    /* map user space */
+    user_mem_map(shell);
+
+    /* console starts */
+    terminal_boot = 1;
 
     /* switch to the first shell */
     switch_to_user(shell);

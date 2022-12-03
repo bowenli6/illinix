@@ -4,19 +4,19 @@
 #include <types.h>
 #include <lib.h>
 
-struct rb_node {
+struct _rb_node {
     uint32_t rb_parent_color;               /* store both the address of the parent and the color of the node */
-    struct rb_node *rb_right;               /* right child */
-    struct rb_node *rb_left;                /* left child */
+    struct _rb_node *rb_right;               /* right child */
+    struct _rb_node *rb_left;                /* left child */
 } __attribute__ ((aligned(sizeof(long))));  /* 32-bit aligned so that bit 0 and 1 are always 0 */
 
 
-struct rb_root {
-    struct rb_node *rb_node;
-}
+struct _rb_root {
+    struct _rb_node *rb_node;
+};
 
-typedef struct rb_node rb_node;
-typedef struct rb_root rb_root;
+typedef struct _rb_node rb_node;
+typedef struct _rb_root rb_root;
 
 
 #define RB_BLACK 1
@@ -60,7 +60,7 @@ static inline void rb_set_color(rb_node *node, int color) {
 
 
 
-static inline void rb_init_node(struct rb_node *rb) {
+static inline void rb_init_node(rb_node *rb) {
     rb->rb_parent_color = 0;
     rb->rb_right = NULL;
     rb->rb_left = NULL;
@@ -72,7 +72,7 @@ static inline void rb_link_node(rb_node *node, rb_node *parent, rb_node **link) 
     node->rb_parent_color = (uint32_t)parent;
 
     /* new node does not have children */
-    node->left = node->right = NULL;
+    node->rb_left = node->rb_right = NULL;
 
     /* assign node to link */
     *link = node;
@@ -90,5 +90,10 @@ void rb_insert_color(rb_node *node, rb_root *root);
 /* remove */
 void rb_erase_color(rb_node *node, rb_root *root);
 
+/* get node */
+rb_node *rb_first(const rb_root *root);
+rb_node *rb_last(const rb_root *root);
+rb_node *rb_next(const rb_node *node);
+rb_node *rb_prev(const rb_node *node);
 
 #endif /* _RBTREE_H_ */

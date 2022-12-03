@@ -108,6 +108,7 @@ static void __dequeue_entity(sched_t *s);
 static void enqueue_task(thread_t *new, int8_t wakeup);
 static void enqueue_entity(sched_t *s, int8_t wakeup);
 static void __enqueue_entity(sched_t *s);
+static uint64_t sched_key(sched_t *s);
 static int32_t check_preempt_new(sched_t *curr, sched_t *new);
 static int32_t check_preempt_tick(sched_t *curr);
 static void update_curr(void);
@@ -299,28 +300,6 @@ void schedule(void) {
 
 
 
-void __schedule(void) {
-    uint32_t flags;
-    thread_t *curr;
-
-     /* avoid preemption */
-    cli_and_save(flags);
-
-    /* get current thread */
-    GETPRO(curr);
-
-    if (curr->state == RUNNING) 
-        curr->state = RUNNABLE;
-
-    curr->children[0]->state = RUNNING;
-
-    context_switch(curr, curr->children[0]);
-}
-
-
-
-
-
 /**
  * @brief pick the task with the smallest vruntime
  * 
@@ -429,8 +408,18 @@ static void dequeue_entity(sched_t *prev, int8_t sleep) {
  * @param s : sched info to remove
  */
 static void __dequeue_entity(sched_t *s) {
-    
-    // rb_remove(s->node);
+    /* s is the left most node */
+    if (rq->left_most == &s->node) {
+        
+        /* get the second left most */
+        rb_node *next = rb_next(&s->node);
+
+        /* update new left most */
+        rq->left_most = next;
+    }
+
+    /* remove from red-black tree */
+    rb_erase_color(&s->node, &rq->rb_tree);
 }
 
 
@@ -485,7 +474,45 @@ static void enqueue_entity(sched_t *s, int8_t wakeup) {
  * @param s : sched info to add
  */
 static void __enqueue_entity(sched_t *s) {
-    // rb_add(&s->node, s->vruntime - rq->min_vruntime);
+    rb_node **link = &rq->rb_tree.rb_node;
+    rb_node *parent = NULL;
+    sched_t *entry;
+    uint64_t key = sched_key(s);
+    int left_most = 1;
+
+    /* find the right place in the rb_tree */
+    while (!link) {
+        parent = *link;
+        entry = sched_of(parent);
+        
+        /* node with the same key stay together */
+        if (key < entry) {
+            link = &parent->rb_left;
+        } else {
+            link = &parent->rb_right;
+            left_most = 0;
+        }
+    }
+
+    /* maintain a cache of leftmost tree entries which is frequently used */
+    if (left_most) /* this node is now the left_most one */
+        rq->left_most = &s->node;
+
+    /* insert new node, rebalance, and coloring the red-black tree */
+    rb_link_node(&s->node, parent, link);
+    rb_insert_color(&s->node, &rq->rb_tree);
+}
+
+
+
+/**
+ * @brief get the key of this sched entity use to insert into the runqueue
+ * 
+ * @param s : sched info
+ * @return uint64_t : key
+ */
+static uint64_t sched_key(sched_t *s) {
+    return s->vruntime - rq->min_vruntime;
 }
 
 

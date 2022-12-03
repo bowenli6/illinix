@@ -42,8 +42,8 @@ void user_mem_map(thread_t* t) {
             area = area->next;
         }
         
-        if(rtn == 0) printf(">>>>>map process pid = %d succeed!\n", t->pid);
-        else printf(">>>>>map process pid = %d FAILED, vmalloc error\n", t->pid);
+        // if(rtn == 0) printf(">>>>>map process pid = %d succeed!\n", t->pid);
+        // else printf(">>>>>map process pid = %d FAILED, vmalloc error\n", t->pid);
     }
     else {
         area = t->vm.map_list;
@@ -52,8 +52,8 @@ void user_mem_map(thread_t* t) {
             area = area->next;
         }
         
-        if(rtn == 0) printf(">>>>>map process pid = %d succeed!\n", t->pid);
-        else printf(">>>>>map process pid = %d FAILED, mapping has existed\n", t->pid);
+        // if(rtn == 0) printf(">>>>>map process pid = %d succeed!\n", t->pid);
+        // else printf(">>>>>map process pid = %d FAILED, mapping has existed\n", t->pid);
     }
     flush_tlb();
     
@@ -87,8 +87,8 @@ void user_mem_unmap(thread_t* t) {
     
     flush_tlb();
 
-    if(rtn == 0) printf("<<<<<unmap process pid = %d succeed!\n", t->pid);
-    else printf("<<<<<unmap process pid = %d FAILED!\n", t->pid);
+    // if(rtn == 0) printf("<<<<<unmap process pid = %d succeed!\n", t->pid);
+    // else printf("<<<<<unmap process pid = %d FAILED!\n", t->pid);
 }
 
 /**
