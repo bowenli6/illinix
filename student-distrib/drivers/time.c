@@ -50,21 +50,15 @@ void do_timer(void) {
 
     GETPRO(current);
 
-    if (current->n_children && strcmp(current->argv[0], SHELL)) {
-        context_switch(current, current->children[current->n_children-1]);
-    }
-
 
     /* update vruntime of current task and reschedule when needed */
-    // task_tick(&current->sched_info);
+    task_tick(current);
 
-    // if (current->flag == NEED_RESCHED) {
-    //     restore_flags(intr_flag);
-    //     schedule();
-    //     return;
-    // }
-
-    // __schedule();
+    if (current->flag == NEED_RESCHED) {
+        restore_flags(intr_flag);
+        schedule();
+        return;
+    }
 
     /* critical section ends. */
     restore_flags(intr_flag);

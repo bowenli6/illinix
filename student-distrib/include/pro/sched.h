@@ -78,7 +78,6 @@ typedef struct {
     uint32_t clock;         /* time clock in nanosecond */
     rb_root rb_tree;        /* root of the red-black tree*/
     rb_node *left_most;     /* current leftmost red-black tree node */
-    rb_node root;           /* root of the red-black tree */
     sched_t *current;       /* current running task's sched info (NULL when no process is running) */
 } cfs_rq;
 
@@ -90,9 +89,7 @@ extern const uint32_t sched_prio_to_wmult[40];
 
 
 void sched_init(void);
-void task_tick(sched_t *curr);
 void schedule(void);
-void __schedule(void);
 void pause(void);
 
 

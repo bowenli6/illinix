@@ -14,6 +14,7 @@ int main(void) {
     if (pid) {
         /* parent process running */
         ece391_fdputs(1, (uint8_t*)"Hello from parent!\n");
+        while(1);
     } else {
         /* child process running */
         ece391_fdputs(1, (uint8_t*)"Hello from child!\n");

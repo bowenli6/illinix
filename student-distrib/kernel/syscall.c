@@ -66,8 +66,8 @@ asmlinkage int32_t sys_fork(void) {
     sti();
 
     /* check for preemption */
-    // if (current->flag == NEED_RESCHED)
-    //     schedule();
+    if (current->flag == NEED_RESCHED)
+        schedule();
     return pid;
 }
 

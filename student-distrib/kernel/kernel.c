@@ -175,6 +175,9 @@ void entry(unsigned long magic, unsigned long addr) {
     pit_init();                     /* Initialize the PIT driver */
     vga_init();                     /* Initialize the VGA driver */
 
+
+    clear();
+    
     /* Process management Unit */
     sched_init();
 
@@ -185,9 +188,6 @@ void entry(unsigned long magic, unsigned long addr) {
    //launch_tests();
     
 #endif
-    clear();
-    
-    init_task();
 
     swapper();  /* process 0 starts schedule tasks for users */
 }

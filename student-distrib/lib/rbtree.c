@@ -273,7 +273,7 @@ rb_node *rb_next(const rb_node *node) {
         node = node->rb_right; 
         while (node->rb_left)
             node=node->rb_left;
-        return (struct rb_node *)node;
+        return (rb_node *)node;
     }
 
     /* No right-hand children.  Everything down and left is
@@ -300,7 +300,7 @@ rb_node *rb_prev(const rb_node *node) {
         node = node->rb_left; 
         while (node->rb_right)
             node=node->rb_right;
-        return (struct rb_node *)node;
+        return (rb_node *)node;
     }
 
     /* No left-hand children. Go up till we find an ancestor which

@@ -71,18 +71,10 @@ void swapper(void) {
  * 
  */
 void init_task(void) {
-    thread_t *curr;
-
     /* only execute once during system boot */
     ntask = 0;
     pidmap_init();
     console_init();
-    
-    GETPRO(curr);
-
-    /* kernel shells can also be here when they first created */
-    if (curr != init)
-        switch_to_user(curr);
 
     /* the real task of the init process
      * scheduled actively by process 0 */
@@ -92,7 +84,7 @@ void init_task(void) {
         // DO SOMETHING HERE IN THE FUTURE
 
         /* yield the CPU */
-        schedule();
+        __schedule(init);
     }
 }
 
@@ -142,7 +134,7 @@ int32_t do_fork(thread_t *parent, uint8_t kthread) {
     }
         
     /* set up sched info for child */
-    // sched_fork(child); 
+    sched_fork(child); 
 
     ntask++;  
 
@@ -230,26 +222,15 @@ void do_exit(uint32_t status) {
         /* leave its children to init */
         place_children(child);
     }
-
+    
     process_free(child);
 
     ntask--;
     
     /* when wait syscall is implement, the parent will get the exit status */
-    // sched_exit();
 
-    asm volatile ("                         \n\
-                    movl %%edx, %%ebp       \n\
-                    movl %%ebx, %%eax       \n\
-                    leave                   \n\
-                    ret                     \n\
-                  "
-                  :
-                  : "d"(parent->context->ebp), "b"(status)
-                  : "memory"
-    );    
-
-
+    /* yield the CPU for scheduler to pick next task to run */
+    __schedule(parent);
 }
 
 
@@ -275,7 +256,7 @@ int32_t do_execute(const int8_t *cmd) {
     child = parent->children[parent->n_children - 1];
 
     /* set up sched info */
-    // sched_fork(child);
+    sched_fork(child);
 
     eip = (uint32_t*)(&parent->context->eip);
 
@@ -618,13 +599,28 @@ static void console_init(void) {
     /* give the first shell vga memory */
     shell->terminal->vidmem = video_mem;
 
-    /* map user space */
+    sched_fork(shell);
+
+     /* save the kernel stack of the current process */
+    asm volatile("movl %%ebp, %0"
+                :
+                : "m"(init->context->ebp)             
+                : "memory" 
+    );
+
+    init->context->esp = (init->context->ebp) + 8;
+
+    init->context->eip = *(((uint32_t*)(init->context->ebp)) + 1);
+
+    rq->current = &shell->sched_info;
+
+    shell->sched_info.on_rq = 1;
+
     user_mem_map(shell);
 
     /* console starts */
     terminal_boot = 1;
-
-    /* switch to the first shell */
+    
     switch_to_user(shell);
 }
 

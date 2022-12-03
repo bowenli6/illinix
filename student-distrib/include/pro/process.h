@@ -12,6 +12,7 @@
 #define MAXARGS         10              /* max number of arguments */
 #define SHELL           "shell"         /* shell program */
 #define INIT            "init"          /* init program */
+#define IDLE            "idle"          /* idle program */
 #define TASKSTART       2               /* user tasks starts from 2 */
 #define NICE_INIT       10              /* nice value for init process */
 #define NICE_SHELL      0               /* nice value for shell process */
@@ -93,6 +94,7 @@ typedef struct vmem {
 /* define a thread that run as a process */
 typedef struct thread {
     list_head          task_node;       /* a list of all tasks  */
+    list_head          wait_node;       /* a list of all sleeping tasks */
     sched_t            sched_info;      /* info used for scheduler */
     volatile pro_state state;	        /* process state */
     volatile uint8_t   flag;            /* process flag */
@@ -174,8 +176,11 @@ int32_t file_init(int32_t fd, file_t *file, dentry_t *dentry, file_op *op, threa
 
 /* implemented in sched.c */
 
+void __schedule(thread_t *curr);
 void sched_fork(thread_t *task);
 void sched_sleep(thread_t *task);
 void sched_wakeup(thread_t *task);
+void activate_task(thread_t *task);
+void task_tick(thread_t *curr);
 
 #endif /* _PROCESS_H_ */

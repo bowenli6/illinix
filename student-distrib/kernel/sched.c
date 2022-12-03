@@ -123,8 +123,8 @@ static void place_entity(sched_t *s, int8_t new_task);
 static uint64_t vtimeslice(sched_t *s);
 static uint64_t timeslice(sched_t *s);
 static uint64_t sched_period(uint32_t nr_running);
-static inline void add_load(weight_t *load, uint32_t weight);
-static inline void sub_load(weight_t *load, uint32_t weight);
+static inline void add_load(weight_t *from, weight_t *to);
+static inline void sub_load(weight_t *from, weight_t *to);
 static inline int32_t nice_to_index(int32_t nice);
 
 
@@ -145,6 +145,10 @@ void sched_init(void) {
     idle->kthread = 1;
     idle->sched_info.load.weight = WEIGHT_IDLE;
     idle->sched_info.load.inv_weight = WMULT_IDLE;
+    idle->argc = 1;
+    idle->argv = kmalloc(sizeof(int8_t*));
+    idle->argv[0] = kmalloc(5);
+    strcpy(idle->argv[0], IDLE);
     idle->context = kmalloc(sizeof(context_t));
     
     /* set up process 1 */
@@ -179,11 +183,16 @@ void sched_init(void) {
     rq->nr_running = 0;
     rq->current = NULL;
     rq->left_most = NULL;
-    
-    // rq->root = ?
+    rq->rb_tree.rb_node = NULL;
+    rq->min_vruntime = 0;
 
     /* add init process to the run queue */
-    // sched_fork(init);
+    sched_fork(init);
+    activate_task(init);
+
+    rq->current = &init->sched_info;
+    
+    init_task();
 }
 
 
@@ -212,15 +221,19 @@ void sched_fork(thread_t *task) {
 
     /* new task become runnable */
     task->state = RUNNABLE;
-
-    /* enqueue task to runqueue */
-    enqueue_task(task, 0);
-
-    /* check if reschedling is needed */
-    if (check_preempt_new(curr, new) == 1) task->flag = NEED_RESCHED;
 }
 
 
+void activate_task(thread_t *task) {
+    /* enqueue task to runqueue */
+    enqueue_task(task, 0);
+}
+
+
+void weakup_preempt(thread_t *task) {
+    /* check if reschedling is needed */
+    if (check_preempt_new(rq->current, &task->sched_info) == 1) task->flag = NEED_RESCHED;
+}
 
 
 /**
@@ -255,18 +268,34 @@ void sched_sleep(thread_t *task) {
  * (2). process wants to sleep, schedule()
  */
 void schedule(void) {
-    thread_t *curr, *next; 
-    sched_t *sched;
-    uint32_t flags;
-
-    /* avoid preemption */
-    cli_and_save(flags);
+    thread_t *curr; 
 
     /* get current thread */
     GETPRO(curr);
 
     /* clear NEED_RESCHED flag */
     curr->flag = 0;
+
+    __schedule(curr);
+}
+
+
+
+/**
+ * @brief schedule a runnable task
+ * 
+ * @param curr : current running process
+ * either yield the CPU or stopped by a
+ * timer interrput
+ * 
+ */
+void __schedule(thread_t *curr) {
+    sched_t *sched;
+    thread_t *next;
+    uint32_t flags;
+
+    /* avoid preemption */
+    cli_and_save(flags);
 
     /* get sched info of the current task */
     sched = &curr->sched_info;
@@ -289,12 +318,10 @@ void schedule(void) {
 
         next->state = RUNNING;
         rq->current = &next->sched_info;
-
         restore_flags(flags);
         context_switch(curr, next);
         return;
     }
-
     restore_flags(flags);
 }
 
@@ -310,8 +337,8 @@ static thread_t *pick_next_task(sched_t *curr) {
     sched_t *next;
 
     /* if no task can be scheduled */
-    if (!rq->nr_running)
-        return idle;
+    if (unlikely(!rq->nr_running))
+        swapper();  /* pause the CPU */
 
     /* store the current task back to the run queue only if curr is present */
     put_prev_task(curr);
@@ -396,7 +423,7 @@ static void dequeue_entity(sched_t *prev, int8_t sleep) {
     if (prev != rq->current)
         __dequeue_entity(prev);
     
-    sub_load(&rq->load, prev->load.weight);
+    sub_load(&prev->load, &rq->load);
     rq->nr_running--;
     prev->on_rq = 0;
 }
@@ -410,7 +437,7 @@ static void dequeue_entity(sched_t *prev, int8_t sleep) {
 static void __dequeue_entity(sched_t *s) {
     /* s is the left most node */
     if (rq->left_most == &s->node) {
-        
+
         /* get the second left most */
         rb_node *next = rb_next(&s->node);
 
@@ -419,7 +446,7 @@ static void __dequeue_entity(sched_t *s) {
     }
 
     /* remove from red-black tree */
-    rb_erase_color(&s->node, &rq->rb_tree);
+    rb_erase(&s->node, &rq->rb_tree);
 }
 
 
@@ -449,11 +476,11 @@ static void enqueue_task(thread_t *new, int8_t wakeup) {
  */
 static void enqueue_entity(sched_t *s, int8_t wakeup) {
     /* update sum of all runnable tasks' load weights */
-    add_load(&rq->load, s->load.weight);
+    add_load(&s->load, &rq->load);
 
     if (wakeup) {
         /* remove it from the wait_queue */
-        list_del(&(task_of(s)->task_node));
+        list_del(&(task_of(s)->wait_node));
 
         /* adjust vruntime */
         place_entity(s, 0);
@@ -486,7 +513,7 @@ static void __enqueue_entity(sched_t *s) {
         entry = sched_of(parent);
         
         /* node with the same key stay together */
-        if (key < entry) {
+        if (key < sched_key(entry)) {
             link = &parent->rb_left;
         } else {
             link = &parent->rb_right;
@@ -541,14 +568,16 @@ static int32_t check_preempt_new(sched_t *curr, sched_t *new) {
  * 
  * @param curr : current sched info
  */
-void task_tick(sched_t *curr) {
+void task_tick(thread_t *curr) {
+    sched_t *sched = &curr->sched_info;
+
     /* update vruntime of the current task */
     update_curr();
     
     /* only try to reschedule when there are more than 1 runnable task */
     if (rq->nr_running) {
-        if (check_preempt_tick(curr) == 1) {
-            task_of(curr)->flag = NEED_RESCHED;
+        if (check_preempt_tick(sched) == 1) {
+            curr->flag = NEED_RESCHED;
         }
     }
 }
@@ -681,6 +710,9 @@ static inline uint64_t calc_delta_vruntime(uint64_t delta, sched_t *s) {
  *          = (delta * NICE_0_LOAD * inv_weight) >> 32
  * inv_weight = (2 ** 32) / weight
  * 
+ * 
+ * (delta * weight * load->inv_weight) >> 32
+ * 
  * @param delta : amount of changes of the real runtime (nanosecond)
  * @param weight : weight offset
  * @param load : load weight of the thread
@@ -693,18 +725,19 @@ static uint64_t __calc_delta_vruntime(uint64_t delta, uint32_t weight, weight_t 
     if (unlikely(fact >> 32)) {
 		while (fact >> 32) {
 			fact >>= 1;
-			shift--;
+			shift--;    
 		}
 	}
 
     /* NICE_0_LOAD * inv_weight */
-    fact = (uint64_t)((uint32_t) fact * load->inv_weight);
+    fact = (uint64_t)(uint32_t)fact * load->inv_weight;
 
     while (fact >> 32) {
         fact >>= 1;
         shift--;
     }
     
+    /* delta * fact >> shift */
     return mul_u64_u32_shr(delta, fact, shift);
 }
 
@@ -824,7 +857,7 @@ static uint64_t timeslice(sched_t *s) {
 	if (unlikely(!s->on_rq)) {
         /* if (unlikely) s is not on the runqueue
          * use a new load to include s */
-        add_load(&load, s->load.weight);
+        add_load(&s->load, &load);
         rq_load = &load;
     }
 
@@ -833,6 +866,7 @@ static uint64_t timeslice(sched_t *s) {
      * the scheduling cycle time to get the time that the current scheduling 
      * entity should run. */
     return __calc_delta_vruntime(slice, s->load.weight, rq_load);
+
 }
 
 
@@ -861,9 +895,9 @@ static uint64_t sched_period(uint32_t nr_running) {
  * @param load : load weight
  * @param weight : offset
  */
-static inline void add_load(weight_t *load, uint32_t weight) {
-    load->weight += weight;
-    load->inv_weight += weight;
+static inline void add_load(weight_t *from, weight_t *to) {
+    to->weight += from->weight;
+    to->inv_weight += from->inv_weight;
 }
 
 
@@ -873,9 +907,9 @@ static inline void add_load(weight_t *load, uint32_t weight) {
  * @param load : load weight
  * @param weight : offset
  */
-static inline void sub_load(weight_t *load, uint32_t weight) {
-    load->weight -= weight;
-    load->inv_weight -= weight;
+static inline void sub_load(weight_t *from, weight_t *to) {
+    to->weight -= from->weight;
+    to->inv_weight -= from->inv_weight;
 }
 
 

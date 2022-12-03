@@ -88,7 +88,7 @@ static inline void rb_link_node(rb_node *node, rb_node *parent, rb_node **link) 
 void rb_insert_color(rb_node *node, rb_root *root);
 
 /* remove */
-void rb_erase_color(rb_node *node, rb_root *root);
+void rb_erase(rb_node *node, rb_root *root);
 
 /* get node */
 rb_node *rb_first(const rb_root *root);
