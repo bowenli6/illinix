@@ -19,7 +19,7 @@ int32_t thread_sig_init(process_t *thread);
 int32_t send_signal(process_t *thread, int8_t signum);
 
 /** 
- * @brief occurs when Kernel ----> Usr 
+ * @brief occurs when Kernel ----> Usr, deliver pending signal
  *   
  * @return return 0 indicates succeed, otherwise -1
 */
@@ -45,21 +45,28 @@ asmlinkage int32_t deliver_signal() {
 
     /* According to ULK P.441, if ka.sa.sa_handler is equal to ISG_DFL, we must perform default handler */
     if (CURRENT->sig->exe_sig_act[sig_num] == default_arr[sig_num]) {
-        default_arr[sig_num](); 
-
-        /*unmask and change previous_mask to the initial state */
-        for (i = 0; i < SIG_COUNT; ++ i) {
-            CURRENT->sig->mask_arr[i] = CURRENT->sig->previous_mask_arr[i];
-            CURRENT->sig->previous_mask_arr[i] = 0;
-        }   
+        default_arr[sig_num]();    
     } else {
         do_deliver((void*) &(CURRENT->esp), CURRENT->sig->exe_sig_act[sig_num], sig_num);
+    }
+
+    /*unmask and change previous_mask to the initial state */
+    for (i = 0; i < SIG_COUNT; ++ i) {
+        CURRENT->sig->mask_arr[i] = CURRENT->sig->previous_mask_arr[i];
+        CURRENT->sig->previous_mask_arr[i] = 0;
     }
 
     restore(flags);
     return 0;
 }
 
+/**
+ * @brief sys_sigreturn syscall, there will be a parameter telling the usr_esp register 
+ * 
+*/
+asmlinkage int32_t sys_sigreturn(void) {
+    do_sys_sigreturn((void*) &(CURRENT->esp));
+}
 
 /**
  * @brief syscall for set specific signal handler to the Current thread
@@ -203,3 +210,5 @@ int32_t thread_sig_init(process_t *thread) {
 
     return 0;
 }
+
+

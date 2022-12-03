@@ -19,23 +19,31 @@ handler:
     .long 0
 sig_num: 
     .long 0
-return_addr: 
+retcode: 
+    .long 0
+pretcode:
     .long 0
 
-
-# need to delete 
-kernel_hw_context_ptr: .long 0
-user_hw_context_ptr: .long 0
+usr_esp_addr:
+    .long 0
+ret_kernel_esp:
+    .long 0
+ret_kernel_ebp:
+    .long 0
+ret_usr_esp_addr:
+    .long
 
 .text
+
 .global do_deliver 
-.global sys_sigreturn
+.global do_sys_sigreturn
 
 linkage_for_sigreturn:
     movl    $10, %eax          # value for sys_sigreturn is 10
     int     $0x80
 
 # this part of code will setup the frame
+# do_deliver(void *reg, default_action func, int32_t num);
 do_deliver:
     pushl %ebp
     movl  %esp, %ebp
@@ -52,6 +60,7 @@ do_deliver:
     movl 8(%ebp), %ebx             # ebx = address of usr_esp in process_t
     movl 12(%ebp), handler
     movl 16(%ebp), sig_num 
+    movl %ebx, usr_esp_addr
 
     # save the user register  
     movl (%ebx), user_esp
@@ -59,20 +68,35 @@ do_deliver:
     movl 8(%ebx), user_eip  
 
     # change to user stack
-    movl %user_esp, %esp
-    movl %user_ebp, %ebp 
+    movl user_esp, %esp
+    movl user_ebp, %ebp 
+
+    # set up the return code
+    movl linkage_for_sigreturn, %edi
+    movl linkage_for_sigreturn + 3, %esi
+
+    subl $7, %esp
+    movl %edi, (%esp)
+    movl %esi, 3(%esp)
+
+    movl %esp, pretcode
+    subl $1, %esp 
 
     # put reg on user stack
+    pushl user_esp
     pushl user_ebp
     pushl user_eip 
-    pushl user_esp
+
 
     # put the sinal numer
     pushl sig_num
 
-    # put the eip of the linkage
-    movl linkage_for_sigreturn, %ebx
-    pushl %ebx
+    # put the preturn code for the linkage
+    pushl pretcode
+
+    # update the CURRETN->esp
+    movl usr_esp_addr, %ebx
+    movl %esp, (%ebx)
 
     # call the handler
     movl handler, %eip
@@ -89,40 +113,32 @@ do_deliver:
     leav 
     ret 
 
-sys_sigreturn:
 
-      movl 64(%esp), %edi
-      addl $4, %edi
-      movl %esp, %esi
-      addl $4, %esi
+# void *reg
+do_sys_sigreturn:
+      
+    pushl %ebp
+    movl  %esp, %ebp
+    pushl %edi
+    pushl %esi
+    pushl %ebx
 
-      movl %esi, kernel_hw_context_ptr
-      movl %edi, user_hw_context_ptr
+    # get usr edi = addr of CURRENT->ESP
+    movl 8(%ebp), %edi 
+    movl 8(%ebp), ret_usr_esp_addr
+    movl (%edi), %edi           # edi = CURRENT -> ESP
+    movl ret_usr_esp_addr, %esi
 
+    # change CURRENT->eip/esp/ebp
+    movl 8(%edi), %ebx
+    movl %ebx, 8(%esi)
+    movl 12(%edi), %ebx
+    movl %ebx, 4(%esi)
+    movl 16(%edi), %ebx
+    movl %ebx, 0(%esi)  
 
-      xorl %ebx, %ebx
-
-copy_loop:
-
-      movl  (%edi,%ebx,4), %ecx
-      movl  %ecx, (%esi,%ebx,4)
-      addl  $1,  %ebx
-      cmpl  $17, %ebx
-      jne   copy_loop
-
-
-      pushl %edx
-      pushl %ecx
-      pushl %eax
-
-      call restore_signal
-
-      popl  %eax
-      popl  %ecx
-      popl  %edx
-
-      movl kernel_hw_context_ptr, %esi
-
-      movl 24(%esi), %eax
-
-      ret
+    popl %ebx 
+    popl %esi
+    popl %edi
+    leav 
+    ret  
