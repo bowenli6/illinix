@@ -86,13 +86,18 @@ void sched_init(void) {
  * 
  */
 void sched_tick(void) {
+    uint32_t flag;
     thread_t *curq;
+
+    cli_and_save(flag);
 
     GETPRO(curq);
 
     list_add_tail(&curq->run_node, &rq->head);
     
     schedule();
+
+    restore_flags(flag);
 }
 
 
@@ -115,12 +120,15 @@ void sched_sleep(thread_t *task) {
 
 
 void sched_wakeup(thread_t *task) {
-    task->state = RUNNABLE;
+    uint32_t flag;
+    cli_and_save(flag);
 
+    task->state = RUNNABLE;
     /* add back to the front for better performance */
     list_add(&task->run_node, &rq->head);
     
     schedule();
+    restore_flags(flag);
 }
 
 /**
