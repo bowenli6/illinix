@@ -148,8 +148,9 @@ void key_press(uint32_t scancode, terminal_t *terminal) {
 
 
 static inline void f_key(uint32_t scancode, terminal_t *terminal, int idx) {
-    terminal_t *to;
-    thread_t *t;
+    terminal_t *next_terminal;
+    thread_t *curr;
+    thread_t *next;
 
     if (scancode == console->curr_key) return; 
 
@@ -161,26 +162,28 @@ static inline void f_key(uint32_t scancode, terminal_t *terminal, int idx) {
 
     terminal->alt = 0;
 
-    t = console->kshells[idx];
-    to = console->terminals[idx];
+    next = console->kshells[idx];
+    next_terminal = console->terminals[idx];
 
     memset((void*)video_mem, 0, VIDMEM_SIZE);
     
-    if (t->state == UNUSED) {
-        t->state = RUNNABLE;
+    if (next->state == UNUSED) {
+        next->state = RUNNABLE;
     } else {
-        memcpy((void*)video_mem, (void*)to->saved_vidmem, VIDMEM_SIZE);
+        memcpy((void*)video_mem, (void*)next_terminal->saved_vidmem, VIDMEM_SIZE);
         flush_tlb();
     }
 
-    to->vidmem = video_mem;
+    next_terminal->vidmem = video_mem;
 
     console->curr_key = scancode;
     
-    vga_update_cursor(to->screen_x, to->screen_y);
+    vga_update_cursor(next_terminal->screen_x, next_terminal->screen_y);
 
-    list_add(&t->run_node, &rq->head);
-    sched_sleep(t);
+    GETPRO(curr);
+
+    curr->state = SLEEPING;
+    sched_wakeup(next);
 }
 
 /**

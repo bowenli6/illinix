@@ -105,6 +105,7 @@ void inline context_switch(thread_t *prev, thread_t *next) {
     if (next != init)
         update_tss(next);
     swtch(prev, next);
+    sti();
 }
 
 /**
@@ -674,29 +675,26 @@ static void console_init(void) {
     // sched_fork(shell);
     // activate_task(shell);
 
-    list_add_tail(&(shell->run_node), &rq->head);
+    // list_add_tail(&(shell->run_node), &rq->head);
+    user_mem_map(shell);
+    /* console starts */
+    terminal_boot = 1;
 
     /* save current context to shell and switch init to init_task
      * when scheduler preempt init to shell, shell will goto line 629 */
     asm volatile("                              \n\
-                  movl  $1f, %[eip0]            \n\
                   movl  $1f, %[eip1]            \n\
                   movl  $1f, %[eip2]            \n\
-                  leave                         \n\
-                  ret                           \n\
+                  pushl %[shell]                \n\
+                  call  switch_to_user          \n\
                   1:                            \n\
-                  "                                 
-                : [eip0] "=m"(shell->context->eip),
-                  [eip1] "=m"(init->children[1]->context->eip),
-                  [eip2] "=m"(init->children[2]->context->eip)
-                :
+                  "       
+                : [eip1] "=m"(init->children[1]->context->eip), [eip2] "=m"(init->children[2]->context->eip)
+                : [shell] "rm"(shell)
                 : "memory" 
     );
-
+    
     GETPRO(shell);
-
-    /* console starts */
-    terminal_boot = 1;
 
     switch_to_user(shell);
 }
