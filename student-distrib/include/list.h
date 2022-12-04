@@ -42,6 +42,8 @@ static inline void list_add_tail(list_head *new, list_head *head) {
 
 static inline void list_del(list_head *entry) {
     __list_del(entry->prev, entry->next);
+    entry->next = NULL;
+    entry->prev = NULL;
 }
 
 static inline int32_t list_empty(list_head *head) {

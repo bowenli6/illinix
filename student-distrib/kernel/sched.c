@@ -8,8 +8,7 @@
 #include <io.h>
 
 /* running queue */
-rr_rq_t *rr_rq;
-
+rr_t *rq;
 
 
 /**
@@ -50,14 +49,11 @@ void sched_init(void) {
     strcpy(init->argv[0], INIT);
     init->context = kmalloc(sizeof(context_t));
 
-    /* create sched run queue */
-    rr_rq = kmalloc(sizeof(rr_rq_t));
-
-    /* empty run queue */
-    rr_rq->run_queue = &(idle->run_node);
-    rr_rq->run_queue->prev = rr_rq->run_queue;
-    rr_rq->run_queue->next = rr_rq->run_queue;
-    rr_rq->size = 0;
+    /* create run queue */
+    rq = kmalloc(sizeof(rr_t));
+    rq->head.next = &(rq->head);
+    rq->head.prev = &(rq->head);
+    rq->size = 0;
 
     /* create task queue */
     task_queue = &(idle->task_node);
@@ -90,12 +86,12 @@ void sched_init(void) {
  * 
  */
 void sched_tick(void) {
-    thread_t *curr;
+    thread_t *curq;
 
-    GETPRO(curr);
+    GETPRO(curq);
 
-    list_add_tail(&curr->run_node, rr_rq->run_queue);
-
+    list_add_tail(&curq->run_node, &rq->head);
+    
     schedule();
 }
 
@@ -107,9 +103,14 @@ void sched_tick(void) {
  * @param task 
  */
 void sched_sleep(thread_t *task) {
+    uint32_t intr_flag;
+    cli_and_save(intr_flag); 
+
     task->state = SLEEPING;
     list_add(&task->wait_node, wait_queue);
     schedule();
+
+    restore_flags(intr_flag);
 }
 
 
@@ -118,9 +119,6 @@ void sched_wakeup(thread_t *task) {
     task->state = RUNNABLE;
 
     list_del(&task->wait_node);
-
-    /* add to the front of the queue to get better responses */
-    list_add(&task->run_node, rr_rq->run_queue);
     
     schedule();
 }
@@ -133,13 +131,10 @@ void schedule(void) {
     thread_t *prev, *next;
     list_head *node;
 
-    /* avoid preemption */
-    cli();
-
-    /* get current thread struct */
+    /* get curqent thread struct */
     GETPRO(prev);        
     
-    node = rr_rq->run_queue->next;
+    node = rq->head.next;
 
     list_del(node);
 
@@ -150,8 +145,6 @@ void schedule(void) {
 
     /* update count to start counting */
     // next->count = TIMESLICE;
-
-    sti();
     
     if (next == prev) return;
 
@@ -161,11 +154,11 @@ void schedule(void) {
 
 /**
  * @brief halts the central processing unit (CPU) until 
- * the next external interrupt is fired.
+ * the next external interqupt is fired.
  * 
  */
 void pause(void) {
-    /* avoid deadlock by ensuring that devices can interrupt */
+    /* avoid deadlock by ensuring that devices can interqupt */
     sti();
 
     /* Spin (nicely, so we don't chew up cycles) */

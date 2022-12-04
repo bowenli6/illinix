@@ -176,9 +176,10 @@ static inline void f_key(uint32_t scancode, terminal_t *terminal, int idx) {
     to->vidmem = video_mem;
 
     console->curr_key = scancode;
+    
     vga_update_cursor(to->screen_x, to->screen_y);
 
-    list_add(&t->run_node, rr_rq->run_queue);
+    list_add(&t->run_node, &rq->head);
     sched_sleep(t);
 }
 

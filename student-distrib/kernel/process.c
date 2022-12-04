@@ -88,7 +88,7 @@ void init_task(void) {
         // DO SOMETHING HERE IN THE FUTURE
 
         /* yield the CPU */
-        schedule();
+        sched_tick();
     }
 }
 
@@ -105,7 +105,6 @@ void inline context_switch(thread_t *prev, thread_t *next) {
     if (next != init)
         update_tss(next);
     swtch(prev, next);
-    sti();
 }
 
 /**
@@ -151,7 +150,7 @@ int32_t do_fork(thread_t *parent, uint8_t kthread) {
     child->context->eax = 0;    
 
     /* add new task to the front of the run queue */
-    list_add(&child->run_node, rr_rq->run_queue);
+    list_add(&child->run_node, &rq->head);
 
     /* map to parent's address space */
     __umap(child, parent);
@@ -272,7 +271,7 @@ int32_t do_execute(thread_t *parent, const int8_t *cmd) {
     // activate_task(child);
 
     /* add new task to the front of the queue */
-    list_add_tail(&child->run_node, rr_rq->run_queue);
+    list_add_tail(&child->run_node, &rq->head);
 
     /* get child esp */
     child->context->esp = get_esp0(child);
@@ -680,7 +679,7 @@ static void console_init(void) {
     // sched_fork(shell);
     // activate_task(shell);
 
-    list_add_tail(&(shell->run_node), rr_rq->run_queue);
+    list_add_tail(&(shell->run_node), &rq->head);
 
     /* save current context to shell and switch init to init_task
      * when scheduler preempt init to shell, shell will goto line 629 */

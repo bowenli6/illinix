@@ -6,12 +6,14 @@
 #include <types.h>
 #include <list.h>
 
-typedef struct {
-    list_head *run_queue;       /* running queue containning all runnable processes */
+struct rr {
+    list_head head;             /* head of the running queue containning all runnable processes */
     uint32_t  size;             /* number of tasks present in the queue */
-} rr_rq_t;
+};
 
-extern rr_rq_t *rr_rq;
+typedef struct rr rr_t;
+
+extern rr_t *rq;
 
 void sched_init(void);
 void sched_tick(void);
