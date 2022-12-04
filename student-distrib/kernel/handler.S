@@ -202,9 +202,25 @@ general_protection_handler:
 
 .globl page_fault_handler
 page_fault_handler:
+    pushal
+    movl	%cr2, %eax
+	pushl	%eax		
     pushl   $0                  # no error code now: pad the hardware error code on the stack.
-    pushl   $do_page_fault      # push the do_handler function address. 
-    jmp     error_code          # part of theses are only useful when syscall is working.
+    #pushl   $do_page_fault      # push the do_handler function address. 
+    call    do_page_fault
+    add     $12, %esp
+    popal
+    # movl    $USER_DS, %eax
+    # andl    $0xFF, %eax
+    # movw	%ax, %ds
+    # pushl   %eax
+    # movl	$, dest
+    
+    # pushl   %ebx
+    
+
+    #jmp     error_code          # part of theses are only useful when syscall is working.
+    iret
 
 
 .globl coprocessor_error_handler

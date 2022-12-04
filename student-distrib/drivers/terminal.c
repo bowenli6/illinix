@@ -7,6 +7,7 @@
 #include <access.h>
 #include <drivers/vga.h>
 #include <io.h>
+#include <boot/page.h>>
 
 /* Local functions, see headers for descriptions. */
 
@@ -152,13 +153,16 @@ static inline void f_key(uint32_t scancode, terminal_t *terminal, int idx) {
 
     if (scancode == console->curr_key) return; 
 
-    if (console->curr_key == terminal->fkey) {
+    // if (console->curr_key == terminal->fkey) {
         /* set its vidmem to back up */
-        memcpy((void*)terminal->saved_vidmem, (void*)video_mem, VIDMEM_SIZE);
-        terminal->vidmem = terminal->saved_vidmem;
-    }
+    //     memcpy((void*)terminal->saved_vidmem, (void*)video_mem, VIDMEM_SIZE);
+    //     terminal->vidmem = terminal->saved_vidmem;
+    // }
+    memcpy((void*)console->terminals[scancode - 30]->saved_vidmem, (void*)video_mem, VIDMEM_SIZE);
+    console->terminals[scancode - 30]->vidmem = console->terminals[scancode - 30]->saved_vidmem;
 
-    
+    terminal->alt = 0;
+
     t = console->kshells[idx];
     to = console->terminals[idx];
 
@@ -168,6 +172,7 @@ static inline void f_key(uint32_t scancode, terminal_t *terminal, int idx) {
         list_add(&t->run_node, rr_rq->run_queue);
     } else {
         memcpy((void*)video_mem, (void*)to->saved_vidmem, VIDMEM_SIZE);
+        flush_tlb();
     }
 
     to->vidmem = video_mem;
@@ -213,7 +218,7 @@ static void in(uint32_t scancode, uint8_t caps, terminal_t *terminal) {
     uint8_t character = scancodes[scancode][caps];  /* Get character. */
     if (character == '\r') character = '\n';
     if (character) {
-        putc(character);
+        _putc(character, terminal);
         if (terminal->size  == TERBUF_SIZE)   
             terminal->bufhd = (terminal->bufhd + 1) % TERBUF_SIZE;
 

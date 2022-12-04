@@ -181,13 +181,7 @@ int32_t puts(int8_t* s) {
     return index;
 }
 
-/**
- * @brief Output a character to the console .
- * @param c : character to print.
- */
-void putc(uint8_t c) {
-    thread_t *curr;
-    terminal_t *terminal;
+void _putc(uint8_t c, terminal_t* terminal) {
     int32_t x, y;
     uint8_t *vidmem;
 
@@ -195,15 +189,12 @@ void putc(uint8_t c) {
         x = screen_x;
         y = screen_y;
         vidmem = (uint8_t*)video_mem;
-    } else {
-        GETPRO(curr);
-        terminal = curr->terminal;          
+    } else {  
         x = terminal->screen_x;
         y = terminal->screen_y;
         vidmem = terminal->vidmem;
     }
-
-    if(c == '\n' || c == '\r') {
+     if(c == '\n' || c == '\r') {
         if (y + 1 == NUM_ROWS) 
             vga_scrolling(vidmem);
         else
@@ -228,6 +219,20 @@ void putc(uint8_t c) {
         terminal->screen_y = y;
     }
     vga_update_cursor(x, y);
+}
+
+/**
+ * @brief Output a character to the console .
+ * @param c : character to print.
+ */
+void putc(uint8_t c) {
+    thread_t *curr;
+    terminal_t *terminal;
+    if(terminal_boot) {
+        GETPRO(curr);
+        terminal = curr->terminal;
+    }
+    _putc(c, terminal);
 }
 
 

@@ -1,5 +1,10 @@
 #include <boot/exception.h>
+#include <access.h>
+#include <pro/process.h>
+#include <boot/x86_desc.h>
+#include <boot/page.h>
 #include <io.h>
+#include <kmalloc.h>
 
 
 /* According to IA32 page 6, we define the name for first 20 exceptions */
@@ -99,7 +104,68 @@ void do_general_protection() {
     exp_to_usr(GENRAL_PROTECTION);
 }
 
-void do_page_fault() {
+/**
+ * @brief If the address of the page fault is within the allowed
+ *        user stack range, expand the user stack by 4KB for the user.
+ * 
+ * @param errcode   
+ * @param addr      Address of page fault.
+ */
+void 
+do_page_fault(int errcode, int addr) 
+{    
+    if(addr < USER_STACK_ADDR && addr > (USER_STACK_ADDR - USER_STACK_MAX)) {
+        // TODO
+        thread_t* t;
+        vm_area_t* area;
+        uint32_t pa, length, va;
+        uint32_t* temp;
+
+        GETPRO(t);
+        
+        printf("handling page fault.. getting more stack!\n Your process = %d, ", t->pid);
+        printf("your address: %x\n", addr);
+
+        area = t->vm.map_list;
+        while(area != 0) {
+            if(area->vmflag & VM_STACK) {
+                //TODO
+                //vmdealloc(area, (area->vmend-area->vmstart), 1);
+                length = (area->vmend - area->vmstart) / PAGE_SIZE + 1;
+
+                area->vmstart = area->vmstart - PAGE_SIZE;
+                pa = get_user_page(0);                      /* Alloc physical memory. */
+
+                temp = kmalloc(sizeof(uint32_t*) * length);
+                if(length > 1) {
+                    memcpy((char*)(temp + sizeof(uint32_t*)), (char*)area->mmap, sizeof(uint32_t*) * length);
+                    kfree(area->mmap);
+                }
+                
+                area->mmap = temp;
+
+                va = area->vmstart;
+                mmap(va, pa, PAGE_SIZE, PTE_RW | PTE_US);   /* Create mmap. */
+
+                area->mmap[0] = ADDR_TO_PTE(pa) | PTE_PRESENT | PTE_RW | PTE_US;
+
+                printf("PAGE FAULT HANDLER: Succeed! Your new stack start: 0x%x.\n", area->vmstart);
+                
+                // int i;
+                // for(i = 0; i < length; i++) {
+                //     printf("mmap: %x", area->mmap[i]);
+                // }
+                
+                return;
+            }
+            area = area->next;
+        }
+        printf("ERROR: NO STACK?\n");
+        while(1);
+    }
+
+    printf("PAGE FAULT! ERROR ADDRESS: %x\n", addr);
+    while(1);
     exp_to_usr(PAGE_FAULT);
 }
 

@@ -54,7 +54,8 @@ void do_keyboard(void) {
     }
 
     
-    terminal = curr->terminal;
+    // terminal = curr->terminal;
+    terminal = console->terminals[console->curr_key - 30];
 
     if (scancode < SCANCODES_SIZE)              /* key press (make) */
         key_press(scancode, terminal);

@@ -94,9 +94,6 @@ void page_init()
         if(i == (VIDEO >> PDE_OFFSET_4KB) ) {
             page_table[i] = page_table[i] | PTE_PRESENT | PTE_RW | ADDR_TO_PTE(VIDEO); 
         }
-        else {
-            page_table[i] = 0 | PTE_RW;  
-        }
     }
 
     page_directory[VIR_VID_MEM / PAGE_SIZE_4MB] = PTE_PRESENT | PTE_RW | PTE_US | ADDR_TO_PTE((int)vidmap_table);
