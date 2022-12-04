@@ -158,8 +158,8 @@ static inline void f_key(uint32_t scancode, terminal_t *terminal, int idx) {
     //     memcpy((void*)terminal->saved_vidmem, (void*)video_mem, VIDMEM_SIZE);
     //     terminal->vidmem = terminal->saved_vidmem;
     // }
-    memcpy((void*)console->terminals[scancode - 30]->saved_vidmem, (void*)video_mem, VIDMEM_SIZE);
-    console->terminals[scancode - 30]->vidmem = console->terminals[scancode - 30]->saved_vidmem;
+    memcpy((void*)terminal->saved_vidmem, (void*)video_mem, VIDMEM_SIZE);
+    terminal->vidmem = terminal->saved_vidmem;
 
     terminal->alt = 0;
 
