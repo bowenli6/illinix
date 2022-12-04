@@ -35,7 +35,7 @@ typedef enum { UNUSED, RUNNING, RUNNABLE, SLEEPING, EXITED, ZOMIBIE } pro_state;
 // " pushl %[prev_con]               \n\t"   /* push prev's context */  
 
 
-#define swtch(prev, next)                                 \
+#define __swtch(prev, next)                                 \
 do {                                                  \
     asm volatile (" pushfl                          \n\t"   /* push eflags */               \
                   " pushl %%ebp                     \n\t"   /* push ebp */                  \
@@ -59,24 +59,23 @@ do {                                                  \
                     [next_con] "m"(next->context)            \
                                                              \
                   : "memory"                                 \
-    );                                                       \
+    );                                                           \
 } while (0)                                                  \
-
 
 
 /* hardware context (callee saved registers and part of segment registers) */
 typedef struct {
-    uint32_t eax;
+    uint32_t eip;
+    uint32_t esp;
+    uint32_t ebx;
     uint32_t ecx;
     uint32_t edx;
+    uint32_t esi;
+    uint32_t edi;
     uint32_t ebp;
-    uint32_t esp;
-    uint32_t eip;
-    uint32_t eflags;
-    uint16_t es;
-    uint16_t fs;
-    uint16_t gs;
+    uint32_t eax;
 } context_t;
+
 
 typedef struct vm_area {
     uint32_t*           mmap;      
@@ -167,8 +166,7 @@ int32_t pro_loader(const int8_t *fname, uint32_t *EIP);
 
 /* implemented in switch.S */
 
-void save_context(context_t *context);
-void __swtch(context_t *from, context_t *to);
+void swtch(context_t *from, context_t *to);
 
 /* implemented in access.c */
 

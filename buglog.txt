@@ -173,3 +173,51 @@ Process
 
 ----------------------------------------------------------------------------------------------------
 Checkpoint5:
+
+Scheduler
+1.  Problem:    Page Fault when executing new process
+    Reason:     Linked List linking error
+    Time used:  1 h
+    Solution:   avoid add node into run queue more than once and clear it only once
+
+2.  Problem:    return abnormally from execute
+    Reason:     must cli when performing list add/remove
+    Time used:  2 h
+    Solution:   add cli/sti to protect scheduling and sleep/wakeup
+
+3.  Problem:    interactive process (shell) delayed response
+    Reason:     (1). chosen times lice too small
+                (2). init process occupy CPU
+                (3). unused shells should go to sleep
+    Time used:  2 h
+    Solution:   (1). choose a more reasonable time slice number to avoid too much 
+                context switches.
+                (2). at this point, init does nothing but spinning and yield the 
+                CPU, delete it for now greatly increase the response time
+                (3). after a shell executing a new process, it should go to sleep,
+                blocked by removing from the running queue. it wakes up as soon as
+                its child returns or the another terminal switch to its one.
+
+
+Terminal Switching
+1.  Problem:    
+    Reason:     
+    Time used:  30 min
+    Solution:   
+
+1.  Problem:    
+    Reason:     
+    Time used:  30 min
+    Solution:   
+
+
+Video memory
+1.  Problem:    Fish exited when terminal switching
+    Reason:     
+    Time used:  1 h
+    Solution:   
+
+
+
+
+

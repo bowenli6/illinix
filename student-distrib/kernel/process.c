@@ -104,7 +104,7 @@ void inline context_switch(thread_t *prev, thread_t *next) {
     __umap(prev, next);
     if (next != init)
         update_tss(next);
-    swtch(prev, next);
+    __swtch(prev, next);
     sti();
 }
 
@@ -276,6 +276,7 @@ int32_t do_execute(thread_t *parent, const int8_t *cmd) {
 
     /* get child esp */
     child->context->esp = get_esp0(child);
+    child->context->ebp = child->context->esp;
 
     /* save current context to child and switch parent to sys_execute
      * when scheduler preempt to child, child will goto line 287 */
@@ -658,6 +659,7 @@ static void console_init(void) {
         shell = console->kshells[i];
         shell->state = UNUSED;
         shell->context->esp = get_esp0(shell);
+        shell->context->ebp = shell->context->esp;
     }
 
     shell = init->children[0];

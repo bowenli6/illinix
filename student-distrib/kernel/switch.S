@@ -2,54 +2,47 @@
 .data 
 
 # Constants for accessing the fields of the context_t
-EAX = 0
-ECX = 4
-EDX = 8
-EBP = 12
-ESP = 16
-EIP = 20
-EFLAGS = 24
-ES = 28
-FS = 32
-GS = 36
+EIP = 0
+ESP = 4
+EBX = 8
+ECX = 12
+EDX = 16
+ESI = 20
+EDI = 24
+EBP = 28
+
 
 .text
 
 # arg0: the hardware context of the thread that wants to switch
 # arg1: the hardware context of the thread that will be switched with
-.globl __swtch
-__swtch:
-    pushl   %ebx
-
+.globl swtch
+swtch:
     # get first argument
-    movl    4(%esp), %ebx 
-    
-    # store current hardware context to eax
-    movl    %eax,    EAX(%ebx)
-    movl    %edx,    EDX(%ebx)
-    movl    %ecx,    ECX(%ebx)
-    pushfl
-    popl    %eax
-    movl    %eax,    EFLAGS(%ebx)
-    movw    %es,     ES(%ebx)
-    movw    %fs,     FS(%ebx)
-    movw    %gs,     GS(%ebx)
+    movl   4(%esp), %eax 
 
-    # get second argument
-    movl    8(%esp), %ebx 
+    # save current context into arg0
+    popl   EIP(%eax)
+    movl   %esp, ESP(%eax)
+    movl   %ebx, EBX(%eax)
+    movl   %ecx, ECX(%eax)
+    movl   %edx, EDX(%eax)
+    movl   %esi, ESI(%eax)
+    movl   %edi, EDI(%eax)
+    movl   %ebp, EBP(%eax)
 
-    # load edx to the current hardware context 
-    movl    EAX(%ebx), %eax
-    movl    EDX(%ebx), %edx
-    movl    ECX(%ebx), %ecx
-    pushl   EFLAGS(%ebx)
-    popfl
-    movw    ES(%ebx),  %es
-    movw    FS(%ebx),  %fs
-    movw    GS(%ebx),  %gs
-   
-    popl    %ebx
-    addl    $8, %esp 
+    # restore saved context into current context
+    movl   4(%esp), %eax
+    movl   EBP(%eax), %ebp
+    movl   EDI(%eax), %edi
+    movl   ESI(%eax), %esi
+    movl   EDX(%eax), %edx
+    movl   ECX(%eax), %ecx
+    movl   EBX(%eax), %ebx
+    movl   ESP(%eax), %esp
 
-    ret 
+    # set new return address
+    jmp  EIP(%eax)
+
+
 

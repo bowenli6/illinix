@@ -182,7 +182,11 @@ static inline void f_key(uint32_t scancode, terminal_t *terminal, int idx) {
 
     GETPRO(curr);
 
-    curr->state = SLEEPING;
+    // if (strcmp(curr->argv[0], SHELL))
+        // list_add_tail(&curr->run_node, &rq->head);
+    // else
+        curr->state = SLEEPING;
+
     sched_wakeup(next);
 }
 
