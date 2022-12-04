@@ -19,12 +19,12 @@
 #define ENTER           0x1c                /* Enter key */
 #define TAB             0x0f                /* Tab key */
 #define TAB_SPACE       4                   /* Tab spaces */
-#define F1              0x3B                /* F1 key */
-#define F2              0x3C                /* F2 key */
-#define F3              0x3D                /* F3 key */
+#define F1              0x1E                /* F1 key */
+#define F2              0x1F                /* F2 key */
+#define F3              0x20                /* F3 key */
 #define L               0x26                /* L key */
 #define D               0x20                /* D key */
-#define Z               0x2c                /* C key */          
+#define Z               0x2c                /* C key */     
 
 
 extern const char scancodes[KEYBOARD_SIZE][2];

@@ -2,8 +2,10 @@
 #include <pro/sched.h>
 #include <kmalloc.h>
 #include <access.h>
+#include <drivers/vga.h>
 #include <list.h>
 #include <lib.h>
+#include <io.h>
 
 /* running queue */
 rr_rq_t *rr_rq;
@@ -89,17 +91,18 @@ void sched_init(void) {
  */
 void sched_tick(void) {
     thread_t *curr;
+    uint32_t intr_flag;
+
+     /* critical section begins. */
+    cli_and_save(intr_flag); 
 
     GETPRO(curr);
 
-    /* schedule a new process when use all time slices */
-    if (curr->count <= 0) {
-         /* add current task to the tail of the task queue */
-        list_add_tail(&curr->run_node, rr_rq->run_queue);
-        schedule();
-    }
+    list_add_tail(&curr->run_node, rr_rq->run_queue);
+    
+    restore_flags(intr_flag);
 
-    curr->count--;
+    schedule();
 }
 
 
@@ -152,7 +155,7 @@ void schedule(void) {
     next->state = RUNNING;
 
     /* update count to start counting */
-    next->count = TIMESLICE;
+    // next->count = TIMESLICE;
 
     if (next == prev) return;
 

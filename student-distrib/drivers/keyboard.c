@@ -52,6 +52,8 @@ void do_keyboard(void) {
         restore_flags(intr_flag);
         return;
     }
+
+    
     terminal = curr->terminal;
 
     if (scancode < SCANCODES_SIZE)              /* key press (make) */

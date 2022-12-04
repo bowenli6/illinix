@@ -125,6 +125,7 @@ typedef struct {
     terminal_t **terminals;
     thread_t **kshells;
     int32_t    size;
+    uint32_t   curr_key;
 } console_t;
 
 

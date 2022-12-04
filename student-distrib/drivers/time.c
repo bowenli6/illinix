@@ -43,10 +43,7 @@ void do_timer(void) {
      */
     // TODO (cfs)
 
-    send_eoi(TIMER_IRQ);      
-
-    /* critical section begins. */
-    cli_and_save(intr_flag);  
+    send_eoi(TIMER_IRQ);       
 
     /* tick ... */
     sched_tick();
@@ -63,5 +60,4 @@ void do_timer(void) {
     // }
 
     /* critical section ends. */
-    restore_flags(intr_flag);
 }

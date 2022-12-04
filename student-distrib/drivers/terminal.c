@@ -42,8 +42,8 @@ terminal_t *terminal_create(void) {
     terminal->size = 0;                         /* No character yet. */
     terminal->exit = 0;                         /* \n is not read. */
     terminal->buffer = kmalloc(TERBUF_SIZE);    /* create buffer */
-    terminal->vidmem = kmalloc(VIDMEM_SIZE);    /* create video memory */
-    terminal->saved_vidmem = terminal->vidmem;  /* save back up video memory */
+    terminal->saved_vidmem = kmalloc(VIDMEM_SIZE); /* create video memory */
+    terminal->vidmem = terminal->saved_vidmem;  /* save back up video memory */
     memset((void*)terminal->buffer, 0, TERBUF_SIZE);
     memset((void*)terminal->vidmem, 0, VIDMEM_SIZE);
     return terminal;
@@ -88,11 +88,35 @@ void key_press(uint32_t scancode, terminal_t *terminal) {
     case TAB:
         out_tab(TAB_SPACE, terminal);
     case F1:
-        f_key(scancode, terminal, 0);
+        if (terminal->alt)        
+            f_key(scancode, terminal, 0);
+        if (terminal->shift) {                    /* If Shift is hold, output in capital form. */
+            in(scancode, 1 - (terminal->capslock & isletter(scancode)), terminal);
+        } else {
+            /* Otherwise, output in capslock from. */
+            in(scancode, (terminal->capslock & isletter(scancode)), terminal);
+        }                             
+        return;
     case F2:
-        f_key(scancode, terminal, 1);
+        if (terminal->alt)        
+            f_key(scancode, terminal, 1);
+        if (terminal->shift) {                    /* If Shift is hold, output in capital form. */
+            in(scancode, 1 - (terminal->capslock & isletter(scancode)), terminal);
+        } else {
+            /* Otherwise, output in capslock from. */
+            in(scancode, (terminal->capslock & isletter(scancode)), terminal);
+        }                             
+        return;
     case F3:
-        f_key(scancode, terminal, 2);
+        if (terminal->alt)
+            f_key(scancode, terminal, 2);
+        if (terminal->shift) {                    /* If Shift is hold, output in capital form. */
+            in(scancode, 1 - (terminal->capslock & isletter(scancode)), terminal);
+        } else {
+            /* Otherwise, output in capslock from. */
+            in(scancode, (terminal->capslock & isletter(scancode)), terminal);
+        }                             
+        return;
     case L:
 
         if (terminal->ctrl) {                    /* If ctrl is hold and CTRL-L is pressed. */
@@ -126,23 +150,30 @@ static inline void f_key(uint32_t scancode, terminal_t *terminal, int idx) {
     terminal_t *to;
     thread_t *t;
 
-    if (!terminal->alt) return;
+    if (scancode == console->curr_key) return; 
 
-    if (scancode == terminal->fkey) return;
+    if (console->curr_key == terminal->fkey) {
+        /* set its vidmem to back up */
+        memcpy((void*)terminal->saved_vidmem, (void*)video_mem, VIDMEM_SIZE);
+        terminal->vidmem = terminal->saved_vidmem;
+    }
 
-    /* set its vidmem to back up */
-    memcpy((void*)terminal->saved_vidmem, (void*)terminal->vidmem, VIDMEM_SIZE);
-    terminal->vidmem = terminal->saved_vidmem;
-
-    to = console->terminals[idx];
-    memcpy((void*)video_mem, (void*)to->vidmem, VIDMEM_SIZE);
-    to->vidmem = video_mem;
-
+    
     t = console->kshells[idx];
+    to = console->terminals[idx];
+
     if (t->state == UNUSED) {
+        memset((void*)video_mem, 0, VIDMEM_SIZE);
         t->state = RUNNABLE;
         list_add(&t->run_node, rr_rq->run_queue);
+    } else {
+        memcpy((void*)video_mem, (void*)to->saved_vidmem, VIDMEM_SIZE);
     }
+
+    to->vidmem = video_mem;
+
+    console->curr_key = scancode;
+    vga_update_cursor(to->screen_x, to->screen_y);
 }
 
 /**
@@ -303,6 +334,7 @@ int32_t terminal_read(int32_t fd, void *buf, int32_t nbytes) {
 
     /* Init to zero. (read is not stopped) */
     terminal->exit = 0;
+
 
 
     while (!terminal->exit) {

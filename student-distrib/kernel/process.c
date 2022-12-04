@@ -88,7 +88,7 @@ void init_task(void) {
         // DO SOMETHING HERE IN THE FUTURE
 
         /* yield the CPU */
-
+        // schedule();
     }
 }
 
@@ -529,8 +529,8 @@ static int32_t process_create(thread_t *current, uint8_t kthread) {
     if (kthread) {
         /* create a new terminal for this kthread */
         t->terminal = terminal_create();
-        console->terminals[console->size++] = t->terminal;
-        console->kshells[console->size] = t;
+        console->terminals[console->size] = t->terminal;
+        console->kshells[console->size++] = t;
     } else {
         /* get the terminal from its parent */
         t->terminal = current->terminal;
@@ -660,14 +660,14 @@ static void console_init(void) {
 
     /* create kernel shells */
     for (i = 0; i < NTERMINAL; ++i) {
-        (void) __exec(init, SHELL, 1);
+        (void) __exec(init, SHELL, 1); 
+        shell = console->kshells[i];
+        shell->state = UNUSED;
+        shell->context->esp = get_esp0(shell);
     }
 
     shell = init->children[0];
     shell->state = RUNNABLE;
-
-    console->kshells[1]->state = UNUSED;
-    console->kshells[2]->state = UNUSED;
 
     console->terminals[0]->fkey = F1;
     console->terminals[1]->fkey = F2;
@@ -676,21 +676,26 @@ static void console_init(void) {
     /* give the first shell vga memory */
     shell->terminal->vidmem = video_mem;
 
+    console->curr_key = F1;
+
     // sched_fork(shell);
     // activate_task(shell);
 
-    shell->context->esp = get_esp0(shell);
     list_add_tail(&(shell->run_node), rr_rq->run_queue);
 
     /* save current context to shell and switch init to init_task
      * when scheduler preempt init to shell, shell will goto line 629 */
     asm volatile("                              \n\
-                  movl  $1f,   %[shell_eip]     \n\
+                  movl  $1f, %[eip0]            \n\
+                  movl  $1f, %[eip1]            \n\
+                  movl  $1f, %[eip2]            \n\
                   leave                         \n\
                   ret                           \n\
                   1:                            \n\
                   "                                 
-                : [shell_eip] "=m"(shell->context->eip)
+                : [eip0] "=m"(shell->context->eip),
+                  [eip1] "=m"(init->children[1]->context->eip),
+                  [eip2] "=m"(init->children[2]->context->eip)
                 :
                 : "memory" 
     );
