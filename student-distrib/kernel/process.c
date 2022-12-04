@@ -271,7 +271,7 @@ int32_t do_execute(thread_t *parent, const int8_t *cmd) {
     // activate_task(child);
 
     /* add new task to the front of the queue */
-    list_add_tail(&child->run_node, &rq->head);
+    list_add(&child->run_node, &rq->head);
 
     /* get child esp */
     child->context->esp = get_esp0(child);
@@ -566,8 +566,6 @@ void process_free(thread_t *current) {
             kfree(current->children[i]);
         kfree(current->children);
     }
-
-    list_del(&current->task_node);
 
     __umap(current, current->parent);
 
