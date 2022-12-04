@@ -32,7 +32,6 @@ void pit_init(void) {
  * 
  */
 void do_timer(void) {
-    uint32_t intr_flag;
 
     /* update system clock */
     // sys_ticks++;

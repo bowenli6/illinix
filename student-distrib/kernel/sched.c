@@ -107,7 +107,6 @@ void sched_sleep(thread_t *task) {
     cli_and_save(intr_flag); 
 
     task->state = SLEEPING;
-    list_add(&task->wait_node, wait_queue);
     schedule();
 
     restore_flags(intr_flag);
@@ -118,7 +117,8 @@ void sched_sleep(thread_t *task) {
 void sched_wakeup(thread_t *task) {
     task->state = RUNNABLE;
 
-    list_del(&task->wait_node);
+    /* add back to the front for better performance */
+    list_add(&task->run_node, &rq->head);
     
     schedule();
 }

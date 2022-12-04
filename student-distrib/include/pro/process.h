@@ -31,6 +31,10 @@
 typedef enum { UNUSED, RUNNING, RUNNABLE, SLEEPING, EXITED, ZOMIBIE } pro_state;
 
 
+// " pushl %[next_con]               \n\t"   /* push next's context */   
+// " pushl %[prev_con]               \n\t"   /* push prev's context */  
+
+
 #define swtch(prev, next)                                 \
 do {                                                  \
     asm volatile (" pushfl                          \n\t"   /* push eflags */               \
@@ -39,9 +43,7 @@ do {                                                  \
                   " movl  %[next_esp], %%esp        \n\t"   /* restore esp from next */     \
                   " movl  $1f, %[prev_eip]          \n\t"   /* save eip to prev */          \
                   " pushl %[next_eip]               \n\t"   /* push eip from next */        \
-                  " pushl %[next_con]               \n\t"   /* push next's context */       \
-                  " pushl %[prev_con]               \n\t"   /* push prev's context */       \
-                  " jmp   __swtch                   \n\t"   /* jump to swtch (switch.S) */  \
+                  " ret                             \n\t"   /* jump to swtch (switch.S) */  \
                   " 1:                              \n\t"   /* eip address for prev */      \
                   " popl  %%ebp                     \n\t"   /* restore ebp */               \
                   " popfl                           \n\t"   /* restore eflags */            \

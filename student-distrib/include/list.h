@@ -39,7 +39,6 @@ static inline void list_add_tail(list_head *new, list_head *head) {
     __list_add(new, head->prev, head);
 }
 
-
 static inline void list_del(list_head *entry) {
     __list_del(entry->prev, entry->next);
     entry->next = NULL;

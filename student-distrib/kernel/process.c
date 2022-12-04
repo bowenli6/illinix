@@ -150,7 +150,7 @@ int32_t do_fork(thread_t *parent, uint8_t kthread) {
     child->context->eax = 0;    
 
     /* add new task to the front of the run queue */
-    list_add(&child->run_node, &rq->head);
+    list_add_tail(&child->run_node, &rq->head);
 
     /* map to parent's address space */
     __umap(child, parent);
@@ -533,9 +533,6 @@ static int32_t process_create(thread_t *current, uint8_t kthread) {
         /* get the terminal from its parent */
         t->terminal = current->terminal;
     }
-
-    /* add child to task queue */
-    list_add(&t->task_node, task_queue);
 
     process_vm_init(&t->vm);
 

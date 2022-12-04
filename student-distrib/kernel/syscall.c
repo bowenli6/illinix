@@ -89,6 +89,8 @@ asmlinkage int32_t sys_execute(const int8_t *cmd) {
         return status;
 
     sched_sleep(curr);
+
+    GETPRO(curr);
     child = curr->children[curr->n_children-1];
     process_free(child);
     sti();
