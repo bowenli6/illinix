@@ -120,7 +120,7 @@ void page_init()
  * @return int32_t : positive or 0 denote success, negative values denote an error condition
  */
 int32_t do_vidmap(uint8_t **screen_start) {
-    if(*(_walk((uint32_t)screen_start, 0, 0)) & PTE_US) {
+    if(!(*(_walk((uint32_t)screen_start, 0, 0)) & PTE_US)) {
         return -1;
     }
     *screen_start = (uint8_t*) (VIR_VID_MEM + VIDEO);
