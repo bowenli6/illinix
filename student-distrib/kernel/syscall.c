@@ -62,12 +62,12 @@ asmlinkage int32_t sys_fork(void) {
 
     /* copy esp from parent to child */
     child->context->esp = (child->context->ebp) + 8;
-
+    
     sti();
 
     /* check for preemption */
-    if (current->flag == NEED_RESCHED)
-        schedule();
+    // if (current->flag == NEED_RESCHED)
+    //     schedule();
     return pid;
 }
 
@@ -80,11 +80,22 @@ asmlinkage int32_t sys_fork(void) {
  * @return int32_t : positive or 0 denote success, negative values denote an error condition
  */
 asmlinkage int32_t sys_execute(const int8_t *cmd) {
+    thread_t *curr;
+    thread_t *child;
     int32_t status;
+
     cli();
-    status = do_execute(cmd);
+    GETPRO(curr);
+    status = do_execute(curr, cmd);
+    if (status < 0) 
+        return status;
+
+    sched_sleep(curr);
+    child = curr->children[curr->n_children-1];
+    process_free(child);
     sti();
-    return status;
+
+    return curr->context->eax;
 }
 
 /**

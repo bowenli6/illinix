@@ -25,6 +25,8 @@
 #include <pro/process.h>
 #include <boot/page.h>
 #include <pro/sched.h>
+// #include <pro/cfs.h>
+#include <drivers/keyboard.h>
 #include <boot/x86_desc.h>
 #include <pro/pid.h>
 #include <lib.h>
@@ -47,7 +49,6 @@ list_head *wait_queue;          /* list of sleeping tasks (idle -> {sleeping use
 static int32_t __exec(thread_t *current, const int8_t *cmd, uint8_t kthread);
 static int32_t process_create(thread_t *current, uint8_t kthread);
 static int32_t process_clone(thread_t *parent, thread_t *child);
-static void process_free(thread_t *current);
 static int32_t parse_arg(int8_t *cmd, int8_t *argv[]);
 static inline void switch_to_user(thread_t *curr);
 static void console_init(void);
@@ -76,6 +77,9 @@ void init_task(void) {
     pidmap_init();
     console_init();
 
+    /* clock starts to tick */
+    sti();
+
     /* the real task of the init process
      * scheduled actively by process 0 */
     while (1) {
@@ -84,7 +88,7 @@ void init_task(void) {
         // DO SOMETHING HERE IN THE FUTURE
 
         /* yield the CPU */
-        __schedule(init);
+
     }
 }
 
@@ -98,8 +102,10 @@ void init_task(void) {
  */
 void inline context_switch(thread_t *prev, thread_t *next) {
     __umap(prev, next);
-    update_tss(next);
+    if (next != init)
+        update_tss(next);
     swtch(prev, next);
+    sti();
 }
 
 /**
@@ -134,11 +140,18 @@ int32_t do_fork(thread_t *parent, uint8_t kthread) {
     }
         
     /* set up sched info for child */
-    sched_fork(child); 
+    // sched_fork(child); 
+    
+    // activate_task(child);
+
+    // wakeup_preempt(child);
 
     ntask++;  
 
     child->context->eax = 0;    
+
+    /* add new task to the front of the run queue */
+    list_add(&child->run_node, rr_rq->run_queue);
 
     /* map to parent's address space */
     __umap(child, parent);
@@ -223,30 +236,30 @@ void do_exit(uint32_t status) {
         place_children(child);
     }
     
-    process_free(child);
-
     ntask--;
     
     /* when wait syscall is implement, the parent will get the exit status */
 
-    /* yield the CPU for scheduler to pick next task to run */
-    __schedule(parent);
+    parent->context->eax = status;
+
+    if (parent->state == SLEEPING) {
+        sti();
+        sched_wakeup(parent);
+    }
 }
 
 
 /**
  * @brief create a new process to execute a program
  * 
+ * @param parent : current process
  * @param cmd : the program name with arguments
  * @return int32_t : positive or 0 denote success, negative values denote an error condition
  */
-int32_t do_execute(const int8_t *cmd) {
-    thread_t *parent, *child;  
-    uint32_t *eip;
+int32_t do_execute(thread_t *parent, const int8_t *cmd) {
+    thread_t *child;  
     int32_t errno;
-
-    GETPRO(parent);
-
+    
     /* call _exec to create the new thread and execute it
      * (only return here when error occurs) */
     if ((errno = __exec(parent, cmd, 0)) < 0) {
@@ -256,21 +269,70 @@ int32_t do_execute(const int8_t *cmd) {
     child = parent->children[parent->n_children - 1];
 
     /* set up sched info */
-    sched_fork(child);
+    // sched_fork(child);
+    // activate_task(child);
 
-    eip = (uint32_t*)(&parent->context->eip);
+    /* add new task to the front of the queue */
+    list_add(&child->run_node, rr_rq->run_queue);
 
-    
-    /* save the kernel stack of the current process */
-    asm volatile("movl %%ebp, %0"
+    /* get child esp */
+    child->context->esp = get_esp0(child);
+
+    /* save current context to child and switch parent to sys_execute
+     * when scheduler preempt to child, child will goto line 287 */
+    asm volatile("                              \n\
+                  movl  $1f,   %[child_eip]     \n\
+                  leave                         \n\
+                  ret                           \n\
+                  1:                            \n\
+                  "                                 
+                : [child_eip] "=m"(child->context->eip)
                 :
-                : "m"(parent->context->ebp)             
                 : "memory" 
     );
+
+    GETPRO(child);
 
     switch_to_user(child);
 
     /* never reach here */
+    return 0;
+}
+
+
+int32_t do_execve(thread_t *curr, const int8_t *pathname, int8_t *const argv[]) {
+    int i;
+    int32_t errno;
+    uint32_t EIP_reg;
+
+    curr->argc = 0;
+
+    /* update argument lists */
+    for (i = 0; argv[i]; ++i) {
+        strcpy((char*)(curr->argv[i]), (char*)(argv[i]));
+        curr->argc++;
+    } 
+
+    /* set next byte to null */
+    if (curr->argc < MAXARGS) curr->argv[curr->argc] = NULL;
+
+    /* executable check and load program image into user's memory */
+    if ((errno = pro_loader(pathname, &EIP_reg)) < 0) {
+        return errno;
+    }
+
+    /* clear fds */
+    if (curr->fds) {
+        kfree(curr->fds);
+        fd_init(curr);
+    }
+
+    /* update nice values */
+    if (!strcmp(argv[0], SHELL))
+        curr->nice = NICE_SHELL;
+    else
+        curr->nice = NICE_NORMAL;
+
     return 0;
 }
 
@@ -306,19 +368,24 @@ static int32_t __exec(thread_t *parent, const int8_t *cmd, uint8_t kthread) {
         kfree(argv);
         return errno;
     }
-
+    
     /* get child thread */
     child = parent->children[parent->n_children - 1];
 
-    /* get process and set its arguments */
     child->argc = argc;
     child->argv = argv;
+
 
     /* map the virtual memory space to to child */
     __umap(parent, child);
 
-    /* executable check and load program image into user's memory */
-    if ((errno = pro_loader(argv[0], &EIP_reg, child)) < 0) {
+    // if ((errno = do_execve(child, argv[0], argv)) < 0) {
+    //     process_free(child);
+    //     return errno;
+    // }
+
+     /* executable check and load program image into user's memory */
+    if ((errno = pro_loader(argv[0], &EIP_reg)) < 0) {
         process_free(child);
         return errno;
     }
@@ -332,20 +399,17 @@ static int32_t __exec(thread_t *parent, const int8_t *cmd, uint8_t kthread) {
         process_free(child);
         return errno;
     }
-    
-    /* create terminals if the program is shell */
-    if (!strcmp(argv[0], SHELL))
-        child->nice = NICE_SHELL;
-    else
-        child->nice = NICE_NORMAL;
-    
-
-    // TODO
 
     /* store registers */
     child->usreip = EIP_reg;
     child->usresp = USER_STACK_ADDR;
 
+    /* update nice values */
+    if (!strcmp(argv[0], SHELL))
+        child->nice = NICE_SHELL;
+    else
+        child->nice = NICE_NORMAL;
+    
     /* increment number of tasks */
     ntask++;
     
@@ -395,6 +459,7 @@ static int32_t parse_arg(int8_t *cmd, int8_t *argv[]) {
     /* build the argv list */
     argc = 0;
     while ((delim = strchr(cmd, ' '))) {
+        if (argc == MAXARGS) return -1;
         /* copy argument */
         *delim = '\0';
         strcpy(argv[argc++], cmd);
@@ -406,6 +471,8 @@ static int32_t parse_arg(int8_t *cmd, int8_t *argv[]) {
 
     /* blank line */
     if (!argc) return -1;
+
+    argv[argc] = NULL;
     
     return argc;
 }
@@ -449,6 +516,8 @@ static int32_t process_create(thread_t *current, uint8_t kthread) {
 
     t->children = NULL;
 
+    t->count = TIMESLICE;
+
     t->n_children = 0;
 
     t->max_children = MAXCHILDREN;
@@ -481,7 +550,7 @@ static int32_t process_create(thread_t *current, uint8_t kthread) {
  * 
  * @param current : the process to be freed
  */
-static void process_free(thread_t *current) {
+void process_free(thread_t *current) {
     int i;
     thread_t *parent;
     
@@ -571,7 +640,7 @@ static inline void update_tss(thread_t *curr) {
  */
 uint32_t get_esp0(thread_t *curr) {
     void *process = (void *)curr;
-    return (uint32_t)(process + sizeof(process_t));
+    return (uint32_t)(process + sizeof(process_t) - 4);
 }
 
 
@@ -595,32 +664,42 @@ static void console_init(void) {
     }
 
     shell = init->children[0];
+    shell->state = RUNNABLE;
+
+    console->kshells[1]->state = UNUSED;
+    console->kshells[2]->state = UNUSED;
+
+    console->terminals[0]->fkey = F1;
+    console->terminals[1]->fkey = F2;
+    console->terminals[2]->fkey = F3;
 
     /* give the first shell vga memory */
     shell->terminal->vidmem = video_mem;
 
-    sched_fork(shell);
+    // sched_fork(shell);
+    // activate_task(shell);
 
-     /* save the kernel stack of the current process */
-    asm volatile("movl %%ebp, %0"
+    shell->context->esp = get_esp0(shell);
+    list_add_tail(&(shell->run_node), rr_rq->run_queue);
+
+    /* save current context to shell and switch init to init_task
+     * when scheduler preempt init to shell, shell will goto line 629 */
+    asm volatile("                              \n\
+                  movl  $1f,   %[shell_eip]     \n\
+                  leave                         \n\
+                  ret                           \n\
+                  1:                            \n\
+                  "                                 
+                : [shell_eip] "=m"(shell->context->eip)
                 :
-                : "m"(init->context->ebp)             
                 : "memory" 
     );
 
-    init->context->esp = (init->context->ebp) + 8;
-
-    init->context->eip = *(((uint32_t*)(init->context->ebp)) + 1);
-
-    rq->current = &shell->sched_info;
-
-    shell->sched_info.on_rq = 1;
-
-    user_mem_map(shell);
+    GETPRO(shell);
 
     /* console starts */
     terminal_boot = 1;
-    
+
     switch_to_user(shell);
 }
 
@@ -649,9 +728,10 @@ thread_t **children_create(void) {
  * @param to : dest process
  */
 static inline void __umap(thread_t *from, thread_t *to) {
-    if (strcmp(from->argv[0], INIT))     /* only unmap if it's not the init process */
+    if (from != init)     /* only unmap if it's not the init process */
         user_mem_unmap(from);
-    user_mem_map(to);
+    if (to != init)
+        user_mem_map(to);
 }
 
 
@@ -687,3 +767,4 @@ static inline void overflow_children(thread_t *task) {
         task->children = children;
     } 
 }
+

@@ -20,6 +20,7 @@ typedef struct {
     uint8_t screen_y;                   /* cursor row index */
     uint8_t *vidmem;                    /* 4KB video memory for this terminal */ 
     uint8_t *saved_vidmem;              /* saved video memory address for backing up */
+    uint32_t fkey;                       /* F1 or F2 or F3 */
 } terminal_t;
 
 extern int8_t terminal_boot;

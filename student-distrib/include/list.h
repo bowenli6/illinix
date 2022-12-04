@@ -1,6 +1,7 @@
 #ifndef _LIST_H_
 #define _LIST_H_
 
+#include <lib.h>
 
 typedef struct _list {
     struct _list *next;
@@ -46,6 +47,14 @@ static inline void list_del(list_head *entry) {
 static inline int32_t list_empty(list_head *head) {
     return head->next == head;
 }
+
+#define list_for_each(pos, head) \
+    for (pos = (head)->next; pos != (head); pos = pos->next)
+
+#define list_for_each_prev(pos, head) \
+    for (pos = (head)->prev; pos != (head); pos = pos->prev)
+
+#define list_entry(ptr, type, member) container_of(ptr, type, member)
 
 
 #endif /* _LIST_H_ */

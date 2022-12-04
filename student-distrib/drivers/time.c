@@ -2,6 +2,7 @@
 #include <boot/i8259.h>
 #include <pro/process.h>
 #include <pro/sched.h>
+// #include <pro/cfs.h>
 #include <lib.h>
 #include <io.h>
 
@@ -32,33 +33,34 @@ void pit_init(void) {
  */
 void do_timer(void) {
     uint32_t intr_flag;
-    thread_t *current;
 
     /* update system clock */
-    sys_ticks++;
+    // sys_ticks++;
     
     /* update scheduler clock 
      * NOTE: the waying of doing this might be updated 
      * when high precision system clock is enabled 
      */
-    rq->clock += TICKUNIT;
+    // TODO (cfs)
 
     send_eoi(TIMER_IRQ);      
 
     /* critical section begins. */
     cli_and_save(intr_flag);  
 
-    GETPRO(current);
+    /* tick ... */
+    sched_tick();
 
+    // GETPRO(current);
 
-    /* update vruntime of current task and reschedule when needed */
-    task_tick(current);
+    // /* update vruntime of current task and reschedule when needed */
+    // task_tick(current);
 
-    if (current->flag == NEED_RESCHED) {
-        restore_flags(intr_flag);
-        schedule();
-        return;
-    }
+    // if (current->flag == NEED_RESCHED) {
+    //     restore_flags(intr_flag);
+    //     schedule();
+    //     return;
+    // }
 
     /* critical section ends. */
     restore_flags(intr_flag);

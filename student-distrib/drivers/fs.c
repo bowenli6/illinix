@@ -10,7 +10,7 @@ fs_t *fs;        /* Stores the file system. */
 
 
 static int32_t validate_inode(uint32_t inode);
-static int32_t validate_fname(int8_t *fname);
+static int32_t validate_fname(const int8_t *fname);
 
 
 /**
@@ -183,10 +183,9 @@ uint32_t get_size(uint32_t index) {
  * 
  * @param fname file name of the program
  * @param EIP: the address of the user program eip register
- * @param curr : the current process 
  * @return int32_t : positive or 0 denote success, negative values denote an error condition
  */
-int32_t pro_loader(int8_t *fname, uint32_t *EIP, thread_t *curr) {
+int32_t pro_loader(const int8_t *fname, uint32_t *EIP) {
     int i;
     int32_t errno;
     int32_t inode;
@@ -229,7 +228,7 @@ int32_t pro_loader(int8_t *fname, uint32_t *EIP, thread_t *curr) {
  * @param inode : A file name of the file
  * @return int32_t : positive or 0 denote success, negative values denote an error condition
  */
-static int32_t validate_fname(int8_t *fname) {
+static int32_t validate_fname(const int8_t *fname) {
     int32_t errno;
     dentry_t dentry;
     

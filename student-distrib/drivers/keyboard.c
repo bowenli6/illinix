@@ -42,12 +42,16 @@ void do_keyboard(void) {
     terminal_t *terminal;
     uint32_t scancode = inb(KEYBOARD_PORT);      /* Read one byte from stdin. */
 
-    send_eoi(KEYBOARD_IRQ);                     /* Send End of interrupt to the PIC. */
-
     /* Critical section begins. */
     cli_and_save(intr_flag);  
 
+    send_eoi(KEYBOARD_IRQ);                     /* Send End of interrupt to the PIC. */
+
     GETPRO(curr);
+    if (curr == init) {
+        restore_flags(intr_flag);
+        return;
+    }
     terminal = curr->terminal;
 
     if (scancode < SCANCODES_SIZE)              /* key press (make) */

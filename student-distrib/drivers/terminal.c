@@ -5,6 +5,7 @@
 #include <kmalloc.h>
 #include <lib.h>
 #include <access.h>
+#include <drivers/vga.h>
 #include <io.h>
 
 /* Local functions, see headers for descriptions. */
@@ -15,6 +16,8 @@ static void out_tab(uint32_t n, terminal_t *terminal);
 static void backspace(terminal_t *terminal);
 static void bufcpy(void *dest, const void *src, uint32_t nbytes, uint8_t bufhd);
 static int isletter(uint32_t scancode);
+static inline void f_key(uint32_t scancode, terminal_t *terminal, int idx);
+
 
 
 /* 1 when terminal driver is booted */
@@ -84,6 +87,12 @@ void key_press(uint32_t scancode, terminal_t *terminal) {
         return;
     case TAB:
         out_tab(TAB_SPACE, terminal);
+    case F1:
+        f_key(scancode, terminal, 0);
+    case F2:
+        f_key(scancode, terminal, 1);
+    case F3:
+        f_key(scancode, terminal, 2);
     case L:
 
         if (terminal->ctrl) {                    /* If ctrl is hold and CTRL-L is pressed. */
@@ -113,6 +122,29 @@ void key_press(uint32_t scancode, terminal_t *terminal) {
 }
 
 
+static inline void f_key(uint32_t scancode, terminal_t *terminal, int idx) {
+    terminal_t *to;
+    thread_t *t;
+
+    if (!terminal->alt) return;
+
+    if (scancode == terminal->fkey) return;
+
+    /* set its vidmem to back up */
+    memcpy((void*)terminal->saved_vidmem, (void*)terminal->vidmem, VIDMEM_SIZE);
+    terminal->vidmem = terminal->saved_vidmem;
+
+    to = console->terminals[idx];
+    memcpy((void*)video_mem, (void*)to->vidmem, VIDMEM_SIZE);
+    to->vidmem = video_mem;
+
+    t = console->kshells[idx];
+    if (t->state == UNUSED) {
+        t->state = RUNNABLE;
+        list_add(&t->run_node, rr_rq->run_queue);
+    }
+}
+
 /**
  * @brief Parse key when the a key is release.
  * 
@@ -129,10 +161,13 @@ void key_release(uint32_t scancode, terminal_t *terminal) {
         case CTRL:
             terminal->ctrl = 0;              /* Uncheck ctrl. */
             break;
+        case LALT:
+            terminal->alt = 0;               /* uncheck alt */
         default:
             break;
     }
 }
+
 
     
 /**
