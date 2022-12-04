@@ -88,7 +88,7 @@ void init_task(void) {
         // DO SOMETHING HERE IN THE FUTURE
 
         /* yield the CPU */
-        // schedule();
+        schedule();
     }
 }
 
