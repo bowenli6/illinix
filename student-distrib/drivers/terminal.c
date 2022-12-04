@@ -7,7 +7,7 @@
 #include <access.h>
 #include <drivers/vga.h>
 #include <io.h>
-#include <boot/page.h>>
+#include <boot/page.h>
 
 /* Local functions, see headers for descriptions. */
 
@@ -99,7 +99,7 @@ void key_press(uint32_t scancode, terminal_t *terminal) {
         }                             
         return;
     case F2:
-        if (terminal->alt)        
+        if (terminal->alt)       
             f_key(scancode, terminal, 1);
         if (terminal->shift) {                    /* If Shift is hold, output in capital form. */
             in(scancode, 1 - (terminal->capslock & isletter(scancode)), terminal);
@@ -109,7 +109,7 @@ void key_press(uint32_t scancode, terminal_t *terminal) {
         }                             
         return;
     case F3:
-        if (terminal->alt)
+        if (terminal->alt)    
             f_key(scancode, terminal, 2);
         if (terminal->shift) {                    /* If Shift is hold, output in capital form. */
             in(scancode, 1 - (terminal->capslock & isletter(scancode)), terminal);
@@ -153,23 +153,21 @@ static inline void f_key(uint32_t scancode, terminal_t *terminal, int idx) {
 
     if (scancode == console->curr_key) return; 
 
-    // if (console->curr_key == terminal->fkey) {
+    if (console->curr_key == terminal->fkey) {
         /* set its vidmem to back up */
-    //     memcpy((void*)terminal->saved_vidmem, (void*)video_mem, VIDMEM_SIZE);
-    //     terminal->vidmem = terminal->saved_vidmem;
-    // }
-    memcpy((void*)terminal->saved_vidmem, (void*)video_mem, VIDMEM_SIZE);
-    terminal->vidmem = terminal->saved_vidmem;
+        memcpy((void*)terminal->saved_vidmem, (void*)video_mem, VIDMEM_SIZE);
+        terminal->vidmem = terminal->saved_vidmem;
+    }
 
     terminal->alt = 0;
 
     t = console->kshells[idx];
     to = console->terminals[idx];
 
+    memset((void*)video_mem, 0, VIDMEM_SIZE);
+    
     if (t->state == UNUSED) {
-        memset((void*)video_mem, 0, VIDMEM_SIZE);
         t->state = RUNNABLE;
-        list_add(&t->run_node, rr_rq->run_queue);
     } else {
         memcpy((void*)video_mem, (void*)to->saved_vidmem, VIDMEM_SIZE);
         flush_tlb();
@@ -179,6 +177,9 @@ static inline void f_key(uint32_t scancode, terminal_t *terminal, int idx) {
 
     console->curr_key = scancode;
     vga_update_cursor(to->screen_x, to->screen_y);
+
+    list_add(&t->run_node, rr_rq->run_queue);
+    sched_sleep(t);
 }
 
 /**
@@ -218,7 +219,7 @@ static void in(uint32_t scancode, uint8_t caps, terminal_t *terminal) {
     uint8_t character = scancodes[scancode][caps];  /* Get character. */
     if (character == '\r') character = '\n';
     if (character) {
-        _putc(character, terminal);
+        putc(character);
         if (terminal->size  == TERBUF_SIZE)   
             terminal->bufhd = (terminal->bufhd + 1) % TERBUF_SIZE;
 

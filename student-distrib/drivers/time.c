@@ -42,6 +42,8 @@ void do_timer(void) {
      * when high precision system clock is enabled 
      */
     // TODO (cfs)
+    /* critical section begins. */
+    cli_and_save(intr_flag); 
 
     send_eoi(TIMER_IRQ);       
 
@@ -60,4 +62,5 @@ void do_timer(void) {
     // }
 
     /* critical section ends. */
+    restore_flags(intr_flag);
 }

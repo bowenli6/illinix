@@ -214,11 +214,13 @@ void _putc(uint8_t c, terminal_t* terminal) {
     if (!terminal_boot) {
         screen_x = x;
         screen_y = y;
+        vga_update_cursor(x, y);
     } else {
         terminal->screen_x = x;
         terminal->screen_y = y;
+        if (terminal->fkey == console->curr_key)
+            vga_update_cursor(x, y);
     }
-    vga_update_cursor(x, y);
 }
 
 /**
@@ -260,7 +262,8 @@ void back(terminal_t *terminal) {
         terminal->screen_x--;
     }
     vga_write(terminal->vidmem, terminal->screen_x, terminal->screen_y, ' ');
-    vga_update_cursor(terminal->screen_x, terminal->screen_y);
+    if (terminal->fkey == console->curr_key)
+        vga_update_cursor(terminal->screen_x, terminal->screen_y);
 }
 
 void panic(int8_t *s)

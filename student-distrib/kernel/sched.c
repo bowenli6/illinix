@@ -91,16 +91,10 @@ void sched_init(void) {
  */
 void sched_tick(void) {
     thread_t *curr;
-    uint32_t intr_flag;
-
-     /* critical section begins. */
-    cli_and_save(intr_flag); 
 
     GETPRO(curr);
 
     list_add_tail(&curr->run_node, rr_rq->run_queue);
-    
-    restore_flags(intr_flag);
 
     schedule();
 }
@@ -157,6 +151,8 @@ void schedule(void) {
     /* update count to start counting */
     // next->count = TIMESLICE;
 
+    sti();
+    
     if (next == prev) return;
 
     context_switch(prev, next);

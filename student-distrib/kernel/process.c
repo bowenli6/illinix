@@ -226,7 +226,7 @@ void do_exit(uint32_t status) {
     /* check if the current process is running a system thread and it is a shell */
     if ((child->kthread) && (!strcmp(child->argv[0], SHELL)))
         switch_to_user(child);
-
+    
     /* free the current task */
     parent = child->parent;
 
@@ -243,7 +243,6 @@ void do_exit(uint32_t status) {
     parent->context->eax = status;
 
     if (parent->state == SLEEPING) {
-        sti();
         sched_wakeup(parent);
     }
 }
@@ -273,7 +272,7 @@ int32_t do_execute(thread_t *parent, const int8_t *cmd) {
     // activate_task(child);
 
     /* add new task to the front of the queue */
-    list_add(&child->run_node, rr_rq->run_queue);
+    list_add_tail(&child->run_node, rr_rq->run_queue);
 
     /* get child esp */
     child->context->esp = get_esp0(child);
