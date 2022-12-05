@@ -14,14 +14,14 @@ EBP = 28
 
 .text
 
-# arg0: the hardware context of the thread that wants to switch
-# arg1: the hardware context of the thread that will be switched with
+# prev: the hardware context of the thread that wants to switch
+# next: the hardware context of the thread that will be switched with
 .globl swtch
 swtch:
     # get first argument
     movl   4(%esp), %eax 
 
-    # save current context into arg0
+    # save current context into prev context
     popl   EIP(%eax)
     movl   %esp, ESP(%eax)
     movl   %ebx, EBX(%eax)
@@ -31,8 +31,10 @@ swtch:
     movl   %edi, EDI(%eax)
     movl   %ebp, EBP(%eax)
 
-    # restore saved context into current context
+    #get second argument 
     movl   4(%esp), %eax
+
+    # restore next context into current context
     movl   EBP(%eax), %ebp
     movl   EDI(%eax), %edi
     movl   ESI(%eax), %esi
@@ -42,7 +44,7 @@ swtch:
     movl   ESP(%eax), %esp
 
     # set new return address
-    jmp  EIP(%eax)
+    pushl  EIP(%eax)
 
-
+    ret
 

@@ -121,14 +121,14 @@ void sched_sleep(thread_t *task) {
 
 void sched_wakeup(thread_t *task) {
     uint32_t flag;
-    // cli_and_save(flag);
+    cli_and_save(flag);
 
     task->state = RUNNABLE;
     /* add back to the front for better performance */
     list_add(&task->run_node, &rq->head);
     
     schedule();
-    // restore_flags(flag);
+    restore_flags(flag);
 }
 
 /**

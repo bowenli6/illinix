@@ -43,7 +43,7 @@ console_t *console;             /* console contains terminals */
 uint32_t ntask;                 /* current number of tasks created */
 list_head *task_queue;          /* list of all tasks (idle -> init -> {user task}) */
 list_head *wait_queue;          /* list of sleeping tasks (idle -> {sleeping user task || init}) */
-
+    
 
 /* local helper functions */
 static int32_t __exec(thread_t *current, const int8_t *cmd, uint8_t kthread);
@@ -104,7 +104,7 @@ void inline context_switch(thread_t *prev, thread_t *next) {
     __umap(prev, next);
     if (next != init)
         update_tss(next);
-    __swtch(prev, next);
+    swtch(prev->context, next->context);
     sti();
 }
 

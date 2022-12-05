@@ -171,7 +171,6 @@ static inline void f_key(uint32_t scancode, terminal_t *terminal, int idx) {
         next->state = RUNNABLE;
     } else {
         memcpy((void*)video_mem, (void*)next_terminal->saved_vidmem, VIDMEM_SIZE);
-        flush_tlb();
     }
 
     next_terminal->vidmem = video_mem;
@@ -182,9 +181,9 @@ static inline void f_key(uint32_t scancode, terminal_t *terminal, int idx) {
 
     GETPRO(curr);
 
-    // if (strcmp(curr->argv[0], SHELL))
-        // list_add_tail(&curr->run_node, &rq->head);
-    // else
+    if (strcmp(curr->argv[0], SHELL))
+        list_add_tail(&curr->run_node, &rq->head);
+    else
         curr->state = SLEEPING;
 
     sched_wakeup(next);

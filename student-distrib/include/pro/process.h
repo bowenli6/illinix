@@ -166,7 +166,7 @@ int32_t pro_loader(const int8_t *fname, uint32_t *EIP);
 
 /* implemented in switch.S */
 
-void swtch(context_t *from, context_t *to);
+void swtch(context_t *prev, context_t *next);
 
 /* implemented in access.c */
 
