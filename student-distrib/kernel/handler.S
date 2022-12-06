@@ -208,7 +208,7 @@ page_fault_handler:
     pushl   $0                  # no error code now: pad the hardware error code on the stack.
     #pushl   $do_page_fault      # push the do_handler function address. 
     call    do_page_fault
-    add     $12, %esp
+    add     $8, %esp
     popal
     # movl    $USER_DS, %eax
     # andl    $0xFF, %eax

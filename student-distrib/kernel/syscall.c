@@ -16,8 +16,6 @@
  * @return int32_t : positive or 0 denote success, negative values denote an error condition
  */
 asmlinkage void sys_exit(uint8_t status) {
-    cli();
-
     /* never returns to the halting process */
     do_exit((uint32_t)status);
 }
@@ -34,10 +32,11 @@ asmlinkage int32_t sys_fork(void) {
     pid_t pid;
     thread_t *current, *child;
 
-    cli();
-
     /* get current process */
     GETPRO(current);
+
+    // cli_and_save(current->intr_flag);
+
 
     /* get pid of child */
     pid = do_fork(current, 0);
@@ -61,7 +60,7 @@ asmlinkage int32_t sys_fork(void) {
     /* copy esp from parent to child */
     child->context->esp = (child->context->ebp) + 8;
     
-    sti();
+    // restore_flags(current->intr_flag);
 
     /* check for preemption */
     // if (current->flag == NEED_RESCHED)
@@ -83,18 +82,26 @@ asmlinkage int32_t sys_execute(const int8_t *cmd) {
     int32_t status;
 
     cli();
+
     GETPRO(curr);
+
+    // cli_and_save(consoles[curr->console_id]->intr_flag);
+
     status = do_execute(curr, cmd);
     if (status < 0) 
         return status;
 
-    sched_sleep(curr);
+    child = curr->children[curr->n_children-1];
+    consoles[child->console_id]->task = child;
+    curr->state = SLEEPING;
+    context_switch(curr, child);
 
     GETPRO(curr);
     child = curr->children[curr->n_children-1];
     process_free(child);
-    sti();
 
+    sti();
+    
     return curr->context->eax;
 }
 

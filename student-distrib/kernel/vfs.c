@@ -397,7 +397,6 @@ void fdcopy(void) {
     thread_t *curr;
     GETPRO(curr);
 
-
     /* copy file descriptor when it first tried to open a file */
     if (!curr->fds) {
         curr->fds = kmalloc(sizeof(files));

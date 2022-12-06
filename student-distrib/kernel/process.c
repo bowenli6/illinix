@@ -220,13 +220,16 @@ void do_exit(uint32_t status) {
     thread_t *child;
     thread_t *parent; 
 
-    GETPRO(child);
+    cli();
+
+    GETPRO(child);  
+
+    // cli_and_save(consoles[child->console_id]->intr_flag);
 
     /* check if the current process is running a system thread and it is a shell */
     if ((child->kthread) && (!strcmp(child->argv[0], SHELL)))
         switch_to_user(child);
     
-    /* free the current task */
     parent = child->parent;
 
     /* if it has children runnable/sleeping */
@@ -242,6 +245,7 @@ void do_exit(uint32_t status) {
     parent->context->eax = status;
 
     consoles[parent->console_id]->task = parent;
+
     context_switch(child, parent);
 }
 
@@ -274,9 +278,6 @@ int32_t do_execute(thread_t *parent, const int8_t *cmd) {
     // sched_fork(child);
     // activate_task(child);
 
-    /* add new task to the end of the queue */
-    list_add_tail(&child->run_node, &rq->head);
-
     /* get child esp */
     child->context->esp = get_esp0(child);
     child->context->ebp = child->context->esp;
@@ -295,8 +296,6 @@ int32_t do_execute(thread_t *parent, const int8_t *cmd) {
     );
 
     GETPRO(child);
-
-    consoles[child->console_id]->task = child;
 
     switch_to_user(child);
 
@@ -566,13 +565,14 @@ void process_free(thread_t *current) {
         kfree(current->children);
     }
 
-    if (curr == current)
+    if (curr == current) {
         __umap(current, current->parent);
+        update_tss(parent);
+    }
 
     free_kstack((void*)current);
 
     parent->children[--parent->n_children] = NULL;
-    update_tss(parent);
 }
 
 

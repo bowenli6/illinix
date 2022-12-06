@@ -88,20 +88,19 @@ void sched_init(void) {
  * 
  */
 void sched_tick(void) {
-    uint32_t flag;
-    thread_t *curq;
+    thread_t *curr;
 
-    cli_and_save(flag);
+    cli();
 
-    GETPRO(curq);
+    GETPRO(curr);
 
-    curq->state = RUNNABLE;
+    curr->state = RUNNABLE;
 
-    list_add_tail(&curq->run_node, &rq->head);
+    list_add_tail(&curr->run_node, &rq->head);
     
     schedule();
 
-    restore_flags(flag);
+    sti();
 }
 
 
@@ -155,9 +154,6 @@ void schedule(void) {
 
     /* update states */
     next->state = RUNNING;
-
-    /* update count to start counting */
-    // next->count = TIMESLICE;
     
     if (next == prev) return;        
 

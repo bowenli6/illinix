@@ -129,6 +129,7 @@ typedef struct {
     uint32_t fkey;
     thread_t *task;
     uint8_t* vidmap;
+    uint32_t intr_flag;       /* interrupt CLI/STI flag */
 } console_t;
 
 

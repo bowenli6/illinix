@@ -46,15 +46,14 @@ void rtc_init() {
  * 
  */
 void do_rtc() {
-    uint32_t interrupt_flag;
-    cli_and_save(interrupt_flag);       /* Disable interrupts and store flags into local variable. */
+    cli();
     global_interrupt_flag = 1;
     send_eoi(RTC_IRQ);
-    restore_flags(interrupt_flag);
 
     outb(RTC_C_reg, RTC_CMD_port);     /* read from register C and ensure all interrupts are properly generated */
 
     inb(RTC_DATA_port);                /* discard the value for now. */
+    sti();
 }
 
 /**

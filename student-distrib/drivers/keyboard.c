@@ -37,12 +37,13 @@ void keyboard_init(void) {
  * @brief Interrupt handler for the keyboard device.
  */
 void do_keyboard(void) {
-    uint32_t intr_flag;
     terminal_t *terminal;
-    uint32_t scancode = inb(KEYBOARD_PORT);      /* Read one byte from stdin. */
+    uint32_t scancode;
 
     /* Critical section begins. */
-    cli_and_save(intr_flag);  
+    cli();
+
+    scancode = inb(KEYBOARD_PORT);              /* Read one byte from stdin. */
 
     send_eoi(KEYBOARD_IRQ);                     /* Send End of interrupt to the PIC. */
 
@@ -54,5 +55,5 @@ void do_keyboard(void) {
         key_release(scancode - SCANCODES_SIZE, terminal);
 
     /* Critical section ends. */
-    restore_flags(intr_flag);
+    sti();
 }

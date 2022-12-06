@@ -3,7 +3,7 @@
 
 
 /* video memory pointer */
-uint8_t *video_mem = (uint8_t *)VIDEO;
+char *video_mem = (char *)VIDEO;
 
 
 /**
@@ -21,10 +21,9 @@ void vga_init(void) {
  * @param x : col position
  * @param y : row position
  */
-
-void vga_write(uint8_t *vidmem, uint8_t x, uint8_t y, int8_t c) {
-	*(vidmem + ((VGA_WIDTH * y + x) << 1)) = c;
-    *(vidmem + ((VGA_WIDTH * y + x) << 1) + 1) = ATTRIB;
+void vga_write(char *vidmem, uint8_t x, uint8_t y, int8_t c) {
+	*(uint8_t *)(vidmem + ((VGA_WIDTH * y + x) << 1)) = c;
+    *(uint8_t *)(vidmem + ((VGA_WIDTH * y + x) << 1) + 1) = ATTRIB;
 }
 
 
@@ -32,11 +31,11 @@ void vga_write(uint8_t *vidmem, uint8_t x, uint8_t y, int8_t c) {
  * @brief clear the screen
  * 
  */
-void vga_clear(uint8_t *vidmem) {
+void vga_clear(char *vidmem) {
 	int32_t i;
     for (i = 0; i < VGA_HEIGHT * VGA_WIDTH; i++) {
-        *(vidmem + (i << 1)) = ' ';
-        *(vidmem + (i << 1) + 1) = ATTRIB;
+        *(uint8_t *)(vidmem + (i << 1)) = ' ';
+        *(uint8_t *)(vidmem + (i << 1) + 1) = ATTRIB;
     }
 }
 
@@ -46,17 +45,17 @@ void vga_clear(uint8_t *vidmem) {
  * @brief vertical scrolling down the screen
  * 
  */
-void vga_scrolling(uint8_t *vidmem) {
+void vga_scrolling(char *vidmem) {
 	int32_t i;
 
     for (i = 0; i < VGA_WIDTH * (VGA_HEIGHT - 1); ++i) {
-        *(vidmem + (i << 1)) = *(uint8_t *)(video_mem + ((i + VGA_WIDTH) << 1));
-        *(vidmem + (i << 1) + 1) = ATTRIB;
+        *(uint8_t *)(vidmem + (i << 1)) = *(uint8_t *)(video_mem + ((i + VGA_WIDTH) << 1));
+        *(uint8_t *)(vidmem + (i << 1) + 1) = ATTRIB;
     }
 
     for (i = VGA_WIDTH * (VGA_HEIGHT - 1); i < VGA_WIDTH * VGA_HEIGHT; ++i) {
-        *(vidmem + (i << 1)) = ' ';
-        *(vidmem + (i << 1) + 1) = ATTRIB;
+        *(uint8_t *)(vidmem + (i << 1)) = ' ';
+        *(uint8_t *)(vidmem + (i << 1) + 1) = ATTRIB;
     }
 }
 

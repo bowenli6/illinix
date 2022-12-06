@@ -13,12 +13,12 @@
 #define VGA_WIDTH   80
 #define VGA_HEIGHT  25
 
-extern uint8_t *video_mem;
+extern char *video_mem;
 
 void vga_init(void);
-void vga_write(uint8_t *vidmem, uint8_t x, uint8_t y, int8_t c);
-void vga_clear(uint8_t *vidmem);
-void vga_scrolling(uint8_t *vidmem);
+void vga_write(char *vidmem, uint8_t x, uint8_t y, int8_t c);
+void vga_clear(char *vidmem);
+void vga_scrolling(char *vidmem);
 void vga_enable_cursor(uint8_t cursor_start, uint8_t cursor_end);
 void vga_disable_cursor(void);
 void vga_update_cursor(uint8_t x, uint8_t y);
