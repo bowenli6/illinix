@@ -231,7 +231,7 @@ void putc(uint8_t c) {
     thread_t *curr;
     terminal_t *terminal;
     if(terminal_boot) {
-        curr = current->task;
+        GETPRO(curr);
         terminal = curr->terminal;
     }
     _putc(c, terminal);

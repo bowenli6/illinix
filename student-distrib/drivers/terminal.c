@@ -7,6 +7,7 @@
 #include <access.h>
 #include <drivers/vga.h>
 #include <io.h>
+#include <boot/x86_desc.h>
 #include <boot/page.h>
 
 /* Local functions, see headers for descriptions. */
@@ -43,7 +44,8 @@ terminal_t *terminal_create(void) {
     terminal->size = 0;                         /* No character yet. */
     terminal->exit = 0;                         /* \n is not read. */
     terminal->buffer = kmalloc(TERBUF_SIZE);    /* create buffer */
-    terminal->saved_vidmem = kmalloc(VIDMEM_SIZE); /* create video memory */
+    terminal->saved_vidmem = get_page(0); /* create video memory */
+    //memset(terminal->saved_vidmem, 0, TERBUF_SIZE);
     terminal->vidmem = terminal->saved_vidmem;  /* save back up video memory */
     memset((void*)terminal->buffer, 0, TERBUF_SIZE);
     memset((void*)terminal->vidmem, 0, VIDMEM_SIZE);
@@ -152,6 +154,20 @@ void key_press(uint32_t scancode, terminal_t *terminal) {
     }
 }
 
+void switch_vidmap(int src, int dest)
+{
+    thread_t *prev, *next;
+    prev = consoles[src]->task;
+    next = consoles[dest]->task;
+
+    vidmap_table[(VIDEO >> PDE_OFFSET_4KB) + src] = PTE_PRESENT | PTE_RW | PTE_US | ADDR_TO_PTE((uint32_t)consoles[src]->task->terminal->saved_vidmem);
+    vidmap_table[(VIDEO >> PDE_OFFSET_4KB) + dest] = PTE_PRESENT | PTE_RW | PTE_US | ADDR_TO_PTE(VIDEO);
+    
+
+    flush_tlb();
+
+}
+
 
 static inline void terminal_switch(uint32_t scancode, terminal_t *terminal, int idx) {
     terminal_t *next_terminal;
@@ -173,25 +189,28 @@ static inline void terminal_switch(uint32_t scancode, terminal_t *terminal, int 
 
     terminal->alt = 0;
 
-    memset((void*)video_mem, 0, VIDMEM_SIZE);
+    // memset((void*)video_mem, 0, VIDMEM_SIZE);
     
     if (next->state == UNUSED) {
         next->state = RUNNABLE;
+        //memcpy((void*)video_mem, (void*)next_terminal->saved_vidmem, VIDMEM_SIZE);
     } else {
         if (next != curr)
-            list_del(&next->run_node);
+            list_del(&next->run_node);    
         memcpy((void*)video_mem, (void*)next_terminal->saved_vidmem, VIDMEM_SIZE);
     }
-
+    
     next_terminal->vidmem = video_mem;
 
     vga_update_cursor(next_terminal->screen_x, next_terminal->screen_y);
+    
+    switch_vidmap(current->id, idx);
 
     if (next != curr)   
         list_add_tail(&curr->run_node, &rq->head);
         
     current = consoles[idx];
-
+    
     if (next == curr) 
         return;
 
@@ -235,7 +254,7 @@ static void in(uint32_t scancode, uint8_t caps, terminal_t *terminal) {
     uint8_t character = scancodes[scancode][caps];  /* Get character. */
     if (character == '\r') character = '\n';
     if (character) {
-        putc(character);
+        _putc(character, terminal);
         if (terminal->size  == TERBUF_SIZE)   
             terminal->bufhd = (terminal->bufhd + 1) % TERBUF_SIZE;
 

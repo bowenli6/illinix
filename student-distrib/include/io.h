@@ -17,6 +17,7 @@ int32_t puts(int8_t *s);
 void test_interrupts(void);
 void back(terminal_t *terminal);
 int32_t fputs(int32_t fd, const int8_t* s);
+void _putc(uint8_t c, terminal_t* terminal);
 
 void panic(int8_t* s);
 #endif /* _IO_T */

@@ -119,6 +119,7 @@ typedef struct thread {
     terminal_t         *terminal;       /* terminal for this thread */
     uint32_t           console_id;      /* console for this thread */
     int32_t            nice;            /* nice value */
+    uint8_t            **user_vidmap;
 } thread_t;
 
 
@@ -127,6 +128,7 @@ typedef struct {
     uint32_t id;
     uint32_t fkey;
     thread_t *task;
+    uint8_t* vidmap;
 } console_t;
 
 

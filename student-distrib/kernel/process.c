@@ -656,6 +656,7 @@ static void console_init(void) {
         console->id = i;
         console->fkey = keys[i];
         console->task = shell;
+        console->vidmap = (uint8_t*)(VIR_VID_MEM + VIDEO + PAGE_SIZE * i);
         consoles[i] = console;
         shell->console_id = console->id;
         shell->terminal = terminal_create();

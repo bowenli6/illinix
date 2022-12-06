@@ -97,14 +97,18 @@ void page_init()
     }
 
     page_directory[VIR_VID_MEM / PAGE_SIZE_4MB] = PTE_PRESENT | PTE_RW | PTE_US | ADDR_TO_PTE((int)vidmap_table);
-    for(i = 0; i < ENTRY_NUM; i++) {
-        if(i == (VIDEO >> PDE_OFFSET_4KB)) {
-            vidmap_table[i] = PTE_PRESENT | PTE_RW | PTE_US | ADDR_TO_PTE(VIDEO);
-        }
-        else {
-            vidmap_table[i] = 0;
-        }
+    
+    for(i = 0; i < 3; i++) {
+        vidmap_table[(VIDEO >> PDE_OFFSET_4KB) + i] = PTE_PRESENT | PTE_RW | PTE_US | ADDR_TO_PTE(VIDEO);
     }
+    // for(i = 0; i < ENTRY_NUM; i++) {
+    //     if(i == (VIDEO >> PDE_OFFSET_4KB)) {
+    //         vidmap_table[i] = PTE_PRESENT | PTE_RW | PTE_US | ADDR_TO_PTE(VIDEO);
+    //     }
+    //     else {
+    //         vidmap_table[i] = 0;
+    //     }
+    // }
 
     /* turn on paging registers */
     enable_paging();
@@ -119,16 +123,29 @@ void page_init()
  * @param screen_start : starting screen address
  * @return int32_t : positive or 0 denote success, negative values denote an error condition
  */
-int32_t do_vidmap(uint8_t **screen_start) {
+int32_t do_vidmap(uint8_t **screen_start)
+{
+    // cli();
     if(!(*(_walk((uint32_t)screen_start, 0, 0)) & PTE_US)) {
         return -1;
     }
-    *screen_start = (uint8_t*) (VIR_VID_MEM + VIDEO);
-    
+
+    thread_t* t;
+    GETPRO(t);
+
+    *screen_start = current->vidmap;
+
+    // if(t == current->task) {
+    //     *screen_start = (uint8_t*) (VIR_VID_MEM + VIDEO);
+    // }
+    // else {
+    //     *screen_start = (uint8_t*) (t->terminal->saved_vidmem);
+    // }
+    // sti();
     return 0;
 }
 
-/**
+/** 
  * @brief Expand the current thread's heap size.
  * 
  * @param incrsize The size(# bytes) of the heap expansion requested by the user. 
