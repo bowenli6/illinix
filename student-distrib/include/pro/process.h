@@ -117,16 +117,16 @@ typedef struct thread {
     files              *fds;            /* opened file descritors */
     uint8_t            kthread;         /* 1 if this thread is belong to the kernel */
     terminal_t         *terminal;       /* terminal for this thread */
+    uint32_t           console_id;      /* console for this thread */
     int32_t            nice;            /* nice value */
 } thread_t;
 
 
 /* array of terminals for each shells */
 typedef struct {
-    terminal_t **terminals;
-    thread_t **kshells;
-    int32_t    size;
-    uint32_t   curr_key;
+    uint32_t id;
+    uint32_t fkey;
+    thread_t *task;
 } console_t;
 
 
@@ -139,10 +139,10 @@ typedef union {
 
 extern thread_t *idle;
 extern thread_t *init;
-extern list_head *task_queue;  
-extern list_head *wait_queue;
-extern console_t *console;  
-
+extern list_head task_queue;  
+extern list_head wait_queue;
+extern console_t **consoles;
+extern console_t *current;
 
 void swapper(void);
 void init_task(void);

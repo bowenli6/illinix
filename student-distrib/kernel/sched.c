@@ -56,14 +56,16 @@ void sched_init(void) {
     rq->size = 0;
 
     /* create task queue */
-    task_queue = &(idle->task_node);
-    task_queue->next = task_queue;
-    task_queue->prev = task_queue;
+    task_queue.next = &task_queue;
+    task_queue.prev = &task_queue;
     
     /* create wait queue */
-    wait_queue = &(idle->task_node);
-    wait_queue->next = wait_queue;
-    wait_queue->prev = wait_queue;
+    wait_queue.next = &wait_queue;
+    wait_queue.prev = &wait_queue;
+
+    /* create console queue */
+    consoles = kmalloc(NTERMINAL * sizeof(console_t));
+    current = NULL;
 
     /* start running init */
     init->context->esp = get_esp0(init);
@@ -92,6 +94,8 @@ void sched_tick(void) {
     cli_and_save(flag);
 
     GETPRO(curq);
+
+    curq->state = RUNNABLE;
 
     list_add_tail(&curq->run_node, &rq->head);
     
@@ -124,8 +128,9 @@ void sched_wakeup(thread_t *task) {
     cli_and_save(flag);
 
     task->state = RUNNABLE;
+
     /* add back to the front for better performance */
-    list_add(&task->run_node, &rq->head);
+    list_add_tail(&task->run_node, &rq->head);
     
     schedule();
     restore_flags(flag);
@@ -139,7 +144,7 @@ void schedule(void) {
     thread_t *prev, *next;
     list_head *node;
 
-    /* get curqent thread struct */
+    /* get current thread struct */
     GETPRO(prev);        
     
     node = rq->head.next;
@@ -154,7 +159,7 @@ void schedule(void) {
     /* update count to start counting */
     // next->count = TIMESLICE;
     
-    if (next == prev) return;
+    if (next == prev) return;        
 
     context_switch(prev, next);
 }

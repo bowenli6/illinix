@@ -17,7 +17,7 @@ static void out_tab(uint32_t n, terminal_t *terminal);
 static void backspace(terminal_t *terminal);
 static void bufcpy(void *dest, const void *src, uint32_t nbytes, uint8_t bufhd);
 static int isletter(uint32_t scancode);
-static inline void f_key(uint32_t scancode, terminal_t *terminal, int idx);
+static inline void terminal_switch(uint32_t scancode, terminal_t *terminal, int idx);
 
 
 
@@ -89,8 +89,10 @@ void key_press(uint32_t scancode, terminal_t *terminal) {
     case TAB:
         out_tab(TAB_SPACE, terminal);
     case F1:
-        if (terminal->alt)        
-            f_key(scancode, terminal, 0);
+        if (terminal->alt) {        
+            terminal_switch(scancode, terminal, 0);
+            return;
+        }
         if (terminal->shift) {                    /* If Shift is hold, output in capital form. */
             in(scancode, 1 - (terminal->capslock & isletter(scancode)), terminal);
         } else {
@@ -99,8 +101,10 @@ void key_press(uint32_t scancode, terminal_t *terminal) {
         }                             
         return;
     case F2:
-        if (terminal->alt)       
-            f_key(scancode, terminal, 1);
+        if (terminal->alt) {    
+            terminal_switch(scancode, terminal, 1);
+            return;
+        }
         if (terminal->shift) {                    /* If Shift is hold, output in capital form. */
             in(scancode, 1 - (terminal->capslock & isletter(scancode)), terminal);
         } else {
@@ -109,8 +113,10 @@ void key_press(uint32_t scancode, terminal_t *terminal) {
         }                             
         return;
     case F3:
-        if (terminal->alt)    
-            f_key(scancode, terminal, 2);
+        if (terminal->alt) {
+            terminal_switch(scancode, terminal, 2);
+            return;
+        }
         if (terminal->shift) {                    /* If Shift is hold, output in capital form. */
             in(scancode, 1 - (terminal->capslock & isletter(scancode)), terminal);
         } else {
@@ -147,46 +153,49 @@ void key_press(uint32_t scancode, terminal_t *terminal) {
 }
 
 
-static inline void f_key(uint32_t scancode, terminal_t *terminal, int idx) {
+static inline void terminal_switch(uint32_t scancode, terminal_t *terminal, int idx) {
     terminal_t *next_terminal;
     thread_t *curr;
     thread_t *next;
 
-    if (scancode == console->curr_key) return; 
+    if (scancode == current->fkey) return; 
 
-    if (console->curr_key == terminal->fkey) {
-        /* set its vidmem to back up */
-        memcpy((void*)terminal->saved_vidmem, (void*)video_mem, VIDMEM_SIZE);
-        terminal->vidmem = terminal->saved_vidmem;
-    }
+    GETPRO(curr);
+
+    next = consoles[idx]->task;
+    
+    next_terminal = next->terminal;
+
+   
+    /* set its vidmem to back up */
+    memcpy((void*)terminal->saved_vidmem, (void*)video_mem, VIDMEM_SIZE);
+    terminal->vidmem = terminal->saved_vidmem;
 
     terminal->alt = 0;
-
-    next = console->kshells[idx];
-    next_terminal = console->terminals[idx];
 
     memset((void*)video_mem, 0, VIDMEM_SIZE);
     
     if (next->state == UNUSED) {
         next->state = RUNNABLE;
     } else {
+        if (next != curr)
+            list_del(&next->run_node);
         memcpy((void*)video_mem, (void*)next_terminal->saved_vidmem, VIDMEM_SIZE);
     }
 
     next_terminal->vidmem = video_mem;
 
-    console->curr_key = scancode;
-    
     vga_update_cursor(next_terminal->screen_x, next_terminal->screen_y);
 
-    GETPRO(curr);
-
-    if (strcmp(curr->argv[0], SHELL))
+    if (next != curr)   
         list_add_tail(&curr->run_node, &rq->head);
-    else
-        curr->state = SLEEPING;
+        
+    current = consoles[idx];
 
-    sched_wakeup(next);
+    if (next == curr) 
+        return;
+
+    context_switch(curr, next);
 }
 
 /**
@@ -327,7 +336,7 @@ int32_t terminal_read(int32_t fd, void *buf, int32_t nbytes) {
     thread_t *curr;
     terminal_t *terminal;
 
-    GETPRO(curr);
+    curr = current->task;
     terminal = curr->terminal;
 
     if (!terminal) return -1;

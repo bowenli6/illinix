@@ -30,7 +30,7 @@ void clear(void) {
         return;
     }
 
-    GETPRO(curr);
+    curr = current->task;
     terminal = curr->terminal;
     
     vga_clear(terminal->vidmem);
@@ -218,7 +218,7 @@ void _putc(uint8_t c, terminal_t* terminal) {
     } else {
         terminal->screen_x = x;
         terminal->screen_y = y;
-        if (terminal->fkey == console->curr_key)
+        if (terminal == current->task->terminal)
             vga_update_cursor(x, y);
     }
 }
@@ -231,7 +231,7 @@ void putc(uint8_t c) {
     thread_t *curr;
     terminal_t *terminal;
     if(terminal_boot) {
-        GETPRO(curr);
+        curr = current->task;
         terminal = curr->terminal;
     }
     _putc(c, terminal);
@@ -262,7 +262,7 @@ void back(terminal_t *terminal) {
         terminal->screen_x--;
     }
     vga_write(terminal->vidmem, terminal->screen_x, terminal->screen_y, ' ');
-    if (terminal->fkey == console->curr_key)
+    if (terminal == current->task->terminal)
         vga_update_cursor(terminal->screen_x, terminal->screen_y);
 }
 

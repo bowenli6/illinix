@@ -34,16 +34,16 @@
 #include <drivers/vga.h>
 #include <kmalloc.h>
 #include <access.h>
-#include <errno.h> 
+#include <errno.h>
 
 
 thread_t *idle;                 /* process 0 (idle process) */
 thread_t *init;                 /* process 1 (init process) */
-console_t *console;             /* console contains terminals */
 uint32_t ntask;                 /* current number of tasks created */
-list_head *task_queue;          /* list of all tasks (idle -> init -> {user task}) */
-list_head *wait_queue;          /* list of sleeping tasks (idle -> {sleeping user task || init}) */
-    
+console_t **consoles;           /* array of consoles containing one running task */
+console_t *current;             /* current console */
+LIST_HEAD(task_queue);          /* list of all tasks (idle -> init -> {user task}) */
+LIST_HEAD(wait_queue);          /* list of sleeping tasks (idle -> {sleeping user task || init}) */
 
 /* local helper functions */
 static int32_t __exec(thread_t *current, const int8_t *cmd, uint8_t kthread);
@@ -105,7 +105,6 @@ void inline context_switch(thread_t *prev, thread_t *next) {
     if (next != init)
         update_tss(next);
     swtch(prev->context, next->context);
-    sti();
 }
 
 /**
@@ -242,9 +241,8 @@ void do_exit(uint32_t status) {
 
     parent->context->eax = status;
 
-    if (parent->state == SLEEPING) {
-        sched_wakeup(parent);
-    }
+    consoles[parent->console_id]->task = parent;
+    context_switch(child, parent);
 }
 
 
@@ -267,12 +265,17 @@ int32_t do_execute(thread_t *parent, const int8_t *cmd) {
 
     child = parent->children[parent->n_children - 1];
 
+    /* set up terminal for process */
+    child->terminal = parent->terminal;
+
+    child->console_id = parent->console_id;
+
     /* set up sched info */
     // sched_fork(child);
     // activate_task(child);
 
-    /* add new task to the front of the queue */
-    list_add(&child->run_node, &rq->head);
+    /* add new task to the end of the queue */
+    list_add_tail(&child->run_node, &rq->head);
 
     /* get child esp */
     child->context->esp = get_esp0(child);
@@ -292,6 +295,8 @@ int32_t do_execute(thread_t *parent, const int8_t *cmd) {
     );
 
     GETPRO(child);
+
+    consoles[child->console_id]->task = child;
 
     switch_to_user(child);
 
@@ -525,17 +530,6 @@ static int32_t process_create(thread_t *current, uint8_t kthread) {
     /* not a kernel thread */
     t->kthread = kthread;
 
-    /* set up terminal for process */
-    if (kthread) {
-        /* create a new terminal for this kthread */
-        t->terminal = terminal_create();
-        console->terminals[console->size] = t->terminal;
-        console->kshells[console->size++] = t;
-    } else {
-        /* get the terminal from its parent */
-        t->terminal = current->terminal;
-    }
-
     process_vm_init(&t->vm);
 
     return 0;
@@ -550,8 +544,11 @@ static int32_t process_create(thread_t *current, uint8_t kthread) {
 void process_free(thread_t *current) {
     int i;
     thread_t *parent;
+    thread_t *curr;
     
     if (!current) return;
+
+    GETPRO(curr);
 
     parent = current->parent;
 
@@ -569,7 +566,8 @@ void process_free(thread_t *current) {
         kfree(current->children);
     }
 
-    __umap(current, current->parent);
+    if (curr == current)
+        __umap(current, current->parent);
 
     free_kstack((void*)current);
 
@@ -593,8 +591,6 @@ void process_free(thread_t *current) {
 static inline void switch_to_user(thread_t *curr) {
     
     update_tss(curr);
-
-    sti();
 
     asm volatile ("                         \n\
                     andl  $0xFF,  %%eax     \n\
@@ -646,38 +642,36 @@ uint32_t get_esp0(thread_t *curr) {
 static void console_init(void) {
     int i;
     thread_t *shell;
+    console_t *console;
+    const uint32_t keys[NTERMINAL] = { F1, F2, F3 };    
 
-    /* create console */
-    console = kmalloc(sizeof(console_t));    /* never be freed */
-    console->terminals = kmalloc(NTERMINAL * sizeof(terminal_t *));
-    console->kshells = kmalloc(NTERMINAL * sizeof(thread_t *));
-    console->size = 0;  
-
-    /* create kernel shells */
+    /* create consoles */
     for (i = 0; i < NTERMINAL; ++i) {
         (void) __exec(init, SHELL, 1); 
-        shell = console->kshells[i];
+        shell = init->children[i];
         shell->state = UNUSED;
         shell->context->esp = get_esp0(shell);
         shell->context->ebp = shell->context->esp;
+        console = kmalloc(sizeof(console_t));
+        console->id = i;
+        console->fkey = keys[i];
+        console->task = shell;
+        consoles[i] = console;
+        shell->console_id = console->id;
+        shell->terminal = terminal_create();
     }
 
     shell = init->children[0];
     shell->state = RUNNABLE;
+    current = consoles[0];
 
-    console->terminals[0]->fkey = F1;
-    console->terminals[1]->fkey = F2;
-    console->terminals[2]->fkey = F3;
 
     /* give the first shell vga memory */
     shell->terminal->vidmem = video_mem;
 
-    console->curr_key = F1;
-
     // sched_fork(shell);
     // activate_task(shell);
 
-    // list_add_tail(&(shell->run_node), &rq->head);
     user_mem_map(shell);
     /* console starts */
     terminal_boot = 1;

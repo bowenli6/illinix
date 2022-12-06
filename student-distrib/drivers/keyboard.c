@@ -38,7 +38,6 @@ void keyboard_init(void) {
  */
 void do_keyboard(void) {
     uint32_t intr_flag;
-    thread_t *curr;
     terminal_t *terminal;
     uint32_t scancode = inb(KEYBOARD_PORT);      /* Read one byte from stdin. */
 
@@ -47,13 +46,7 @@ void do_keyboard(void) {
 
     send_eoi(KEYBOARD_IRQ);                     /* Send End of interrupt to the PIC. */
 
-    GETPRO(curr);
-    if (curr == init) {
-        restore_flags(intr_flag);
-        return;
-    }
-
-    terminal = curr->terminal;
+    terminal = current->task->terminal;
 
     if (scancode < SCANCODES_SIZE)              /* key press (make) */
         key_press(scancode, terminal);
