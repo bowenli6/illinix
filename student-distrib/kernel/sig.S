@@ -1,5 +1,6 @@
 
-
+# calling rountine should be: signal_handler(user_space) -> 
+#                             linkage_for_sig_return -> syscal_handler -> sys_ig_return -> user_space
 # for store regiser, and argument value 
 .data
 
@@ -77,14 +78,21 @@ do_deliver:
 
     # get value from argument
     movl 8(%ebp), %ebx             # ebx = address of usr_context_addr in process_t
-    movl 12(%ebp), handler
-    movl 16(%ebp), sig_num 
+    movl 12(%ebp), %esi
+    movl %esi, handler
+    movl 16(%ebp), %esi 
+    movl %esi, sig_num
+
+    # get thread->context pointer 
     movl %ebx, usr_context_addr
 
     # save the user register  
-    movl EIP(%ebx), user_eip  
-    movl ESP(%ebx), user_esp
-    movl EBP(%ebx), user_ebp
+    movl EIP(%ebx), %esi
+    movl %esi, user_eip   
+    movl ESP(%ebx), %esi 
+    movl %esi, user_esp 
+    movl EBP(%ebx), %esi 
+    movl %esi, user_ebp 
 
     # change to user stack
     movl user_esp, %esp
@@ -129,10 +137,10 @@ do_deliver:
     movl usr_context_addr, %ebx
     movl %esp, ESP(%ebx)
 
-    # call the handler
-    movl handler, %eip
-    # when the handler return, it will resume by calling linkage
-    # linkage will do int $80 and call sys_sigreturn
+    # change the eipin context
+    movl usr_context_addr, %ebx
+    movl handler, %esi 
+    movl %esi, EIP(%ebx) 
 
     movl kernel_esp, %esp
     movl kernel_ebp, %ebp 
@@ -157,7 +165,7 @@ do_sys_sigreturn:
 
     # get addr of thread context
     movl 8(%ebp), %edi 
-    movl 8(%ebp), ret_usr_context_addr
+    movl %edi, ret_usr_context_addr
     movl ESP(%edi), %edi                       # edi = context -> ESP
     movl ret_usr_context_addr, %esi
 
