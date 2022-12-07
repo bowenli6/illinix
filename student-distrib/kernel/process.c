@@ -275,8 +275,8 @@ int32_t do_execute(thread_t *parent, const int8_t *cmd) {
     child->console_id = parent->console_id;
 
     /* set up sched info */
-    sched_fork(child);
-    activate_task(child);
+    // sched_fork(child);
+    // activate_task(child);
 
     /* get child esp */
     child->context->esp = get_esp0(child);
@@ -540,7 +540,6 @@ static int32_t process_create(thread_t *current, uint8_t kthread) {
 void process_free(thread_t *current) {
     int i;
     thread_t *parent;
-    thread_t *curr;
     
     if (!current) return;
 
@@ -655,7 +654,7 @@ static void console_init(void) {
         consoles[i] = console;
         shell->console_id = console->id;
         shell->terminal = terminal_create();
-        shell->terminal->saved_vidmem = VIDEO_BUF_1 + i*PAGE_SIZE;       /* create video memory */
+        shell->terminal->saved_vidmem = (char*) (VIDEO_BUF_1 + i * PAGE_SIZE);       /* create video memory */
         shell->terminal->vidmem = shell->terminal->saved_vidmem;  /* save back up video memory */
         memset(shell->terminal->saved_vidmem, 0, PAGE_SIZE);
     }

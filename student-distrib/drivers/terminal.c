@@ -186,7 +186,7 @@ static inline void terminal_switch(uint32_t scancode, terminal_t *terminal, int 
 
     terminal->alt = 0;
 
-    memset((void*)video_mem, 0, VIDMEM_SIZE);
+    // memset((void*)video_mem, 0, VIDMEM_SIZE);
     
     if (next->state == UNUSED) {
         next->state = RUNNABLE;
