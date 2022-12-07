@@ -246,7 +246,9 @@ void do_exit(uint32_t status) {
 
     consoles[parent->console_id]->task = parent;
 
-    context_switch(child, parent);
+    if (current->task == parent)
+        list_add_tail(&parent->run_node, &rq->head);
+    schedule();
 }
 
 

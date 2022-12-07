@@ -169,12 +169,9 @@ void switch_vidmap(int src, int dest)
 
 static inline void terminal_switch(uint32_t scancode, terminal_t *terminal, int idx) {
     terminal_t *next_terminal;
-    thread_t *curr;
     thread_t *next;
 
     if (scancode == current->fkey) return; 
-
-    GETPRO(curr);
 
     next = consoles[idx]->task;
     
@@ -185,32 +182,21 @@ static inline void terminal_switch(uint32_t scancode, terminal_t *terminal, int 
     terminal->vidmem = terminal->saved_vidmem;
 
     terminal->alt = 0;
-
-    // memset((void*)video_mem, 0, VIDMEM_SIZE);
     
-    if (next->state == UNUSED) {
+    if ((next->state == UNUSED) || (next->state == SLEEPING)) {
         next->state = RUNNABLE;
-    } else {
-        if (next != curr)
-            list_del(&next->run_node);    
-        memcpy((void*)video_mem, (void*)next_terminal->saved_vidmem, VIDMEM_SIZE);
-    }
+        list_add_tail(&next->run_node, &rq->head);
+    } 
+
+    memcpy((void*)video_mem, (void*)next_terminal->saved_vidmem, VIDMEM_SIZE);
     
     next_terminal->vidmem = video_mem;
 
     vga_update_cursor(next_terminal->screen_x, next_terminal->screen_y);
     
-    switch_vidmap(current->id,    idx);
-
-    if (next != curr)   
-        list_add_tail(&curr->run_node, &rq->head);
+    switch_vidmap(current->id, idx);
         
     current = consoles[idx];
-    
-    if (next == curr) 
-        return;
-
-    context_switch(curr, next);
 }
 
 /**
@@ -356,7 +342,6 @@ int32_t terminal_read(int32_t fd, void *buf, int32_t nbytes) {
 
     if (!terminal) return -1;
 
-
     if (fd != stdin)
         return -1;
 
@@ -371,8 +356,6 @@ int32_t terminal_read(int32_t fd, void *buf, int32_t nbytes) {
 
     /* Init to zero. (read is not stopped) */
     terminal->exit = 0;
-
-
 
     while (!terminal->exit) {
 
