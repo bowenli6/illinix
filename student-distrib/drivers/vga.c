@@ -49,7 +49,7 @@ void vga_scrolling(char *vidmem) {
 	int32_t i;
 
     for (i = 0; i < VGA_WIDTH * (VGA_HEIGHT - 1); ++i) {
-        *(uint8_t *)(vidmem + (i << 1)) = *(uint8_t *)(video_mem + ((i + VGA_WIDTH) << 1));
+        *(uint8_t *)(vidmem + (i << 1)) = *(uint8_t *)(vidmem + ((i + VGA_WIDTH) << 1));
         *(uint8_t *)(vidmem + (i << 1) + 1) = ATTRIB;
     }
 

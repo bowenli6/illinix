@@ -8,6 +8,11 @@
 #define VA_OFFSET           12
 #define GETBIT_10           0x3FF
 #define VIDEO               0xB8000
+
+#define VIDEO_BUF_1         0xD0000
+#define VIDEO_BUF_2         0xD1000
+#define VIDEO_BUF_3         0xD2000
+
 #define CR4_EXTENSION_FLAG  0x10
 #define CR0_PAGE_FLAG       0x80000000
 #define KERNEL_INDEX        1

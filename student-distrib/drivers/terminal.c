@@ -44,10 +44,9 @@ terminal_t *terminal_create(void) {
     terminal->size = 0;                         /* No character yet. */
     terminal->exit = 0;                         /* \n is not read. */
     terminal->buffer = kmalloc(TERBUF_SIZE);    /* create buffer */
-    terminal->saved_vidmem = get_page(0);       /* create video memory */
-    terminal->vidmem = terminal->saved_vidmem;  /* save back up video memory */
+    // terminal->saved_vidmem = VIDEO_BUF_1 + i*TERBUF_SIZE;       /* create video memory */
+    // terminal->vidmem = terminal->saved_vidmem;  /* save back up video memory */
     memset((void*)terminal->buffer, 0, TERBUF_SIZE);
-    memset((void*)terminal->vidmem, 0, VIDMEM_SIZE);
     return terminal;
 }
 
@@ -201,7 +200,7 @@ static inline void terminal_switch(uint32_t scancode, terminal_t *terminal, int 
 
     vga_update_cursor(next_terminal->screen_x, next_terminal->screen_y);
     
-    // switch_vidmap(current->id,    idx);
+    switch_vidmap(current->id,    idx);
 
     if (next != curr)   
         list_add_tail(&curr->run_node, &rq->head);
