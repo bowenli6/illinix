@@ -1,8 +1,7 @@
 #ifndef _TIME_H_
 #define _TIME_H_
 
-
-#define HZ                  200             /* 1000 timer interrupts per second (20 ms) */
+#define HZ                  1000            /* 100 timer interrupts per second (10 ms) */
 #define TICKUNIT            1000000UL       /* 1 ms = 1000,000 nanoseconds */
 #define CLOCK_TICK_RATE     1193182         /* 8254 chip's internal oscillator frequency */
 #define LATCH   ((CLOCK_TICK_RATE + HZ / 2) / HZ)

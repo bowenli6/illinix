@@ -46,7 +46,8 @@ terminal_t *terminal_create(void) {
     terminal->buffer = kmalloc(TERBUF_SIZE);    /* create buffer */
     // terminal->saved_vidmem = VIDEO_BUF_1 + i*TERBUF_SIZE;       /* create video memory */
     // terminal->vidmem = terminal->saved_vidmem;  /* save back up video memory */
-    memset((void*)terminal->buffer, 0, TERBUF_SIZE);
+    // memset((void*)terminal->buffer, 0, TERBUF_SIZE);
+    // vga_clear(terminal->vidmem);
     return terminal;
 }
 
@@ -125,7 +126,6 @@ void key_press(uint32_t scancode, terminal_t *terminal) {
         }                             
         return;
     case L:
-
         if (terminal->ctrl) {                    /* If ctrl is hold and CTRL-L is pressed. */
             char buf[terminal->size];
             clear(); 

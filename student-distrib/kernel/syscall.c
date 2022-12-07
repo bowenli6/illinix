@@ -53,7 +53,6 @@ asmlinkage int32_t sys_fork(void) {
                 : "memory" 
     );
     
-    
     /* copy eip from parent to child */
     child->context->eip = *(((uint32_t*)(child->context->ebp)) + 1);
 

@@ -7,7 +7,7 @@
 
 /* sets a target for is approximation of the "infinitely small" 
  * scheduling duration in perfect multitasking */
-#define TARGET_LATENCY      48000000ULL     /* 48 ms */
+#define TARGET_LATENCY      5000000ULL     /* 5 ms */
 
 /* a small granularity time used for sleeping process to avoid too many context switches */
 #define WAKEUP_GRANULARITY  1000000ULL
@@ -17,7 +17,7 @@
 #define NICE_0_LOAD         1024            /* the weight for process has nice value 0 */
 
 /* minimum guanularity running time for each task */
-#define MIN_GRANULARITY     6000000ULL      /* 6 ms */
+#define MIN_GRANULARITY     1000000ULL      /* 1 ms */
 
 /* lowest prio and weights for process 0 */
 #define WEIGHT_IDLE         3               /* weight for process 0 */

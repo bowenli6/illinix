@@ -35,11 +35,7 @@ void do_timer(void) {
 
     cli_and_save(intr_flag);
 
-    /* update scheduler clock 
-     * NOTE: the waying of doing this might be updated 
-     * when high precision system clock is enabled 
-     */
-    rq->clock += 20 * TICKUNIT;
+    rq->clock +=  TICKUNIT;
 
     send_eoi(TIMER_IRQ);       
 

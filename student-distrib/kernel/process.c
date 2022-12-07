@@ -141,16 +141,27 @@ int32_t do_fork(thread_t *parent, uint8_t kthread) {
     }
         
     /* set up sched info for child */
-    sched_fork(child); 
-    activate_task(child);
+    // sched_fork(child); 
+    
+    // activate_task(child);
+
+    // wakeup_preempt(child);
 
     ntask++;  
 
     child->context->eax = 0;    
 
-    /* map to parent's address space */
-    __umap(child, parent);
-    return child->pid;
+    // /* map to parent's address space */
+    // __umap(child, parent);
+    user_mem_map(child);
+
+    child->context->esp = get_esp0(child);
+    child->context->ebp = child->context->esp;
+
+
+    switch_to_user(child);
+
+    return 0;   /* never reach here */
 }
 
 

@@ -15,7 +15,7 @@
 #define IDLE            "idle"          /* idle program */
 #define TASKSTART       2               /* user tasks starts from 2 */
 #define NICE_INIT       19              /* nice value for init process */
-#define NICE_SHELL      0              /* nice value for shell process */
+#define NICE_SHELL      5              /* nice value for shell process */
 #define NICE_NORMAL     0               /* nice value for default process */
 #define NTERMINAL       3               /* max number of terminals supported */
 #define MAXCHILDREN     100             /* default max number of children for a process */
