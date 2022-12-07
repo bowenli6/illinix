@@ -149,12 +149,34 @@ int32_t do_fork(thread_t *parent, uint8_t kthread) {
 
     child->context->eax = 0;    
 
-    /* add new task to the front of the run queue */
+    /* add new task to the run queue */
     list_add_tail(&child->run_node, &rq->head);
 
     /* map to parent's address space */
     __umap(child, parent);
-    return child->pid;
+
+    child->context->esp = get_esp0(child);
+    child->context->ebp = child->context->esp;
+
+    /* save current context to child and switch parent to sys_execute
+     * when scheduler preempt to child, child will goto line 287 */
+    asm volatile("                              \n\
+                  movl  $1f,   %[child_eip]     \n\
+                  movl  %[child_pid], %%eax     \n\
+                  leave                         \n\
+                  ret                           \n\
+                  1:                            \n\
+                  "                
+                : [child_eip] "=m"(child->context->eip)
+                : [child_pid] "r"(child->pid)
+                : "memory" 
+    );
+
+    GETPRO(child);
+
+    switch_to_user(child);
+
+    return 0;   /* never reach here */
 }
 
 
@@ -170,7 +192,6 @@ static int32_t process_clone(thread_t *parent, thread_t *child) {
     int i;
     int32_t errno;
     uint32_t *parent_stack;
-    uint32_t *child_stack;
     
     /* copy physical memory */
     if ((errno = vmcopy(&child->vm, &parent->vm)) < 0)
@@ -191,19 +212,19 @@ static int32_t process_clone(thread_t *parent, thread_t *child) {
     /* child will get real copied when it tries to open a file */
     child->fds = NULL;
 
-    parent_stack = (uint32_t*)(&((process_t*)parent)->stack);
-    child_stack = (uint32_t*)(&((process_t*)child)->stack);
-
     /* copy CPU pre-pushed user context
-     * stack[2043] : user eip register
-     * stack[2044] : user code segment 
-     * stack[2045] : user eflags 
-     * stack[2046] : user esp
-     * stack[2047] : user data segment
+     * stack[....] : general purpose registers 
+     * stack[2042] : user eip register
+     * stack[2043] : user code segment 
+     * stack[2044] : user eflags 
+     * stack[2045] : user esp
+     * stack[2046] : user data segment
+     * stack[....] : hardware reserved
      */
+    parent_stack = (uint32_t*)(&((process_t*)parent)->stack);
 
-    for (i = 0; i < NCONTEXT; ++i)
-        child_stack[STACK + i] = parent_stack[STACK + i];
+    child->usreip = parent_stack[2042];
+    child->usresp = USER_STACK_ADDR;
 
     return 0;
 }

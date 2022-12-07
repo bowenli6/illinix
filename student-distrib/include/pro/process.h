@@ -20,8 +20,9 @@
 #define NICE_NORMAL     5               /* nice value for default process */
 #define NTERMINAL       3               /* max number of terminals supported */
 #define MAXCHILDREN     100             /* default max number of children for a process */
-#define STACK           2043            /* CPU pushs user registers on stack starting at this offset */
+#define STACK           2042            /* CPU pushs user registers on stack starting at this offset */
 #define NCONTEXT        5               /* CPU pre-pushed user info needed to be copied */
+#define KSTACK_SIZE     2048            /* 2048 word */
 
 #define task_of(ptr)  container_of(ptr, thread_t, sched_info)
 
@@ -136,7 +137,7 @@ typedef struct {
 /* two 4 KB pages containing both the process descriptor and the kernel stack. */
 typedef union {
     thread_t thread;
-    uint32_t stack[2048];
+    uint32_t stack[KSTACK_SIZE];
 } process_t;
 
 

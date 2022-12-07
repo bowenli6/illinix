@@ -30,7 +30,7 @@ asmlinkage void sys_exit(uint8_t status) {
  */
 asmlinkage int32_t sys_fork(void) {
     pid_t pid;
-    thread_t *current, *child;
+    thread_t *current;
 
     cli();
 
@@ -40,30 +40,7 @@ asmlinkage int32_t sys_fork(void) {
     /* get pid of child */
     pid = do_fork(current, 0);
 
-    /* get child thread */
-    child = current->children[current->n_children-1];
-
-    /* child return 0 */
-    child->context->eax = 0;
-
-    /* copy ebp from parent to child */
-    asm volatile("movl %%ebp, %0"
-                :
-                : "m"(child->context->ebp)       
-                : "memory" 
-    );
-
-    /* copy eip from parent to child */
-    child->context->eip = *(((uint32_t*)(child->context->ebp)) + 1);
-
-    /* copy esp from parent to child */
-    child->context->esp = (child->context->ebp) + 8;
-    
-    // restore_flags(current->intr_flag);
-
-    /* check for preemption */
-    // if (current->flag == NEED_RESCHED)
-    //     schedule();
+    schedule();
 
     sti();
     return pid;
@@ -86,8 +63,6 @@ asmlinkage int32_t sys_execute(const int8_t *cmd) {
 
     GETPRO(curr);
 
-    // cli_and_save(consoles[curr->console_id]->intr_flag);
-
     status = do_execute(curr, cmd);
     if (status < 0) 
         return status;
@@ -95,7 +70,8 @@ asmlinkage int32_t sys_execute(const int8_t *cmd) {
     child = curr->children[curr->n_children-1];
     consoles[child->console_id]->task = child;
     curr->state = SLEEPING;
-    context_switch(curr, child);
+    list_add_tail(&child->run_node, &rq->head);
+    schedule();
 
     GETPRO(curr);
     child = curr->children[curr->n_children-1];

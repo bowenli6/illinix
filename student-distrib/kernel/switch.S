@@ -10,6 +10,7 @@ EDX = 16
 ESI = 20
 EDI = 24
 EBP = 28
+EAX = 32
 
 
 .text
@@ -19,9 +20,11 @@ EBP = 28
 .globl swtch
 swtch:
     # get first argument
-    movl   4(%esp), %eax 
+    pushl  %eax
+    movl   8(%esp), %eax 
 
     # save current context into prev context
+    popl   EAX(%eax)
     popl   EIP(%eax)
     movl   %esp, ESP(%eax)
     movl   %ebx, EBX(%eax)

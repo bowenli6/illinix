@@ -157,6 +157,10 @@ void schedule(void) {
     
     if (next == prev) return;        
 
+    /* update current console's task */
+    if (prev->console_id == next->console_id)
+        current->task = next;
+
     context_switch(prev, next);
 }
 
