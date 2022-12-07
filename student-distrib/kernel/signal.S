@@ -1,5 +1,29 @@
+
+
 # for store regiser, and argument value 
 .data
+
+EIP = 0
+ESP = 4
+EBX = 8
+ECX = 12
+EDX = 16
+ESI = 20
+EDI = 24
+EBP = 28
+EAX = 32
+
+BACK_EAX = 8
+BACK_EBP = 12
+BACK_EDI = 16
+BACK_ESI = 20
+BACK_EDX = 24
+BACK_ECX = 28
+BACK_EBX = 32
+BACK_ESP = 36
+BACK_EIP = 40
+
+
 
 user_esp: 
     .long 0
@@ -22,13 +46,13 @@ retcode:
 pretcode:
     .long 0
 
-usr_esp_addr:
+usr_context_addr:
     .long 0
 ret_kernel_esp:
     .long 0
 ret_kernel_ebp:
     .long 0
-ret_usr_esp_addr:
+ret_usr_context_addr:
     .long
 
 .text
@@ -52,15 +76,15 @@ do_deliver:
     movl %ebp, kernel_ebp
 
     # get value from argument
-    movl 8(%ebp), %ebx             # ebx = address of usr_esp in process_t
+    movl 8(%ebp), %ebx             # ebx = address of usr_context_addr in process_t
     movl 12(%ebp), handler
     movl 16(%ebp), sig_num 
-    movl %ebx, usr_esp_addr
+    movl %ebx, usr_context_addr
 
     # save the user register  
-    movl (%ebx), user_esp
-    movl 4(%ebx), user_ebp
-    movl 8(%ebx), user_eip  
+    movl EIP(%ebx), user_eip  
+    movl ESP(%ebx), user_esp
+    movl EBP(%ebx), user_ebp
 
     # change to user stack
     movl user_esp, %esp
@@ -78,10 +102,22 @@ do_deliver:
     subl $1, %esp 
 
     # put reg on user stack
-    pushl user_esp
-    pushl user_ebp
-    pushl user_eip 
-
+    movl usr_context_addr, %ebx  
+    pushl user_eip                  # eip reg
+    pushl user_esp                  # esp reg 
+    movl  EBX(%ebx), %esi
+    pushl %esi                      # ebx reg  
+    movl  ECX(%ebx), %esi           
+    pushl %esi                      # ecx reg
+    movl  EDX(%ebx), %esi
+    pushl %esi                      # edx reg 
+    movl  ESI(%ebx), %esi
+    pushl %esi                      # esi reg
+    movl  EDI(%ebx), %esi
+    pushl %esi                      # edi reg 
+    pushl user_ebp                  # ebp reg 
+    movl  EAX(%ebx), %esi
+    pushl %esi                      # eax reg 
 
     # put the sinal numer
     pushl sig_num
@@ -89,9 +125,9 @@ do_deliver:
     # put the preturn code for the linkage
     pushl pretcode
 
-    # update the CURRETN->esp
-    movl usr_esp_addr, %ebx
-    movl %esp, (%ebx)
+    # update the current esp valueS
+    movl usr_context_addr, %ebx
+    movl %esp, ESP(%ebx)
 
     # call the handler
     movl handler, %eip
@@ -109,7 +145,7 @@ do_deliver:
     ret 
 
 
-# void *reg
+# void *context
 .globl do_sys_sigreturn
 do_sys_sigreturn:
       
@@ -119,19 +155,32 @@ do_sys_sigreturn:
     pushl %esi
     pushl %ebx
 
-    # get usr edi = addr of CURRENT->ESP
+    # get addr of thread context
     movl 8(%ebp), %edi 
-    movl 8(%ebp), ret_usr_esp_addr
-    movl (%edi), %edi           # edi = CURRENT -> ESP
-    movl ret_usr_esp_addr, %esi
+    movl 8(%ebp), ret_usr_context_addr
+    movl ESP(%edi), %edi                       # edi = context -> ESP
+    movl ret_usr_context_addr, %esi
 
     # change CURRENT->eip/esp/ebp
-    movl 8(%edi), %ebx
-    movl %ebx, 8(%esi)
-    movl 12(%edi), %ebx
-    movl %ebx, 4(%esi)
-    movl 16(%edi), %ebx
-    movl %ebx, 0(%esi)  
+    movl BACK_EAX(%edi), %ebx
+    movl %ebx, EAX(%esi)
+    movl BACK_EBP(%edi), %ebx
+    movl %ebx, EBP(%esi)
+    movl BACK_EDI(%edi), %ebx
+    movl %ebx, EDI(%esi)
+    movl BACK_ESI(%edi), %ebx
+    movl %ebx, ESI(%esi)
+    movl BACK_EDX(%edi), %ebx
+    movl %ebx, EDX(%esi)
+    movl BACK_ECX(%edi), %ebx
+    movl %ebx, ECX(%esi)
+    movl BACK_EBX(%edi), %ebx
+    movl %ebx, EBX(%esi)
+    movl BACK_ESP(%edi), %ebx
+    movl %ebx, ESP(%esi)
+    movl BACK_EIP(%edi), %ebx
+    movl %ebx, EIP(%esi)
+    
 
     popl %ebx 
     popl %esi

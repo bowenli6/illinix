@@ -71,15 +71,15 @@ do {                                                  \
 
 /* hardware context (callee saved registers and part of segment registers) */
 typedef struct {
-    uint32_t eip;
-    uint32_t esp;
-    uint32_t ebx;
-    uint32_t ecx;
-    uint32_t edx;
-    uint32_t esi;
-    uint32_t edi;
-    uint32_t ebp;
-    uint32_t eax;
+    uint32_t eip;  /* 0 */
+    uint32_t esp;  /* 4 */
+    uint32_t ebx;  /* 8 */
+    uint32_t ecx;  /* 12 */
+    uint32_t edx;  /* 16 */
+    uint32_t esi;  /* 20 */
+    uint32_t edi;   /* 24*/
+    uint32_t ebp;   /* 28 */
+    uint32_t eax;  /* 32 */
 } context_t;
 
 
