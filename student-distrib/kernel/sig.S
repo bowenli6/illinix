@@ -141,7 +141,7 @@ do_deliver:
     popl %esi
     popl %ebx
 
-    leav 
+    leave
     ret 
 
 
@@ -186,5 +186,5 @@ do_sys_sigreturn:
     popl %esi
     popl %edi
     
-    leav 
+    leave
     ret  

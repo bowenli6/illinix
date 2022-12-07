@@ -17,8 +17,7 @@ asmlinkage int32_t sys_read(int32_t fd, void *buf, uint32_t nbytes);
 asmlinkage int32_t sys_write(int32_t fd, const void *buf, uint32_t nbytes);
 asmlinkage int32_t sys_getargs(uint8_t *buf, int32_t nbytes);
 asmlinkage int32_t sys_vidmap(uint8_t **screen_start);
-asmlinkage int32_t sys_set_handler(int32_t signum, void *handler_addr);
-asmlinkage int32_t sys_sigreturn(void);
+
 
 
 /* Extra Credit */
@@ -26,7 +25,8 @@ asmlinkage int32_t sys_sigreturn(void);
 asmlinkage int32_t sys_restart(void);
 asmlinkage int32_t sys_fork(void);
 asmlinkage int32_t sys_getpid(void);
-
+asmlinkage int32_t sys_set_handler(int32_t signum, void *handler_addr);
+asmlinkage int32_t sys_sigreturn(void);
 
 /* --------------------------------Process-------------------------------- */
 

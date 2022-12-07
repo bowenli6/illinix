@@ -1,5 +1,6 @@
-#include <pro/signal.h>
 #include <pro/process.h>
+#include <pro/signal.h>
+#include <boot/syscall.h>
 
 
 default_action default_arr[SIG_COUNT];
@@ -42,7 +43,7 @@ int32_t user1_hdler(void){
  * @brief sys_sigreturn syscall, there will be a parameter telling the usr_esp register 
  * 
 */
-int32_t sys_sigreturn(void){
+asmlinkage int32_t sys_sigreturn(void){
     thread_t *curr;
     GETPRO(curr);
 
@@ -56,7 +57,7 @@ int32_t sys_sigreturn(void){
  * 
  * @return return 0 if successfull
 */
-int32_t sys_set_handler(int32_t signum, void *handler_addr){
+asmlinkage int32_t sys_set_handler(int32_t signum, void *handler_addr){
     thread_t *curr;
     GETPRO(curr);
 
