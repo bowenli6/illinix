@@ -275,8 +275,8 @@ int32_t do_execute(thread_t *parent, const int8_t *cmd) {
     child->console_id = parent->console_id;
 
     /* set up sched info */
-    // sched_fork(child);
-    // activate_task(child);
+    sched_fork(child);
+    activate_task(child);
 
     /* get child esp */
     child->context->esp = get_esp0(child);
@@ -383,12 +383,7 @@ static int32_t __exec(thread_t *parent, const int8_t *cmd, uint8_t kthread) {
     /* map the virtual memory space to to child */
     __umap(parent, child);
 
-    // if ((errno = do_execve(child, argv[0], argv)) < 0) {
-    //     process_free(child);
-    //     return errno;
-    // }
-
-     /* executable check and load program image into user's memory */
+    /* executable check and load program image into user's memory */
     if ((errno = pro_loader(argv[0], &EIP_reg)) < 0) {
         process_free(child);
         return errno;
@@ -529,6 +524,8 @@ static int32_t process_create(thread_t *current, uint8_t kthread) {
     /* not a kernel thread */
     t->kthread = kthread;
 
+    t->state = UNUSED;
+
     process_vm_init(&t->vm);
 
     return 0;
@@ -547,8 +544,6 @@ void process_free(thread_t *current) {
     
     if (!current) return;
 
-    GETPRO(curr);
-
     parent = current->parent;
 
     kill_pid(current->pid);
@@ -565,7 +560,7 @@ void process_free(thread_t *current) {
         kfree(current->children);
     }
 
-    if (curr == current) {
+    if (current->state != EXITED) {
         __umap(current, current->parent);
         update_tss(parent);
     }

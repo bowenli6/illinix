@@ -32,11 +32,10 @@ asmlinkage int32_t sys_fork(void) {
     pid_t pid;
     thread_t *current, *child;
 
+    cli();
+
     /* get current process */
     GETPRO(current);
-
-    // cli_and_save(current->intr_flag);
-
 
     /* get pid of child */
     pid = do_fork(current, 0);
@@ -65,6 +64,8 @@ asmlinkage int32_t sys_fork(void) {
     /* check for preemption */
     // if (current->flag == NEED_RESCHED)
     //     schedule();
+
+    sti();
     return pid;
 }
 
@@ -98,6 +99,7 @@ asmlinkage int32_t sys_execute(const int8_t *cmd) {
 
     GETPRO(curr);
     child = curr->children[curr->n_children-1];
+    child->state = EXITED;
     process_free(child);
 
     sti();
