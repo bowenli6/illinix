@@ -48,7 +48,7 @@ void user_mem_map(thread_t* t) {
     else {
         area = t->vm.map_list;
         while(area != 0) {
-            rtn += _user_mem_mmap(area);
+            rtn += _user_mem_mmap(area);    
             area = area->next;
         }
         

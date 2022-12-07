@@ -27,6 +27,12 @@
 
 #define NEED_RESCHED    1               /* flag used for rescheduling */
 #define WAKEUP          2               /* flag used for waking up */
+#define SIG_COUNT 5
+
+typedef int32_t (*default_action)(void);
+
+extern default_action default_arr[5];
+
 
 typedef enum { UNUSED, RUNNING, RUNNABLE, SLEEPING, EXITED, ZOMIBIE } pro_state;
 
@@ -94,6 +100,16 @@ typedef struct vmem {
     int                 count;
 } vmem_t;
 
+typedef struct signal_struct {
+    int8_t          pending_sig_count;
+    int8_t          curr_sig;                                    /* signal index the thread is using; -1 means we are not using any */
+    int8_t          mask_arr[SIG_COUNT];                         /* 0 means not mask, 1 means mask */
+    int8_t          previous_mask_arr[SIG_COUNT];                /* previous mask, we need to store them before */
+    int8_t          pen_arr[SIG_COUNT];                          /* 0 means not pending, 1 means pending */
+    default_action  exe_sig_act[SIG_COUNT];                    /* use signal as index, and corrosponding value indicates the handler */
+} signal_struct_t;  
+
+
 /* define a thread that run as a process */
 typedef struct thread {
     list_head          task_node;       /* a list of all tasks  */
@@ -118,6 +134,7 @@ typedef struct thread {
     uint8_t            kthread;         /* 1 if this thread is belong to the kernel */
     terminal_t         *terminal;       /* terminal for this thread */
     int32_t            nice;            /* nice value */
+    signal_struct_t    *sig;
 } thread_t;
 
 
@@ -161,15 +178,12 @@ int32_t file_init(int32_t fd, file_t *file, dentry_t *dentry, file_op *op, threa
 thread_t **children_create(void);
 
 /* implemented in fs.c */
-
 int32_t pro_loader(const int8_t *fname, uint32_t *EIP);
 
 /* implemented in switch.S */
-
 void swtch(context_t *prev, context_t *next);
 
 /* implemented in access.c */
-
 void user_mem_map(thread_t* t);
 void user_mem_unmap(thread_t* t);
 

@@ -163,7 +163,7 @@ void schedule(void) {
 /**
  * @brief halts the central processing unit (CPU) until 
  * the next external interqupt is fired.
- * 
+ * S
  */
 void pause(void) {
     /* avoid deadlock by ensuring that devices can interqupt */

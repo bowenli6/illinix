@@ -31,7 +31,7 @@ swtch:
     movl   %edi, EDI(%eax)
     movl   %ebp, EBP(%eax)
 
-    #get second argument 
+    # get second argument 
     movl   4(%esp), %eax
 
     # restore next context into current context

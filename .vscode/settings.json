@@ -1,0 +1,12 @@
+{
+    "files.associations": {
+        "file.h": "c",
+        "sched.h": "c",
+        "syscall.h": "c",
+        "lib.h": "c",
+        "signal.h": "c",
+        "types.h": "c",
+        "process.h": "c",
+        "fs.h": "c"
+    }
+}
