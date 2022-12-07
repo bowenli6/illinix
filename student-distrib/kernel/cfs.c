@@ -37,7 +37,7 @@
  * https://trepo.tuni.fi/bitstream/handle/10024/96864/GRADU-1428493916.pdf
  * https://static.linaro.org/connect/yvr18/presentations/yvr18-220.pdf
  * 
- * @version 0.9
+ * @version 1.0
  * @date 2022-11-26
  * 
  * @copyright Copyright (c) 2022
