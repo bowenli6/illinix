@@ -95,6 +95,9 @@ void page_init()
             page_table[i] = page_table[i] | PTE_PRESENT | PTE_RW | ADDR_TO_PTE(VIDEO); 
         }
     }
+    page_table[VIDEO_BUF_1 >> PDE_OFFSET_4KB] = PTE_PRESENT | PTE_RW | ADDR_TO_PTE(VIDEO_BUF_1); 
+    page_table[VIDEO_BUF_2 >> PDE_OFFSET_4KB] = PTE_PRESENT | PTE_RW | ADDR_TO_PTE(VIDEO_BUF_2);
+    page_table[VIDEO_BUF_3 >> PDE_OFFSET_4KB] = PTE_PRESENT | PTE_RW | ADDR_TO_PTE(VIDEO_BUF_3);
 
     page_directory[VIR_VID_MEM / PAGE_SIZE_4MB] = PTE_PRESENT | PTE_RW | PTE_US | ADDR_TO_PTE((int)vidmap_table);
     

@@ -660,6 +660,9 @@ static void console_init(void) {
         consoles[i] = console;
         shell->console_id = console->id;
         shell->terminal = terminal_create();
+        shell->terminal->saved_vidmem = VIDEO_BUF_1 + i*PAGE_SIZE;       /* create video memory */
+        shell->terminal->vidmem = shell->terminal->saved_vidmem;  /* save back up video memory */
+        memset(shell->terminal->saved_vidmem, 0, PAGE_SIZE);
     }
 
     shell = init->children[0];
