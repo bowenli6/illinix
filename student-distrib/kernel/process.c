@@ -24,8 +24,8 @@
 
 #include <pro/process.h>
 #include <boot/page.h>
-#include <pro/sched.h>
-// #include <pro/cfs.h>
+// #include <pro/sched.h>
+#include <pro/cfs.h>
 #include <drivers/keyboard.h>
 #include <boot/x86_desc.h>
 #include <pro/pid.h>
@@ -88,7 +88,7 @@ void init_task(void) {
         // DO SOMETHING HERE IN THE FUTURE
 
         /* yield the CPU */
-        sched_tick();
+        // sched_tick();
     }
 }
 
@@ -102,8 +102,10 @@ void init_task(void) {
  */
 void inline context_switch(thread_t *prev, thread_t *next) {
     __umap(prev, next);
+
     if (next != init)
         update_tss(next);
+
     swtch(prev->context, next->context);
 }
 
@@ -139,44 +141,16 @@ int32_t do_fork(thread_t *parent, uint8_t kthread) {
     }
         
     /* set up sched info for child */
-    // sched_fork(child); 
-    
-    // activate_task(child);
-
-    // wakeup_preempt(child);
+    sched_fork(child); 
+    activate_task(child);
 
     ntask++;  
 
     child->context->eax = 0;    
 
-    /* add new task to the run queue */
-    list_add_tail(&child->run_node, &rq->head);
-
     /* map to parent's address space */
     __umap(child, parent);
-
-    child->context->esp = get_esp0(child);
-    child->context->ebp = child->context->esp;
-
-    /* save current context to child and switch parent to sys_execute
-     * when scheduler preempt to child, child will goto line 287 */
-    asm volatile("                              \n\
-                  movl  $1f,   %[child_eip]     \n\
-                  movl  %[child_pid], %%eax     \n\
-                  leave                         \n\
-                  ret                           \n\
-                  1:                            \n\
-                  "                
-                : [child_eip] "=m"(child->context->eip)
-                : [child_pid] "r"(child->pid)
-                : "memory" 
-    );
-
-    GETPRO(child);
-
-    switch_to_user(child);
-
-    return 0;   /* never reach here */
+    return child->pid;
 }
 
 
@@ -192,6 +166,7 @@ static int32_t process_clone(thread_t *parent, thread_t *child) {
     int i;
     int32_t errno;
     uint32_t *parent_stack;
+    uint32_t *child_stack;
     
     /* copy physical memory */
     if ((errno = vmcopy(&child->vm, &parent->vm)) < 0)
@@ -222,9 +197,13 @@ static int32_t process_clone(thread_t *parent, thread_t *child) {
      * stack[....] : hardware reserved
      */
     parent_stack = (uint32_t*)(&((process_t*)parent)->stack);
+    child_stack =  (uint32_t*)(&((process_t*)child)->stack);
 
-    child->usreip = parent_stack[2042];
-    child->usresp = USER_STACK_ADDR;
+    child->usreip = parent_stack[USEREIP];
+    child->usresp = parent_stack[USERESP];
+    
+    for (i = KSTACK_SIZE - 1; i >= KSTACK_SIZE - 128; --i)
+        child_stack[i] = parent_stack[i];
 
     return 0;
 }
@@ -244,8 +223,6 @@ void do_exit(uint32_t status) {
     cli();
 
     GETPRO(child);  
-
-    // cli_and_save(consoles[child->console_id]->intr_flag);
 
     /* check if the current process is running a system thread and it is a shell */
     if ((child->kthread) && (!strcmp(child->argv[0], SHELL)))
@@ -267,9 +244,7 @@ void do_exit(uint32_t status) {
 
     consoles[parent->console_id]->task = parent;
 
-    if (current->task == parent)
-        list_add_tail(&parent->run_node, &rq->head);
-    schedule();
+    sched_exit(child, parent);
 }
 
 
@@ -298,12 +273,13 @@ int32_t do_execute(thread_t *parent, const int8_t *cmd) {
     child->console_id = parent->console_id;
 
     /* set up sched info */
-    // sched_fork(child);
-    // activate_task(child);
+    sched_fork(child);
+    activate_task(child);
 
     /* get child esp */
     child->context->esp = get_esp0(child);
     child->context->ebp = child->context->esp;
+
 
     /* save current context to child and switch parent to sys_execute
      * when scheduler preempt to child, child will goto line 287 */
@@ -321,6 +297,7 @@ int32_t do_execute(thread_t *parent, const int8_t *cmd) {
     GETPRO(child);
 
     switch_to_user(child);
+    
 
     /* never reach here */
     return 0;
@@ -538,8 +515,6 @@ static int32_t process_create(thread_t *current, uint8_t kthread) {
 
     t->children = NULL;
 
-    t->count = TIMESLICE;
-
     t->n_children = 0;
 
     t->max_children = MAXCHILDREN;
@@ -662,6 +637,7 @@ static void console_init(void) {
     console_t *console;
     const uint32_t keys[NTERMINAL] = { F1, F2, F3 };    
 
+    
     /* create consoles */
     for (i = 0; i < NTERMINAL; ++i) {
         (void) __exec(init, SHELL, 1); 
@@ -683,17 +659,20 @@ static void console_init(void) {
     }
 
     shell = init->children[0];
+    shell->sched_info.on_rq = 1;
     shell->state = RUNNABLE;
     current = consoles[0];
+    rq->current = &shell->sched_info;
 
 
     /* give the first shell vga memory */
     shell->terminal->vidmem = video_mem;
 
-    // sched_fork(shell);
+    sched_fork(shell);
     // activate_task(shell);
 
     user_mem_map(shell);
+
     /* console starts */
     terminal_boot = 1;
 

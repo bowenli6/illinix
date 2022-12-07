@@ -15,7 +15,7 @@
 #include <drivers/vga.h>
 #include <vfs/vfs.h>
 #include <pro/process.h>
-#include <pro/sched.h>
+#include <pro/cfs.h>
 #include <debug.h>
 #include <lib.h>
 #include <io.h>

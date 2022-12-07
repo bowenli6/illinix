@@ -4,8 +4,7 @@
 #include <vfs/vfs.h>
 #include <drivers/terminal.h>
 #include <access.h>
-// #include <pro/sched.h>
-// #include <pro/cfs.h>
+#include <pro/cfs.h>
 #include <list.h>
 
 
@@ -15,13 +14,14 @@
 #define INIT            "init"          /* init program */
 #define IDLE            "idle"          /* idle program */
 #define TASKSTART       2               /* user tasks starts from 2 */
-#define NICE_INIT       10              /* nice value for init process */
-#define NICE_SHELL      0               /* nice value for shell process */
-#define NICE_NORMAL     5               /* nice value for default process */
+#define NICE_INIT       19              /* nice value for init process */
+#define NICE_SHELL      0              /* nice value for shell process */
+#define NICE_NORMAL     0               /* nice value for default process */
 #define NTERMINAL       3               /* max number of terminals supported */
 #define MAXCHILDREN     100             /* default max number of children for a process */
 #define STACK           2042            /* CPU pushs user registers on stack starting at this offset */
-#define NCONTEXT        5               /* CPU pre-pushed user info needed to be copied */
+#define USEREIP         2042            /* CPU pre-pushed user eip needed to be copied */
+#define USERESP         2045            /* CPU pre-pushed user esp needed to be copied */
 #define KSTACK_SIZE     2048            /* 2048 word */
 
 #define task_of(ptr)  container_of(ptr, thread_t, sched_info)
@@ -32,10 +32,7 @@
 typedef enum { UNUSED, RUNNING, RUNNABLE, SLEEPING, EXITED, ZOMIBIE } pro_state;
 
 
-// " pushl %[next_con]               \n\t"   /* push next's context */   
-// " pushl %[prev_con]               \n\t"   /* push prev's context */  
-
-
+/* deprecated */
 #define __swtch(prev, next)                                 \
 do {                                                  \
     asm volatile (" pushfl                          \n\t"   /* push eflags */               \
@@ -101,7 +98,7 @@ typedef struct thread {
     list_head          wait_node;       /* a list of all sleeping tasks */
     list_head          run_node;        /* a list of all runnable tasks */
     volatile uint32_t  count;           /* time slice for a task */
-    // sched_t            sched_info;      /* info used for scheduler */
+    sched_t            sched_info;      /* info used for scheduler */
     volatile pro_state state;	        /* process state */
     volatile uint8_t   flag;            /* process flag */
     int32_t            argc;            /* number of arguments */
@@ -188,12 +185,13 @@ int32_t file_init(int32_t fd, file_t *file, dentry_t *dentry, file_op *op, threa
 
 /* implemented in sched.c */
 
-// void __schedule(thread_t *curr);
-// void sched_fork(thread_t *task);
+void __schedule(thread_t *curr);
+void sched_fork(thread_t *task);
 void sched_sleep(thread_t *task);
-void sched_wakeup(thread_t *task);
-// void activate_task(thread_t *task);
-// void wakeup_preempt(thread_t *task);
-// void task_tick(thread_t *curr);
+void sched_wakeup(thread_t *from, thread_t *task);
+void sched_exit(thread_t *child, thread_t *parent);
+void activate_task(thread_t *task);
+void wakeup_preempt(thread_t *task);
+void task_tick(thread_t *curr);
 
 #endif /* _PROCESS_H_ */

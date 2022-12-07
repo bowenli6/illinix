@@ -75,7 +75,7 @@ typedef struct {
     weight_t load;          /* sum of weights of all tasks in the queue */
     uint32_t nr_running;    /* number of runnable tasks in the queue */
     uint64_t min_vruntime;  /* current min vruntime in the queue */
-    uint32_t clock;         /* time clock in nanosecond */
+    uint64_t clock;         /* time clock in nanosecond */
     rb_root rb_tree;        /* root of the red-black tree*/
     rb_node *left_most;     /* current leftmost red-black tree node */
     sched_t *current;       /* current running task's sched info (NULL when no process is running) */
@@ -91,6 +91,7 @@ extern const uint32_t sched_prio_to_wmult[40];
 void sched_init(void);
 void schedule(void);
 void pause(void);
+ void enqueue_entity(sched_t *s, int8_t wakeup);
 
 
 #endif /* _CFS_H_ */

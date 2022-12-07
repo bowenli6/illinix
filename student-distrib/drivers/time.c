@@ -1,8 +1,6 @@
 #include <drivers/time.h>
 #include <boot/i8259.h>
 #include <pro/process.h>
-#include <pro/sched.h>
-// #include <pro/cfs.h>
 #include <lib.h>
 #include <io.h>
 
@@ -32,30 +30,28 @@ void pit_init(void) {
  * 
  */
 void do_timer(void) {
+    thread_t *current;
+    uint32_t intr_flag;
 
-    /* update system clock */
-    // sys_ticks++;
-    
+    cli_and_save(intr_flag);
+
     /* update scheduler clock 
      * NOTE: the waying of doing this might be updated 
      * when high precision system clock is enabled 
      */
-    // TODO (cfs)
+    rq->clock += 20 * TICKUNIT;
 
     send_eoi(TIMER_IRQ);       
 
-    /* tick ... */
-    sched_tick();
+    GETPRO(current);
 
-    // GETPRO(current);
+    /* update vruntime of current task and reschedule when needed */
+    task_tick(current);
 
-    // /* update vruntime of current task and reschedule when needed */
-    // task_tick(current);
+    if (current->flag == NEED_RESCHED) {
+        schedule();
+    }
 
-    // if (current->flag == NEED_RESCHED) {
-    //     restore_flags(intr_flag);
-    //     schedule();
-    //     return;
-    // }
+    restore_flags(intr_flag);
 
 }

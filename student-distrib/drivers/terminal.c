@@ -1,6 +1,6 @@
 #include <drivers/terminal.h>
 #include <vfs/vfs.h>
-#include <pro/sched.h>
+#include <pro/cfs.h>
 #include <pro/process.h>
 #include <kmalloc.h>
 #include <lib.h>
@@ -183,10 +183,16 @@ static inline void terminal_switch(uint32_t scancode, terminal_t *terminal, int 
 
     terminal->alt = 0;
     
-    if ((next->state == UNUSED) || (next->state == SLEEPING)) {
+    if (next->state == UNUSED) {
         next->state = RUNNABLE;
-        list_add_tail(&next->run_node, &rq->head);
+        sched_fork(next);
+        activate_task(next);
     } 
+
+    if (next->state == SLEEPING) {
+        next->state = RUNNABLE;
+        enqueue_entity(&next->sched_info, 1);
+    }   
 
     memcpy((void*)video_mem, (void*)next_terminal->saved_vidmem, VIDMEM_SIZE);
     
