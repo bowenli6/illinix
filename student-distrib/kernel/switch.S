@@ -20,11 +20,9 @@ EAX = 32
 .globl swtch
 swtch:
     # get first argument
-    pushl  %eax
-    movl   8(%esp), %eax 
+    movl   4(%esp), %eax 
 
     # save current context into prev context
-    popl   EAX(%eax)
     popl   EIP(%eax)
     movl   %esp, ESP(%eax)
     movl   %ebx, EBX(%eax)
@@ -48,6 +46,9 @@ swtch:
 
     # set new return address
     pushl  EIP(%eax)
+
+    # return value 
+    movl   EAX(%eax), %eax
 
     ret
 

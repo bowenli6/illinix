@@ -139,32 +139,23 @@ int32_t do_fork(thread_t *parent, uint8_t kthread) {
         process_free(child);
         return -1;
     }
+
+    /* set up terminal for process */
+    child->terminal = parent->terminal;
         
     /* set up sched info for child */
-    // sched_fork(child); 
+    sched_fork(child); 
     
-    // activate_task(child);
-
-    // wakeup_preempt(child);
+    activate_task(child);
 
     ntask++;  
 
     child->context->eax = 0;    
 
     /* map to parent's address space */
-    // __umap(child, parent);
+    __umap(child, parent);
 
-    // return child->pid;
-
-    // user_mem_map(child);
-
-    child->context->esp = get_esp0(child);
-    child->context->ebp = child->context->esp;
-
-
-    switch_to_user(child);
-
-    return 0;   /* never reach here */
+    return child->pid;
 }
 
 
@@ -216,7 +207,7 @@ static int32_t process_clone(thread_t *parent, thread_t *child) {
     child->usreip = parent_stack[USEREIP];
     child->usresp = parent_stack[USERESP];
     
-    memcpy((void*)child_stack, (void*)parent_stack, PAGE_SIZE);
+    memcpy((void*)(child_stack + 1024), (void*)(parent_stack + 1024), PAGE_SIZE);
 
     return 0;
 }

@@ -1,10 +1,23 @@
 #include <unistd.h>
 
 /* process */
-// pid_t fork(void);
-// void exit(int status);
+
+pid_t fork(void) {
+
+}
+
+
+void exit(int status) {
+
+}
+
+
 // pid_t waitpid(pid_t pid, int *wstatus);
-// pid_t getpid(void);
+
+pid_t getpid(void) {
+
+}
+
 // pid_t getppid(void);
 
 

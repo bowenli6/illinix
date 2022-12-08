@@ -30,21 +30,18 @@ asmlinkage void sys_exit(uint8_t status) {
  */
 asmlinkage int32_t sys_fork(void) {
     pid_t pid;
-    thread_t *current, *child;
+    thread_t *curr, *child;
 
     cli();
 
     /* get current process */
-    GETPRO(current);
+    GETPRO(curr);
 
     /* get pid of child */
-    pid = do_fork(current, 0);
+    pid = do_fork(curr, 0);
 
     /* get child thread */
-    child = current->children[current->n_children-1];
-
-    /* child return 0 */
-    child->context->eax = 0;
+    child = curr->children[curr->n_children-1];
 
     /* copy ebp from parent to child */
     asm volatile("movl %%ebp, %0"
@@ -56,14 +53,13 @@ asmlinkage int32_t sys_fork(void) {
     /* copy eip from parent to child */
     child->context->eip = *(((uint32_t*)(child->context->ebp)) + 1);
 
-    uint32_t stack =  (get_esp0(current) - (child->context->ebp) - 8);
+    uint32_t stack = (get_esp0(curr) - (child->context->ebp) - 8);
 
     /* copy esp from parent to child */
     child->context->esp = get_esp0(child) - stack;
     
     sti();
-    
-
+        
     return pid;
 }
 
@@ -209,9 +205,56 @@ asmlinkage int32_t sys_sigreturn(void) {
     return -1;
 }
 
-asmlinkage void *sys_sbrk(void) {
+
+
+/**
+ * @brief A system call service routine for dynamic heap allocation in user space, 
+ * which change the location of the program break, which de‐fines the end of the 
+ * process's data segment.
+ *
+ * The calling convation of this function is to use the
+ * arguments from the stack
+ *
+ * @param size : size of allocation
+ * @return void* : Non-NULL value denote success, NULL denote an error condition
+ */
+asmlinkage void *sys_sbrk(uint32_t size) {
     thread_t *curr;
 
     GETPRO(curr);
     return NULL;
 }
+
+
+
+/**
+ * @brief A system call service routine for creating a new mapping in the virtual 
+ * address space of the calling process.
+ *
+ * The calling convation of this function is to use the
+ * arguments from the stack
+ *
+ * @param addr : virtual address spaces to be mapped
+ * @param size : size of allocation
+ * @return int32_t : positive or 0 denote success, negative values denote an error condition
+ */
+asmlinkage int32_t sys_mmap(void *addr, uint32_t size) {
+    return 0;
+}
+
+
+/**
+ * @brief A system call service routine for removing a old mapping in the virtual 
+ * address space of the calling process.
+ *
+ * The calling convation of this function is to use the
+ * arguments from the stack
+ *
+ * @param addr : virtual address spaces to be unmapped
+ * @param size : size of allocation
+ * @return int32_t : positive or 0 denote success, negative values denote an error condition
+ */
+asmlinkage int32_t sys_munmap(void *addr, uint32_t size) {
+    return 0;
+}
+
