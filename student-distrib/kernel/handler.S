@@ -23,6 +23,9 @@ syscall_table:
     .long sys_set_handler
     .long sys_sigreturn
     .long sys_fork
+    .long sys_sbrk
+    .long sys_mmap
+    .long sys_munmap
 
 .text
 

@@ -552,4 +552,32 @@ int vmcopy(vmem_t* dest, vmem_t* src)
     return 0;
 }
 
+void show_mmap(vmem_t* vm)
+{
+    vm_area_t* area;
+    area = vm->map_list;
+    int length;
+    printf("-----------------memory-map------------------\n");
+    printf("start           end           length     flag\n");
+    while(area->next != 0) {
+        length = area->vmend - area->vmstart;
+        if(length != 0) {
+            printf("0x%x-----", area->vmstart);
+            printf("0x%x      ", area->vmend);
+            printf("0x%x      ",length);
+            if(area->vmflag & VM_HEAP) {
+                printf("[HEAP]\n");
+                area = area->next;
+                continue;
+            }
+            if(area->vmflag & VM_STACK) {
+                printf("[STACK]\n");
+                area = area->next;
+            }
+            printf("r%c%c\n", (area->vmflag & VM_WRITE)?'w':'-',(area->vmflag & VM_EXEC)?'e':'-');
+        }
+        area = area->next;
+    }
+    printf("-----------------memory-map------------------\n");
+}
 

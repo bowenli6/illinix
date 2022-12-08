@@ -79,6 +79,7 @@ int32_t do_vidmap(uint8_t **screen_start);
 void user_mem_init();
 uint32_t get_user_page(int order);
 void free_user_page(uint32_t addr, int order);
+void show_mmap(vmem_t* vm);
 
 typedef struct pg_descriptor_t {
     uint32_t flags;

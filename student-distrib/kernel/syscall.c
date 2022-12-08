@@ -3,6 +3,7 @@
 #include <vfs/vfs.h>
 #include <pro/sched.h>
 #include <errno.h>
+#include <boot/x86_desc.h>
 #include <boot/page.h>
 #include <lib.h>
 #include <io.h>
@@ -220,8 +221,21 @@ asmlinkage int32_t sys_sigreturn(void) {
  */
 asmlinkage void *sys_sbrk(uint32_t size) {
     thread_t *curr;
-
+    vm_area_t* heap = curr->vm.map_list;
+    char* rtn = NULL;
+    
     GETPRO(curr);
+    while(heap != 0) {
+        if(heap->vmflag & VM_HEAP) {
+            if(vmalloc(heap, size, PTE_RW | PTE_US) == -1)
+                return rtn;
+            rtn = curr->vm.brk;
+            curr->vm.brk += ((size + PAGE_SIZE - 1) / PAGE_SIZE) * PAGE_SIZE;
+            show_mmap(&curr->vm);
+            return rtn;
+        }
+        heap = heap->next;
+    }
     return NULL;
 }
 
@@ -239,6 +253,13 @@ asmlinkage void *sys_sbrk(uint32_t size) {
  * @return int32_t : positive or 0 denote success, negative values denote an error condition
  */
 asmlinkage int32_t sys_mmap(void *addr, uint32_t size) {
+    // if(addr < KERNEL_PAGES * PAGE_SIZE_4MB)
+    //     return -1;
+    // vm_area_t* area;
+    // area->vmflag = VM_WRITE | VM_READ;
+    // area->vmend = area->vmstart = (uint32_t)addr;
+    
+    // vmalloc(area->vmstart, )
     return 0;
 }
 
