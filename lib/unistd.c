@@ -69,7 +69,7 @@ pid_t fork(void) {
  * returned, and errno is set appropriately.
  */
 int execve(const char *pathname, char *const argv[]) {
-    return syscall(SYS_EXECVE, (int) pathname, (int) argv);
+    return syscall(SYS_EXECVE, (int) pathname, (int) argv, 0);
 }
 
 
