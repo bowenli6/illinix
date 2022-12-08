@@ -733,11 +733,12 @@ thread_t **children_create(void) {
  */
 static inline void place_children(thread_t *task) {
     int i;
+    thread_t *parent_of_parent = task->parent;
 
     for (i = 0; i < task->n_children; ++i) {
-        overflow_children(task->parent);
-        task->parent->children[init->n_children++] = task->children[i];
-        task->children[i]->parent = task->parent;
+        overflow_children(parent_of_parent);
+        parent_of_parent->children[parent_of_parent->n_children++] = task->children[i];
+        task->children[i]->parent = parent_of_parent;
     }
 }
 
