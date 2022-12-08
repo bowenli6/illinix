@@ -468,9 +468,9 @@ void vmdealloc(vm_area_t* vm, int decsize, int mapping)
  */
 int vmcopy(vmem_t* dest, vmem_t* src) 
 {
-    uint32_t i, length, pa, va;
+    uint32_t i, length, pa, va, cachepa;
     pte_t* pte;
-    char *cache, cachepa;
+    char *cache;
     vm_area_t* srcarea, *destarea, *nextarea;
 
     /* Use a temp storage. It's a random address in user area. */

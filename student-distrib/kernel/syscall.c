@@ -240,25 +240,8 @@ asmlinkage int32_t sys_sigreturn(void) {
     return -1;
 }
 
-asmlinkage int32_t sys_execve(const int8_t *pathname, int8_t *const argv[]) {
-    return -1;
-}
 
-asmlinkage int32_t sys_getpid(void) {
-    return -1;
-}
 
-asmlinkage int32_t sys_wait(void) {
-    return -1;
-}
-
-asmlinkage int32_t sys_waitpid(void) {
-    return -1;
-}
-
-asmlinkage int32_t sys_getppid(void) {
-    return -1;
-}
 /**
  * @brief A system call service routine for dynamic heap allocation in user space, 
  * which change the location of the program break, which de‐fines the end of the 
