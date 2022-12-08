@@ -113,9 +113,9 @@ void do_general_protection() {
  */
 void 
 do_page_fault(int errcode, int addr) 
-{    
+{   
+
     if(addr < USER_STACK_ADDR && addr > (USER_STACK_ADDR - USER_STACK_MAX)) {
-        // TODO
         thread_t* t;
         vm_area_t* area;
         uint32_t pa, length, va;
@@ -123,8 +123,8 @@ do_page_fault(int errcode, int addr)
 
         GETPRO(t);
         
-        printf("handling page fault.. getting more stack!\n Your process = %d, ", t->pid);
-        printf("your address: %x\n", addr);
+        // printf("handling page fault.. getting more stack!\n Your process = %d, ", t->pid);
+        // printf("your address: %x\n", addr);
 
         area = t->vm.map_list;
         while(area != 0) {
@@ -148,9 +148,9 @@ do_page_fault(int errcode, int addr)
                 mmap(va, pa, PAGE_SIZE, PTE_RW | PTE_US);   /* Create mmap. */
 
                 area->mmap[0] = ADDR_TO_PTE(pa) | PTE_PRESENT | PTE_RW | PTE_US;
-
+                printf("------------------------------------------------------------\n");
                 printf("PAGE FAULT HANDLER: Succeed! Your new stack start: 0x%x.\n", area->vmstart);
-                
+                printf("------------------------------------------------------------\n");
                 // int i;
                 // for(i = 0; i < length; i++) {
                 //     printf("mmap: %x", area->mmap[i]);

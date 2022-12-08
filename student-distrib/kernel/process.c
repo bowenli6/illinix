@@ -53,7 +53,6 @@ static int32_t parse_arg(int8_t *cmd, int8_t *argv[]);
 static inline void switch_to_user(thread_t *curr);
 static void console_init(void);
 static inline void update_tss(thread_t *curr);
-static inline void __umap(thread_t *from, thread_t *to);
 static inline void place_children(thread_t *task);
 static inline void overflow_children(thread_t *task);
 
@@ -325,7 +324,7 @@ int32_t do_execve(thread_t *curr, const int8_t *pathname, int8_t *const argv[]) 
     if (curr->argc < MAXARGS) curr->argv[curr->argc] = NULL;
 
     /* executable check and load program image into user's memory */
-    if ((errno = pro_loader(pathname, &EIP_reg)) < 0) {
+    if ((errno = pro_loader(pathname, &EIP_reg, curr)) < 0) {
         return errno;
     }
 
@@ -388,7 +387,7 @@ static int32_t __exec(thread_t *parent, const int8_t *cmd, uint8_t kthread) {
     __umap(parent, child);
 
     /* executable check and load program image into user's memory */
-    if ((errno = pro_loader(argv[0], &EIP_reg)) < 0) {
+    if ((errno = pro_loader(argv[0], &EIP_reg, child)) < 0) {
         process_free(child);
         return errno;
     }
@@ -717,18 +716,6 @@ thread_t **children_create(void) {
 }
 
 
-/**
- * @brief map user virtual memory space
- * 
- * @param from : source process
- * @param to : dest process
- */
-static inline void __umap(thread_t *from, thread_t *to) {
-    if (from != init)     /* only unmap if it's not the init process */
-        user_mem_unmap(from);
-    if (to != init)
-        user_mem_map(to);
-}
 
 
 

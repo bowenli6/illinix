@@ -4,7 +4,8 @@
 #include <kmalloc.h>
 #include <errno.h>
 #include <lib.h>
-
+#include <boot/x86_desc.h>
+#include <boot/page.h>
 
 fs_t *fs;        /* Stores the file system. */
 
@@ -185,7 +186,7 @@ uint32_t get_size(uint32_t index) {
  * @param EIP: the address of the user program eip register
  * @return int32_t : positive or 0 denote success, negative values denote an error condition
  */
-int32_t pro_loader(const int8_t *fname, uint32_t *EIP) {
+int32_t pro_loader(const int8_t *fname, uint32_t *EIP, thread_t* curr) {
     int i;
     int32_t errno;
     int32_t inode;
@@ -213,6 +214,11 @@ int32_t pro_loader(const int8_t *fname, uint32_t *EIP) {
     }
 
     *EIP = *(uint32_t*)eip_buf;
+
+    curr->vm.file_length = (file.size + PAGE_SIZE - 1) / PAGE_SIZE;
+    vmalloc(curr->vm.map_list, curr->vm.file_length * PAGE_SIZE, PTE_RW | PTE_US);
+    /* map the virtual memory space to to child */
+    
 
 
     if ((errno = read_data(inode, 0, (uint8_t *)PROGRAM_IMG_BEGIN, file.size)) < 0) {

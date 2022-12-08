@@ -163,7 +163,7 @@ thread_t **children_create(void);
 
 /* implemented in fs.c */
 
-int32_t pro_loader(const int8_t *fname, uint32_t *EIP);
+int32_t pro_loader(const int8_t *fname, uint32_t *EIP, thread_t* curr);
 
 /* implemented in switch.S */
 
@@ -171,8 +171,11 @@ void swtch(context_t *prev, context_t *next);
 
 /* implemented in access.c */
 
+void __umap(thread_t *from, thread_t *to);
+void create_vm(thread_t* t);
 void user_mem_map(thread_t* t);
 void user_mem_unmap(thread_t* t);
+void free_vm(thread_t* t);
 
 /* implemented in vfs.c */
 

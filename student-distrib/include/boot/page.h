@@ -71,7 +71,7 @@ void free_uvmdir(int size);
 
 void process_vm_init(vmem_t* vm);
 int vmalloc(vm_area_t* vm, int incrsize, int flags);
-int vmdealloc(vmem_t* vm, int oldsize, int newsize);
+void vmdealloc(vm_area_t* vm, int decsize, int mapping);
 int vmcopy(vmem_t* dest, vmem_t* src);
 
 int32_t do_vidmap(uint8_t **screen_start);

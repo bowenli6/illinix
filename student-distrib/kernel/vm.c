@@ -94,24 +94,23 @@ void page_init()
         if(i == (VIDEO >> PDE_OFFSET_4KB) ) {
             page_table[i] = page_table[i] | PTE_PRESENT | PTE_RW | ADDR_TO_PTE(VIDEO); 
         }
+        else {
+            page_table[i] = 0 | PTE_RW;  
+        }
     }
-    page_table[VIDEO_BUF_1 >> PDE_OFFSET_4KB] = PTE_PRESENT | PTE_RW | ADDR_TO_PTE(VIDEO_BUF_1); 
-    page_table[VIDEO_BUF_2 >> PDE_OFFSET_4KB] = PTE_PRESENT | PTE_RW | ADDR_TO_PTE(VIDEO_BUF_2);
-    page_table[VIDEO_BUF_3 >> PDE_OFFSET_4KB] = PTE_PRESENT | PTE_RW | ADDR_TO_PTE(VIDEO_BUF_3);
 
     page_directory[VIR_VID_MEM / PAGE_SIZE_4MB] = PTE_PRESENT | PTE_RW | PTE_US | ADDR_TO_PTE((int)vidmap_table);
-    
-    for(i = 0; i < 3; i++) {
-        vidmap_table[(VIDEO >> PDE_OFFSET_4KB) + i] = PTE_PRESENT | PTE_RW | PTE_US | ADDR_TO_PTE(VIDEO);
+    for(i = 0; i < ENTRY_NUM; i++) {
+        if(i == (VIDEO >> PDE_OFFSET_4KB)) {
+            vidmap_table[i] = PTE_PRESENT | PTE_RW | PTE_US | ADDR_TO_PTE(VIDEO);
+        }
+        else {
+            vidmap_table[i] = 0;
+        }
     }
-    // for(i = 0; i < ENTRY_NUM; i++) {
-    //     if(i == (VIDEO >> PDE_OFFSET_4KB)) {
-    //         vidmap_table[i] = PTE_PRESENT | PTE_RW | PTE_US | ADDR_TO_PTE(VIDEO);
-    //     }
-    //     else {
-    //         vidmap_table[i] = 0;
-    //     }
-    // }
+        page_table[VIDEO_BUF_1 >> PDE_OFFSET_4KB] = PTE_PRESENT | PTE_RW | ADDR_TO_PTE(VIDEO_BUF_1); 
+        page_table[VIDEO_BUF_2 >> PDE_OFFSET_4KB] = PTE_PRESENT | PTE_RW | ADDR_TO_PTE(VIDEO_BUF_2);
+        page_table[VIDEO_BUF_3 >> PDE_OFFSET_4KB] = PTE_PRESENT | PTE_RW | ADDR_TO_PTE(VIDEO_BUF_3);
 
     /* turn on paging registers */
     enable_paging();
@@ -120,12 +119,6 @@ void page_init()
 
 
 
-/**
- * @brief map the text-mode video memory into user space at a pre-set virtual address.
- * 
- * @param screen_start : starting screen address
- * @return int32_t : positive or 0 denote success, negative values denote an error condition
- */
 int32_t do_vidmap(uint8_t **screen_start)
 {
     // cli();
@@ -148,34 +141,15 @@ int32_t do_vidmap(uint8_t **screen_start)
     return 0;
 }
 
-/** 
- * @brief Expand the current thread's heap size.
+
+
+
+/**
+ * @brief Get the buddy object
  * 
- * @param incrsize The size(# bytes) of the heap expansion requested by the user. 
+ * @param addr Addresses to be allocated
+ * @return buddy* buddy struct storing addr
  */
-void do_mmap(int incrsize) {
-    thread_t* curr;
-    vm_area_t *heap;
-    
-    GETPRO(curr);
-
-    curr->vm.brk += (incrsize + PAGE_SIZE - 1) / PAGE_SIZE;
-
-    heap = curr->vm.map_list;
-
-    while(heap != 0) {
-        if(heap->vmflag & VM_HEAP) {
-            vmalloc(heap, incrsize, PTE_US | PTE_RW);
-            return;
-        }
-        heap = heap->next;
-    }
-
-    panic("Where is my heap??");
-}
-
-
-
 buddy* get_buddy(uint32_t addr) 
 {
     buddy* b = kmalloc(sizeof(buddy));
@@ -184,6 +158,11 @@ buddy* get_buddy(uint32_t addr)
 }
 
 
+/**
+ * @brief Initialize user memory area
+ *        (bitmaps & free lists), 
+ *        index user memory
+ */
 void user_mem_init() 
 {
     int i = 0;
@@ -218,10 +197,11 @@ void user_mem_init()
 
 
 /**
- * @brief Get a free user page using buddy system
+ * @brief   Allocate 2^order page size user memory space.
+ *          Using the buddy allocator.
  * 
- * @param order 
- * @return void* 
+ * @param order     Required memory space, can be any integer from 0 to 4MB.
+ * @return void*    pointer to allocated memory space. NULL means failed.
  */
 uint32_t get_user_page(int order)
 {
@@ -243,6 +223,12 @@ uint32_t get_user_page(int order)
     return NULL;
 }
 
+/**
+ * @brief       Free a memory address created by get_user_page().
+ * 
+ * @param addr  Physical address of allocated space.
+ * @param order The minimum order is 0 (4KB) and the maximum order is 10 (4MB).
+ */
 void free_user_page(uint32_t addr, int order)
 {   
     _free_page(ufree_area, get_buddy(addr), order);
@@ -250,16 +236,25 @@ void free_user_page(uint32_t addr, int order)
 }
 
 
-
+/**
+ * @brief   Find the page table entry corresponding to a virtual address.
+ * 
+ * @param va        target virtual address
+ * @param flags     Used to create page directory entry
+ * @param alloc     If the value of alloc is 1, _walk will create a page table
+ *                  for a pde that does not currently exist; otherwise, _walk
+ *                  will return 0 if the pde does not exist.
+ * @return pte_t*   pointer to target pte
+ */
 pte_t*
 _walk(uint32_t va, uint32_t flags, int alloc)
 {
     uint32_t pde_i = PDE_MB_ADDR(va);
-    pde_t* pde = &page_directory[pde_i];
+    pde_t* pde = &page_directory[pde_i];                        /* Get pde entry. */
     uint32_t ptaddr;
 
     if(!(*pde & PTE_PRESENT)) {
-        if(!alloc || (ptaddr = (uint32_t)get_page(0)) == 0)
+        if(!alloc || (ptaddr = (uint32_t)get_page(0)) == 0)     /* Alloc a new page table if needed. */
             return 0;
         memset((void*)ptaddr, 0, PAGE_SIZE);
         *pde = PTE_PRESENT | flags | ADDR_TO_PTE(ptaddr);
@@ -270,7 +265,16 @@ _walk(uint32_t va, uint32_t flags, int alloc)
     return &pte[(va >> VA_OFFSET) & GETBIT_10];
 }
 
-
+/**
+ * @brief           Create a memory map between a virtual address and 
+ *                  a physical address.
+ * 
+ * @param va        Virtual address.
+ * @param pa        Physical address.
+ * @param size      Size of memory map. (# bytes)
+ * @param flags     Flags to be set on PTE & PDE.
+ * @return int      0 if succeed, -1 if failed.
+ */
 int mmap(uint32_t va, uint32_t pa, int size, int flags)
 {
     pte_t* pte;
@@ -280,20 +284,31 @@ int mmap(uint32_t va, uint32_t pa, int size, int flags)
     length = size / PAGE_SIZE;
 
     for(i = 0; i < length; i++ ){
-        if((pte = _walk(addr, flags, 1)) == 0) 
+
+        if((pte = _walk(addr, flags, 1)) == 0)          /* Get the PTE position to map. */
             panic("walk error");
-        if((*pte) & PTE_PRESENT) 
+
+        if((*pte) & PTE_PRESENT)                        /* Cannot remap an existing mmap. */
             return -1;
 
-        *pte = PTE_PRESENT | flags | (ADDR_TO_PTE(pa) + i * PAGE_SIZE);
+        *pte = PTE_PRESENT | flags | (ADDR_TO_PTE(pa) + i * PAGE_SIZE);     /* Create map. */
         pdesc[PDE_MB_ADDR(addr)].count ++;
 
         addr += PAGE_SIZE;
     }
+
     flush_tlb();
     return 0;
 }
 
+/**
+ * @brief           Delete a memory map on a virtual address.
+ *                  *Do not free the physical memory.*
+ * 
+ * @param va        Virtual address.
+ * @param size      Size of map to delete.
+ * @return int      0 if succeed, -1 if failed.
+ */
 int
 freemap(uint32_t va, int size)
 {
@@ -301,21 +316,29 @@ freemap(uint32_t va, int size)
     uint32_t addr;
 
     for(addr = va; addr < va + size; addr += PAGE_SIZE) {
-        if((pte = _walk(addr, 0, 0)) == 0) 
+        if((pte = _walk(addr, 0, 0)) == 0)              /* Find the PTE to free. */
             return -1;
+
         if(!((*pte) & PTE_PRESENT))
             return -1;
+
         *pte = 0;
-        if((pdesc[PDE_MB_ADDR(addr)].count--) == 0) {
+        if((pdesc[PDE_MB_ADDR(addr)].count--) == 0) {   /* If the page table became empty, free it. */
             free_page((void*)ADDR_TO_PTE(page_directory[PDE_MB_ADDR(addr)]), 0);
         }
     }
+
     flush_tlb();
     return 0;
 }
 
 
-
+/**
+ * @brief       Initialize the virtual memory structure of a process.
+ *              * Do not alloc physical memory *
+ * 
+ * @param vm    Virtual memory struct.
+ */
 void process_vm_init(vmem_t* vm)
 {
     vm_area_t *file = kmalloc(sizeof(vm_area_t));
@@ -323,14 +346,13 @@ void process_vm_init(vmem_t* vm)
     vm_area_t *stack = kmalloc(sizeof(vm_area_t));
 
     vm->size = 0;
-    vm->file_length = 16;
+    vm->file_length = 0;
     vm->start_brk = vm->brk = 0x8800000;
     vm->count = 0;
 
     file->next = heap;
-    file->vmstart = PROGRAM_IMG_BEGIN;
     file->vmend = PROGRAM_IMG_BEGIN + PAGE_SIZE * vm->file_length;
-    // file->vmstart = USER_MEM;
+    file->vmstart = PROGRAM_IMG_BEGIN;
     // file->vmend = USER_MEM + PAGE_SIZE_4MB;
     file->vmflag = VM_READ | VM_WRITE | VM_EXEC;
     
@@ -339,7 +361,7 @@ void process_vm_init(vmem_t* vm)
     heap->next = stack;
 
     stack->vmend = 0xC000000;
-    stack->vmstart = stack->vmend - 16 * PAGE_SIZE;
+    stack->vmstart = stack->vmend;
     stack->next = 0;
     stack->vmflag = VM_READ | VM_WRITE | VM_STACK;
 
@@ -348,6 +370,15 @@ void process_vm_init(vmem_t* vm)
 }
 
 
+/**
+ * @brief       Expand a virtual memory area. Allocate physical memory 
+ *              to it and create the mapping.
+ * 
+ * @param vm        Virtual memory area.
+ * @param incrsize  Increase size.
+ * @param flags     Flags of memory map.
+ * @return int      0 if succeed, -1 if failed.
+ */
 int 
 vmalloc(vm_area_t* vm, int incrsize, int flags)
 {
@@ -364,26 +395,24 @@ vmalloc(vm_area_t* vm, int incrsize, int flags)
 
     length = (vm->vmend - vm->vmstart) / PAGE_SIZE;
 
-    if((temp = kmalloc((length + incrlength) * sizeof(uint32_t*))) == 0)
+    if((temp = kmalloc((length + incrlength) * sizeof(uint32_t*))) == 0)    /* Create space for mmap area structure. */
         return -1;
     if(length) {
-        memcpy(temp, vm->mmap, length * sizeof(uint32_t*));
+        memcpy(temp, vm->mmap, length * sizeof(uint32_t*));                 /* If it has an old mmap area, replace it. */
         kfree(vm->mmap);
     }
     vm->mmap = temp;
 
     startva = vm->vmend;
-    // startva = USER_MEM + ADDR_TO_PTE(oldsize) + PAGE_SIZE * ((oldsize % PAGE_SIZE) != 0);
-    // endva =  ADDR_TO_PTE(USER_MEM + newsize + PAGE_SIZE - 1);
     
     vm->vmend = vm->vmend + ADDR_TO_PTE(incrsize + PAGE_SIZE - 1);
 
     for(va = startva; va < vm->vmend; va += PAGE_SIZE) {
-        if((pa = get_user_page(0)) == 0)
+        if((pa = get_user_page(0)) == 0)                                    /* Alloc physical memory. */
             return -1;
-        if(mmap(va, pa, PAGE_SIZE, flags) == -1) 
+        if(mmap(va, pa, PAGE_SIZE, flags) == -1)                            /* Map it onto the virtual address. */
             panic("mmap error");
-        vm->mmap[i] = PTE_PRESENT | flags | (ADDR_TO_PTE(pa));
+        vm->mmap[i] = PTE_PRESENT | flags | (ADDR_TO_PTE(pa));              /* Store the mmap info into the process's structure. */
         i++;
     }
 
@@ -391,8 +420,52 @@ vmalloc(vm_area_t* vm, int incrsize, int flags)
     return 0;
 }
 
+/**
+ * @brief           Dealloc a virtual memory area. Dealloc the physical memory corresponding
+ *                  to it. If it's mapped on current virtual memory, delete the memory map.
+ * 
+ * @param vm        Virtual memory area.
+ * @param decsize   Decrease size.
+ * @param mapping   1 if mapping on virtual memory, 0 if not mapping.
+ */
+void vmdealloc(vm_area_t* vm, int decsize, int mapping)
+{
+    uint32_t newend, va;
+    int i, pa;
+    uint32_t* temp;
+    
+    i = (vm->vmend - vm->vmstart) / PAGE_SIZE;
 
+    newend = vm->vmend - decsize / PAGE_SIZE;
 
+    /* Loop through all the virtual addresses need to be freed. */
+    for(va = vm->vmend; va > newend; va -= PAGE_SIZE) {
+
+        if(mapping)                         /* If the address if mapped on vm, delete it. */
+            freemap(va, PAGE_SIZE);     
+        
+        pa = ADDR_TO_PTE(vm->mmap[--i]);    /* Fetch physical address from mmap structure. */
+        free_user_page(pa, 0);              /* Free the physical address. */
+    }
+
+    if(newend != vm->vmend) {               /* Shrink the mmap structure. */
+        temp = kmalloc(i * sizeof(uint32_t*));          
+        memcpy(temp, vm->mmap, i * sizeof(uint32_t*));
+        kfree(vm->mmap);   
+
+        vm->mmap = temp;
+        vm->vmend = newend; 
+    }
+    
+}
+
+/**
+ * @brief           Copy a virtual memory structure.
+ * 
+ * @param dest      Destination vm structure.
+ * @param src       Source vm structure.
+ * @return int      0 if succeed, -1 if failed.
+ */
 int vmcopy(vmem_t* dest, vmem_t* src) 
 {
     uint32_t i, length, pa, va;
@@ -400,58 +473,64 @@ int vmcopy(vmem_t* dest, vmem_t* src)
     char *cache, cachepa;
     vm_area_t* srcarea, *destarea, *nextarea;
 
+    /* Use a temp storage. It's a random address in user area. */
     cachepa = get_user_page(0);
     cache = (char*) 0x7F00000;
     mmap((uint32_t)cache, cachepa, PAGE_SIZE, PTE_US | PTE_RW);
 
-    dest->size = src->size;
+
+    dest->size = src->size;                     /* Copy virtual memory attributes. */
     dest->start_brk = src->start_brk;
     dest->file_length = src->file_length;
     dest->brk = src->brk;
     //dest->count = ++src->count;
 
-    srcarea = src->map_list;
+    srcarea = src->map_list;                    /* Start from the first memory map area. */
 
     destarea = dest->map_list;
     while(destarea != 0) {
         nextarea = destarea->next;
-        kfree(destarea);
+        kfree(destarea);                        /* Free destination mmap areas if it has existed. */
         destarea = nextarea;
     }
 
-    destarea = kmalloc(sizeof(vm_area_t));
+    destarea = kmalloc(sizeof(vm_area_t));      /* Create first destination mmap area. */
     dest->map_list = destarea;
 
     while(srcarea != 0) {
         length = (srcarea->vmend - srcarea->vmstart) / PAGE_SIZE;
 
         destarea->mmap = kmalloc(sizeof(uint32_t*) * length);
-        
+
         destarea->vmstart = srcarea->vmstart;
         destarea->vmend = srcarea->vmend;
         destarea->vmflag = srcarea->vmflag;
 
+        /* For each mmap area to copy, loop through all pages. */
         i = 0;
         for(va = srcarea->vmstart; va < srcarea->vmend; va += PAGE_SIZE) {
-            if((pte = _walk(va, 0, 0)) == 0) {
+
+            if((pte = _walk(va, 0, 0)) == 0) {      /* Obtain PTE entry for current virtual address. */
                 panic("vmcopy: walk error");
             }
             if((*pte & PTE_PRESENT) == 0) {
                 panic("vmcopy: src not present");
             }
-            if((pa = get_user_page(0)) == 0) {
+            
+            if((pa = get_user_page(0)) == 0) {      /* Alloc physical memory for dest. */
                 panic("vmcopy: get user page failed");
             }
             
-            memcpy(cache, (char*)va, PAGE_SIZE);
+            memcpy(cache, (char*)va, PAGE_SIZE);    /* Copy mapping data onto the temp storage. */
+            
+            freemap(va, PAGE_SIZE);                 /* Delete previous memory map. */
 
-            freemap(va, PAGE_SIZE);
-
-            if(mmap(va, pa, PAGE_SIZE, GETBIT_12(srcarea->mmap[i])) == -1) {
+            if(mmap(va, pa, PAGE_SIZE, GETBIT_12(srcarea->mmap[i])) == -1) {    /* Map new physical memory to the pagedir. */
                 free_user_page(pa, 0);
                 panic("vmcopy: remap failed");
             }
-            memcpy((char*)va, cache, PAGE_SIZE);
+            
+            memcpy((char*)va, cache, PAGE_SIZE);    /* Copy data to current virtual memory. */
 
             destarea->mmap[i] = PTE_PRESENT | GETBIT_12(srcarea->mmap[i]) | (ADDR_TO_PTE(pa));
             i ++;
@@ -459,7 +538,7 @@ int vmcopy(vmem_t* dest, vmem_t* src)
 
         srcarea = srcarea->next;
         if(srcarea != 0) {
-            nextarea = kmalloc(sizeof(vm_area_t));
+            nextarea = kmalloc(sizeof(vm_area_t));  /* Create next mmap area structure. */
             destarea->next = nextarea;
             destarea = nextarea;
         }
@@ -467,23 +546,10 @@ int vmcopy(vmem_t* dest, vmem_t* src)
 
     destarea->next = 0;
 
-    freemap((uint32_t)cache, PAGE_SIZE);
+    freemap((uint32_t)cache, PAGE_SIZE);            /* Free the temp storage. */
     free_user_page(cachepa, 0);
 
     return 0;
 }
 
-
-/*
-int vmdealloc(vmem_t* vm, int oldsize, int newsize)
-{
-    uint32_t startva, endva, va, pa;
-    startva = ADDR_TO_PTE(newsize) + PAGE_SIZE;
-    endva = ADDR_TO_PTE(oldsize);
-
-    _freemap(pd, va, (startva - endva) / PAGE_SIZE);
-
-    return;
-}
-*/
 
