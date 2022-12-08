@@ -151,9 +151,12 @@ int32_t do_fork(thread_t *parent, uint8_t kthread) {
 
     child->context->eax = 0;    
 
-    // /* map to parent's address space */
+    /* map to parent's address space */
     // __umap(child, parent);
-    user_mem_map(child);
+
+    // return child->pid;
+
+    // user_mem_map(child);
 
     child->context->esp = get_esp0(child);
     child->context->ebp = child->context->esp;
@@ -213,8 +216,7 @@ static int32_t process_clone(thread_t *parent, thread_t *child) {
     child->usreip = parent_stack[USEREIP];
     child->usresp = parent_stack[USERESP];
     
-    for (i = KSTACK_SIZE - 1; i >= KSTACK_SIZE - 128; --i)
-        child_stack[i] = parent_stack[i];
+    memcpy((void*)child_stack, (void*)parent_stack, PAGE_SIZE);
 
     return 0;
 }
