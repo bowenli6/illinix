@@ -33,6 +33,8 @@ asmlinkage int32_t sys_waitpid(pid_t pid, int *wstatus);
 asmlinkage void   *sys_sbrk(uint32_t size);
 asmlinkage int32_t sys_mmap(void *addr, uint32_t size);
 asmlinkage int32_t sys_munmap(void *addr);
+asmlinkage int32_t sys_stat(int8_t *info[]);
+
 
 
 /* --------------------------------Process-------------------------------- */

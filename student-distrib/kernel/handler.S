@@ -7,7 +7,7 @@ ES       = 0x20
 ORIG_EAX = 0x24
 EIP      = 0x30
 INTR     = 0x24
-NCALL    = 20
+NCALL    = 21
 USER_DS  = 0x002B
 
 syscall_table:
@@ -31,7 +31,7 @@ syscall_table:
     .long sys_sbrk
     .long sys_mmap
     .long sys_munmap
-
+    .long sys_stat
 .text
 
 # Save all the CPU registers that may be used by the exception handler on the stack.

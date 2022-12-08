@@ -7,7 +7,9 @@
 #include <boot/page.h>
 #include <lib.h>
 #include <io.h>
+#include <list.h>
 #include <kmalloc.h>
+#include <drivers/time.h>
 
 /**
  * @brief A system call service routine for exiting a process
@@ -384,5 +386,36 @@ asmlinkage int32_t sys_wait(int *wstatus) {
 
 asmlinkage int32_t sys_waitpid(pid_t pid, int *wstatus) {
     return 0;
+}
+
+
+asmlinkage int32_t sys_stat(int8_t *info[]) {
+    thread_t *thread;
+    list_head *node;
+    int8_t buf[128];
+    int count;
+    const int size[6] = { 3, 4, 3, 4, 5, 7 };
+    const char state[5][32] = {
+        "unused", "running", "runnable", "sleeping", "exited", "zomibie"
+    };
+
+    list_for_each(node, &task_queue) {
+        thread = list_entry(node, thread_t, task_node);
+        strcat(*info, itoa(thread->pid, buf, 10));
+        strcat(*info, ",");
+        strcat(*info, itoa(thread->parent->pid, buf, 10));
+        strcat(*info, ",");
+        strcat(*info, thread->argv[0]);
+        strcat(*info, ",");
+        strcat(*info, itoa(thread->nice, buf, 10));
+        strcat(*info, ",");
+        strcat(*info, state[thread->state]);
+        // strcat(*info, ",");
+        // strcat(*info, itoa((uint32_t)(thread->sched_info.sum_exec_time / TICKUNIT), buf, 10));
+        info++;
+        count++;
+    }
+
+    return count;
 }
 

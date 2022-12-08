@@ -330,3 +330,9 @@ char *strchr(const char *s, int c) {
     }
     return NULL;
 }
+
+
+char *strcat(char * dest, const char * src) {
+    while (*dest) dest++;
+    return strcpy(dest, src);
+}

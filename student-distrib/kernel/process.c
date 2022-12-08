@@ -324,6 +324,8 @@ int32_t do_execv(thread_t *curr, const int8_t *pathname, int8_t *const argv[]) {
     /* update argument lists */
     for (i = 0; argv[i]; ++i) {
         strcpy((char*)(curr->argv[i]), (char*)(argv[i]));
+        if (curr->argv[i][strlen(curr->argv[i]) - 1] == '\n')
+            curr->argv[i][strlen(curr->argv[i]) - 1] = '\0';
         curr->argc++;
     } 
 
@@ -331,7 +333,7 @@ int32_t do_execv(thread_t *curr, const int8_t *pathname, int8_t *const argv[]) {
     if (curr->argc < MAXARGS) curr->argv[curr->argc] = NULL;
 
     /* executable check and load program image into user's memory */
-    if ((errno = pro_loader(pathname, &EIP_reg, curr)) < 0) {
+    if ((errno = pro_loader(curr->argv[0], &EIP_reg, curr)) < 0) {
         return errno;
     }
 
@@ -542,6 +544,8 @@ static int32_t process_create(thread_t *current, uint8_t kthread) {
 
     process_vm_init(&t->vm);
 
+    list_add_tail(&t->task_node, &task_queue);
+
     return 0;
 }
 
@@ -577,6 +581,8 @@ void process_free(thread_t *current) {
         __umap(current, current->parent);
         update_tss(parent);
     }
+
+    list_del(&current->task_node);
 
     free_kstack((void*)current);
 

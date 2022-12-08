@@ -71,16 +71,57 @@ static inline int32_t list_empty(list_head *head) {
 
 #define list_entry(ptr, type, member) container_of(ptr, type, member)
 
+int8_t* strrev(int8_t* s) {
+    register int8_t tmp;
+    register int32_t beg = 0;
+    register int32_t end = strlen(s) - 1;
+
+    while (beg < end) {
+        tmp = s[end];
+        s[end] = s[beg];
+        s[beg] = tmp;
+        beg++;
+        end--;
+    }
+    return s;
+}
+
+typedef unsigned long uint32_t;
 
 
+int8_t* itoa(uint32_t value, int8_t* buf, int32_t radix) {
+    static int8_t lookup[] = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+    int8_t *newbuf = buf;
+    int32_t i;
+    uint32_t newval = value;
+
+    /* Special case for zero */
+    if (value == 0) {
+        buf[0] = '0';
+        buf[1] = '\0';
+        return buf;
+    }
+
+    /* Go through the number one place value at a time, and add the
+     * correct digit to "newbuf".  We actually add characters to the
+     * ASCII string from lowest place value to highest, which is the
+     * opposite of how the number should be printed.  We'll reverse the
+     * characters later. */
+    while (newval > 0) {
+        i = newval % radix;
+        *newbuf = lookup[i];
+        newbuf++;
+        newval /= radix;
+    }
+
+    /* Add a terminating NULL */
+    *newbuf = '\0';
+
+    /* Reverse the string and return */
+    return strrev(buf);
+}
 
 int main(void) {
-   printf("L0\n");
-    if (fork() != 0) {
-        printf("L1\n");
-        if (fork() != 0) {
-            printf("L2\n");
-        }
-    }
-    printf("Bye\n");
+    char buf[100];
+   printf("%s\n", itoa(2131231231, buf, 10));
 }   

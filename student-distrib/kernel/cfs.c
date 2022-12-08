@@ -169,6 +169,10 @@ void sched_init(void) {
     consoles = kmalloc(NTERMINAL * sizeof(console_t));
     current = NULL;
 
+    /* create task queue */
+    task_queue.next = &task_queue;
+    task_queue.prev = &task_queue;
+
     /* create run queue */
     rq = kmalloc(sizeof(cfs_rq));
     rq->nr_running = 0;

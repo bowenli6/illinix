@@ -278,3 +278,7 @@ int munmap(void *addr, size_t size) {
     return syscall(SYS_MUNMAP, (int) addr, (int) size, 0);
 }
 
+
+int stat(char *info[]) {
+    return syscall(SYS_STAT, (int) info, 0, 0);
+}

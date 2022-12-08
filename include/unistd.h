@@ -24,7 +24,8 @@ typedef enum {
     SYS_GETPPID,
     SYS_SBRK,
     SYS_MMAP,
-    SYS_MUNMAP
+    SYS_MUNMAP,
+    SYS_STAT
 } sysnum;
 
 
@@ -41,6 +42,9 @@ pid_t getpid(void);
 pid_t getppid(void);
 int getargs (char* buf, int nbytes);
 
+/* Debug */
+int stat(char *info[]);
+
 
 /* file system */
 int open(const char *pathname);
@@ -53,9 +57,6 @@ void *sbrk(size_t increment);
 int vidmap(char **screen_start);
 void *mmap(void *addr, size_t size);
 int munmap(void *addr, size_t size);
-
-
-/* signal */
 
 
 
