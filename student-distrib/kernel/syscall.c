@@ -17,6 +17,8 @@
  * @return int32_t : positive or 0 denote success, negative values denote an error condition
  */
 asmlinkage void sys_exit(uint8_t status) {
+    cli();
+    
     /* never returns to the halting process */
     do_exit((uint32_t)status);
 }
@@ -32,6 +34,7 @@ asmlinkage void sys_exit(uint8_t status) {
 asmlinkage int32_t sys_fork(void) {
     pid_t pid;
     thread_t *curr, *child;
+    uint32_t stack;
 
     cli();
 
@@ -54,7 +57,7 @@ asmlinkage int32_t sys_fork(void) {
     /* copy eip from parent to child */
     child->context->eip = *(((uint32_t*)(child->context->ebp)) + 1);
 
-    uint32_t stack = (get_esp0(curr) - (child->context->ebp) - 8);
+    stack = (get_esp0(curr) - (child->context->ebp) - 8);
 
     /* copy esp from parent to child */
     child->context->esp = get_esp0(child) - stack;
@@ -225,9 +228,9 @@ asmlinkage void *sys_sbrk(uint32_t size) {
     char* rtn = NULL;
     
     GETPRO(curr);
-    while(heap != 0) {
-        if(heap->vmflag & VM_HEAP) {
-            if(vmalloc(heap, size, PTE_RW | PTE_US) == -1)
+    while (heap != 0) {
+        if (heap->vmflag & VM_HEAP) {
+            if (vmalloc(heap, size, PTE_RW | PTE_US) == -1)
                 return rtn;
             rtn = curr->vm.brk;
             curr->vm.brk += ((size + PAGE_SIZE - 1) / PAGE_SIZE) * PAGE_SIZE;

@@ -223,8 +223,6 @@ void do_exit(uint32_t status) {
     thread_t *child;
     thread_t *parent; 
 
-    cli();
-
     GETPRO(child);  
 
     /* check if the current process is running a system thread and it is a shell */
@@ -307,6 +305,15 @@ int32_t do_execute(thread_t *parent, const int8_t *cmd) {
 }
 
 
+
+/**
+ * @brief execute a program at the current process
+ * 
+ * @param curr : current thread
+ * @param pathname : program name
+ * @param argv : program arguments
+ * @return int32_t : positive or 0 denote success, negative values denote an error condition
+ */
 int32_t do_execve(thread_t *curr, const int8_t *pathname, int8_t *const argv[]) {
     int i;
     int32_t errno;

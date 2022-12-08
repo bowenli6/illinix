@@ -23,6 +23,11 @@ syscall_table:
     .long sys_set_handler
     .long sys_sigreturn
     .long sys_fork
+    .long sys_execve 
+    .long sys_wait
+    .long sys_waitpid 
+    .long sys_getpid 
+    .long sys_getppid 
     .long sys_sbrk
     .long sys_mmap
     .long sys_munmap
