@@ -34,8 +34,8 @@ pid_t fork(void) {
  * @return int : On success, execve() does not return, on error -1 is
  * returned, and errno is set appropriately.
  */
-int execve(const char *pathname, char *const argv[]) {
-    return syscall(SYS_EXECVE, (int) pathname, (int) argv, 0);
+int execv(const char *pathname, char *const argv[]) {
+    return syscall(SYS_EXECV, (int) pathname, (int) argv, 0);
 }
 
 

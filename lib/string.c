@@ -428,3 +428,32 @@ char *itoa(unsigned int value, char *buf, int radix) {
     /* Reverse the string and return */
     return strrev(buf);
 }
+
+
+
+/**
+ * @brief converts the initial portion of the string pointed to by nptr to int.
+ * 
+ * @param nptr : string representation of a number
+ * @return int : the numebr
+ */
+int atoi(const char *nptr) {
+    int number = 0;
+    int sign = 1;
+
+    /* check sign */
+    if (*nptr == '-') {
+        sign = -1;
+        nptr++;
+    }
+
+    while (*nptr) {
+        if (*nptr >= '0' && *nptr <= '9')
+            number = number * 10 + (*nptr - '0');
+        else 
+            break;
+        nptr++;
+    }
+
+    return sign * number;
+}

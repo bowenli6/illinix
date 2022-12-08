@@ -208,3 +208,27 @@ int fputs(int fd, const char *s) {
 }
 
 
+/**
+ * @brief reads in at most one less than size characters from stream and
+ * stores them into the buffer pointed to by s. Reading stops after an EOF 
+ * or a newline. If a newline is read, it is stored into the buffer. 
+ * A terminating null byte ('\0') is stored after the last character in 
+ * the buffer.
+ * 
+ * @param s : store buffer into s
+ * @param size : numebr of bytes to read
+ * @param stream : input stream
+ * @return char* : returns s on success, and NULL on error or when end 
+ * of file occurs while no characters have been read.
+ */
+char *fgets(char *s, int size, int stream) {
+    /* EOP unimplemented due to lack of signal module */
+
+    if (read(stream, (void *)s, size) < 0) {
+        return NULL;
+    }
+
+    return s;
+}
+
+

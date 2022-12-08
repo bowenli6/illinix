@@ -151,7 +151,7 @@ void inline context_switch(thread_t *prev, thread_t *next);
 void process_free(thread_t *current);
 
 void do_exit(uint32_t status);
-int32_t do_execve(thread_t *curr, const int8_t *pathname, int8_t *const argv[]);
+int32_t do_execv(thread_t *curr, const int8_t *pathname, int8_t *const argv[]);
 int32_t do_fork(thread_t *parent, uint8_t kthread);
 int32_t do_execute(thread_t *parent, const int8_t *cmd);
 pid_t do_getpid(void);

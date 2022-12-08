@@ -10,5 +10,7 @@ void free(void *ptr);
 
 void exit(int status);
 pid_t Fork(void);
+void Execv(const char *pathname, char *const argv[]);
+void Waitpid(pid_t pid, int *wstatus);
 
 #endif /* _STDLIB_H_ */

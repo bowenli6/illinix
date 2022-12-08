@@ -7,7 +7,7 @@ ES       = 0x20
 ORIG_EAX = 0x24
 EIP      = 0x30
 INTR     = 0x24
-NCALL    = 12
+NCALL    = 20
 USER_DS  = 0x002B
 
 syscall_table:
@@ -23,7 +23,7 @@ syscall_table:
     .long sys_set_handler
     .long sys_sigreturn
     .long sys_fork
-    .long sys_execve 
+    .long sys_execv 
     .long sys_wait
     .long sys_waitpid 
     .long sys_getpid

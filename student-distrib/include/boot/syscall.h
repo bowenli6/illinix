@@ -25,7 +25,7 @@ asmlinkage int32_t sys_sigreturn(void);
 
 asmlinkage int32_t sys_restart(void);
 asmlinkage int32_t sys_fork(void);
-asmlinkage int32_t sys_execve(const int8_t *pathname, int8_t *const argv[]);
+asmlinkage int32_t sys_execv(const int8_t *pathname, int8_t *const argv[]);
 asmlinkage int32_t sys_getpid(void);
 asmlinkage int32_t sys_getppid(void);
 asmlinkage int32_t sts_wait(int *wstatus);

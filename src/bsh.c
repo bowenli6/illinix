@@ -18,7 +18,6 @@
 #include <string.h>
 #include <unistd.h>
 #include <errno.h>
-#include <sys/wait.h>
 
 
 #define MAXARGS 10              /* Max number of arguments supported in bsh */
@@ -31,10 +30,6 @@
 static int parse(char *buf, char *argv[]);
 static int eval(char *cmd);
 static int buildin(char *argv[]);
-static void unix_error(char *msg);
-static pid_t Fork(void);
-static void Execv(char *pathname, char *argv[]);
-static void Waitpid(pid_t pid, int *wstatus);
 static void echo(char *argv[]);
 
 
@@ -58,12 +53,12 @@ int main(void) {
 
         /* read */
         if (!fgets(cmdline, MAXLINE, stdin)) {
-            fprintf(stderr, "Read command line failed!\n");
+            printf("Read command line failed!\n");
             continue;
         }
         
-        if (feof(stdin)) 
-            exit(0);
+        // if (feof(stdin)) 
+        //     exit(0);
     
         /* eval */
         if (eval(cmdline))
@@ -88,7 +83,7 @@ static int eval(char *cmd) {
     char buf[MAXLINE];      /* holds modified command line */
     int background;         /* does the process run in background? */
     pid_t pid;              /* process id */
-    int status;             /* wait process status */
+    // int status;             /* wait process status */
     
     /* parse */
     strcpy(buf, cmd);
@@ -102,15 +97,16 @@ static int eval(char *cmd) {
 
     /* not buildin command, fork a new process */
     if (!(pid = Fork())) {
-         /* child process */
+        /* child process */
         Execv(argv[0], argv);
-    } else {
+    } else {    
         /* parent process */
         if (background) {
             printf("%d is executing %s in background", pid, cmd);
         } else {
             /* parent waits for foreground process to terminate */
-            Waitpid(pid, &status);
+            // not implemened yet due to lack of signals
+            // Waitpid(pid, &status);
         }
     }
     if (!strcmp(argv[0], "cd"))
@@ -189,55 +185,6 @@ int buildin(char *argv[]) {
 
     /* otherwise not buildin command */
     return 0;
-}
-
-
-/**
- * @brief Stevens-style error printing for a Unix-style error
- * 
- * @param msg : error message
- */
-static void unix_error(char *msg) {
-    fprintf(stderr, "%s: %s\n", msg, strerror(errno));
-    exit(0);
-}
-
-
-/**
- * @brief Stevens-style error-handling wrapper function for fork
- * 
- * @return pid_t : 0 to the child process
- *                 pid to the parent process
- */
-static pid_t Fork(void) {
-    pid_t pid;
-
-    if ((pid = fork()) < 0)
-        unix_error("Fork failed");
-
-    return pid;
-}
-
-/**
- * @brief Stevens-style error-handling wrapper function for execv
- * 
- */
-static void Execv(char *pathname, char *argv[]) {
-    if (execv(pathname, argv) < 0)
-        unix_error("Command not found");
-}
-
-
-/**
- * @brief Stevens-style error-handling wrapper function for waitpid
- * 
- * @param pid : child process id to wait
- * @param wstatus : child process status
- */
-static void Waitpid(pid_t pid, int *wstatus) {
-    if (waitpid(pid, wstatus, 0) < 0) {
-        unix_error("waitfg: waitpid failed");
-    }
 }
 
 

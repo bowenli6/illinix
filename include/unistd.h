@@ -17,7 +17,7 @@ typedef enum {
     SYS_SET_HANDLER,
     SYS_SIGRETURN,
     SYS_FORK,
-    SYS_EXECVE,
+    SYS_EXECV,
     SYS_WAIT,
     SYS_WAITPID,
     SYS_GETPID,
@@ -33,7 +33,7 @@ int syscall(sysnum sysnum, int arg0, int arg1, int arg2);
 /* process */
 pid_t fork(void);
 void _exit(int status);
-int execve(const char *pathname, char *const argv[]);
+int execv(const char *pathname, char *const argv[]);
 int execute(const char *cmd);
 pid_t wait(int *wstatus);
 pid_t waitpid(pid_t pid, int *wstatus);

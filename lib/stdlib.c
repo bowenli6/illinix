@@ -329,17 +329,61 @@ static void transferring_data(void *src, void *dst, size_t size) {
 }
 
 
-
+/**
+ * @brief exit the process
+ * 
+ * @param status : status message
+ */
 void exit(int status) {
     _exit(status);
 }
 
 
+/**
+ * @brief Stevens-style error printing for a Unix-style error
+ * 
+ * @param msg : error message
+ */
+static void unix_error(char *msg) {
+    printf("%s\n", msg);
+    exit(0);
+}
+
+
+/**
+ * @brief Stevens-style error-handling wrapper function for fork
+ * 
+ * @return pid_t : 0 to the child process
+ *                 pid to the parent process
+ */
 pid_t Fork(void) {
     pid_t pid;
-    if ((pid = fork()) < 0) {
-        fputs(stdout, "Fork error");
-        exit(1);
-    }
+
+    if ((pid = fork()) < 0)
+        unix_error("Fork failed");
+
     return pid;
 }
+
+/**
+ * @brief Stevens-style error-handling wrapper function for execv
+ * 
+ */
+void Execv(const char *pathname, char *const argv[]) {
+    if (execv(pathname, argv) < 0)
+        unix_error("Command not found");
+}
+
+
+/**
+ * @brief Stevens-style error-handling wrapper function for waitpid
+ * 
+ * @param pid : child process id to wait
+ * @param wstatus : child process status
+ */
+void Waitpid(pid_t pid, int *wstatus) {
+    if (waitpid(pid, wstatus) < 0) {
+        unix_error("waitfg: waitpid failed");
+    }
+}
+

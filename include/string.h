@@ -22,4 +22,5 @@ void *memcpy(void * __restrict dest, const void * __restrict src, size_t n);
 void *memmove(void *dest, const void *src, size_t n);
 
 char *itoa(unsigned int value, char *buf, int radix);
+int atoi(const char *nptr);
 #endif /* _STRING_H_ */

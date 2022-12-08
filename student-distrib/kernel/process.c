@@ -314,7 +314,7 @@ int32_t do_execute(thread_t *parent, const int8_t *cmd) {
  * @param argv : program arguments
  * @return int32_t : positive or 0 denote success, negative values denote an error condition
  */
-int32_t do_execve(thread_t *curr, const int8_t *pathname, int8_t *const argv[]) {
+int32_t do_execv(thread_t *curr, const int8_t *pathname, int8_t *const argv[]) {
     int i;
     int32_t errno;
     uint32_t EIP_reg;
@@ -347,7 +347,13 @@ int32_t do_execve(thread_t *curr, const int8_t *pathname, int8_t *const argv[]) 
     else
         curr->nice = NICE_NORMAL;
 
-    return 0;
+    /* store registers */
+    curr->usreip = EIP_reg;
+    curr->usresp = USER_STACK_ADDR;
+
+    switch_to_user(curr);
+    
+    return 0;   /* never reach here */
 }
 
 
@@ -721,7 +727,6 @@ thread_t **children_create(void) {
     }
     return children;
 }
-
 
 
 

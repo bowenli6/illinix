@@ -69,14 +69,14 @@ asmlinkage int32_t sys_fork(void) {
 }
 
 
-asmlinkage int32_t sys_execve(const int8_t *pathname, int8_t *const argv[]) {
+asmlinkage int32_t sys_execv(const int8_t *pathname, int8_t *const argv[]) {
     thread_t *curr;
     int32_t status;
 
     cli();
     GETPRO(curr);
 
-    status = do_execve(curr, pathname, argv);
+    status = do_execv(curr, pathname, argv);
     sti();
 
     return status;
@@ -253,11 +253,13 @@ asmlinkage int32_t sys_sigreturn(void) {
  */
 asmlinkage void *sys_sbrk(uint32_t size) {
     thread_t *curr;
-    vm_area_t* heap = curr->vm.map_list;
+    vm_area_t* heap;
     int32_t brk;
     
     GETPRO(curr);
+    heap = curr->vm.map_list;
     brk = curr->vm.brk;
+    
 
     if((brk % PAGE_SIZE == 0) || ((size + (brk % PAGE_SIZE)) > PAGE_SIZE)) {
         while (heap != 0) {
