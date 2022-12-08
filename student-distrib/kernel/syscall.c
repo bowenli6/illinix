@@ -7,6 +7,7 @@
 #include <boot/page.h>
 #include <lib.h>
 #include <io.h>
+#include <kmalloc.h>
 
 /**
  * @brief A system call service routine for exiting a process
@@ -239,8 +240,25 @@ asmlinkage int32_t sys_sigreturn(void) {
     return -1;
 }
 
+asmlinkage int32_t sys_execve(const int8_t *pathname, int8_t *const argv[]) {
+    return -1;
+}
 
+asmlinkage int32_t sys_getpid(void) {
+    return -1;
+}
 
+asmlinkage int32_t sys_wait(void) {
+    return -1;
+}
+
+asmlinkage int32_t sys_waitpid(void) {
+    return -1;
+}
+
+asmlinkage int32_t sys_getppid(void) {
+    return -1;
+}
 /**
  * @brief A system call service routine for dynamic heap allocation in user space, 
  * which change the location of the program break, which de‐fines the end of the 
@@ -255,20 +273,30 @@ asmlinkage int32_t sys_sigreturn(void) {
 asmlinkage void *sys_sbrk(uint32_t size) {
     thread_t *curr;
     vm_area_t* heap = curr->vm.map_list;
-    char* rtn = NULL;
+    int32_t brk;
     
     GETPRO(curr);
-    while (heap != 0) {
-        if (heap->vmflag & VM_HEAP) {
-            if (vmalloc(heap, size, PTE_RW | PTE_US) == -1)
-                return rtn;
-            rtn = curr->vm.brk;
-            curr->vm.brk += ((size + PAGE_SIZE - 1) / PAGE_SIZE) * PAGE_SIZE;
-            show_mmap(&curr->vm);
-            return rtn;
+    brk = curr->vm.brk;
+
+    if((brk % PAGE_SIZE == 0) || ((size + (brk % PAGE_SIZE)) > PAGE_SIZE)) {
+        while (heap != 0) {
+            if (heap->vmflag & VM_HEAP) {
+
+                if (vmalloc(heap, PAGE_SIZE, PTE_RW | PTE_US) == -1)
+                    return 0;
+                
+                curr->vm.brk += size;
+                show_mmap(&curr->vm);
+                return (void*)brk;
+            }
+            heap = heap->next;
         }
-        heap = heap->next;
     }
+    else {
+        curr->vm.brk += size;
+        return (void*)brk;
+    }
+
     return NULL;
 }
 
@@ -286,13 +314,39 @@ asmlinkage void *sys_sbrk(uint32_t size) {
  * @return int32_t : positive or 0 denote success, negative values denote an error condition
  */
 asmlinkage int32_t sys_mmap(void *addr, uint32_t size) {
-    // if(addr < KERNEL_PAGES * PAGE_SIZE_4MB)
-    //     return -1;
-    // vm_area_t* area;
-    // area->vmflag = VM_WRITE | VM_READ;
-    // area->vmend = area->vmstart = (uint32_t)addr;
+    thread_t* curr;
+    int pagesz, pageaddr;
+    vm_area_t* area, *t;
+
+    GETPRO(curr);
+
+    if((uint32_t)addr < KERNEL_PAGES * PAGE_SIZE_4MB || (uint32_t)addr > USER_STACK_ADDR)
+        return -1;
+
+    pagesz = (((int)addr % PAGE_SIZE) + size + PAGE_SIZE - 1) / PAGE_SIZE;
+    pageaddr = (int)addr % PAGE_SIZE;
+
+    area = kmalloc(sizeof(vm_area_t));
+    area->vmflag = VM_WRITE | VM_READ;
+    area->vmend = area->vmstart = (uint32_t)addr;
     
-    // vmalloc(area->vmstart, )
+    vmalloc(area, pagesz, PTE_US | PTE_RW);
+
+    t = curr->vm.map_list;
+    if(t->vmstart > (uint32_t)addr) {
+        curr->vm.map_list = area;
+        area->next = t;
+        show_mmap(&curr->vm);
+        return 0;
+    }
+    while(t->next->vmstart < (uint32_t)addr && t->next->next != 0) {
+        t = t->next;
+    }
+    if(t->next == 0) 
+        return -1;
+    area->next = t->next->next;
+    t->next = area;
+    show_mmap(&curr->vm);
     return 0;
 }
 
@@ -308,7 +362,34 @@ asmlinkage int32_t sys_mmap(void *addr, uint32_t size) {
  * @param size : size of allocation
  * @return int32_t : positive or 0 denote success, negative values denote an error condition
  */
-asmlinkage int32_t sys_munmap(void *addr, uint32_t size) {
+asmlinkage int32_t sys_munmap(void *addr) {
+    uint32_t pageaddr = (uint32_t)addr % PAGE_SIZE, size;
+    vm_area_t *area, *prev;
+    thread_t* curr;
+    
+    GETPRO(curr);
+
+    prev = area = curr->vm.map_list;
+    
+    while(area->next != 0) {
+        if(area->vmstart == pageaddr)
+            break;
+        area = area->next;
+        if(area != curr->vm.map_list) prev = prev->next;
+    }
+    if(area == 0)
+        return -1;
+        
+    if(area == prev)
+        curr->vm.map_list = area->next;
+    else 
+        prev->next = area->next;
+
+    size = area->vmend - area->vmstart;
+    vmdealloc(area, size, 1);
+    kfree(area);
+    
+    show_mmap(&curr->vm);
     return 0;
 }
 
