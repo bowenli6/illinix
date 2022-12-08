@@ -1,10 +1,12 @@
 #include <boot/exception.h>
 #include <access.h>
 #include <pro/process.h>
+#include <pro/signal.h>
 #include <boot/x86_desc.h>
 #include <boot/page.h>
 #include <io.h>
 #include <kmalloc.h>
+
 
 
 /* According to IA32 page 6, we define the name for first 20 exceptions */
@@ -114,14 +116,15 @@ void do_general_protection() {
 void 
 do_page_fault(int errcode, int addr) 
 {    
+    thread_t* t;
+    vm_area_t* area;
+    uint32_t pa, length, va;
+    uint32_t* temp;
+    GETPRO(t);
+
     if(addr < USER_STACK_ADDR && addr > (USER_STACK_ADDR - USER_STACK_MAX)) {
         // TODO
-        thread_t* t;
-        vm_area_t* area;
-        uint32_t pa, length, va;
-        uint32_t* temp;
 
-        GETPRO(t);
         
         printf("handling page fault.. getting more stack!\n Your process = %d, ", t->pid);
         printf("your address: %x\n", addr);
@@ -165,8 +168,12 @@ do_page_fault(int errcode, int addr)
     }
 
     printf("PAGE FAULT! ERROR ADDRESS: %x\n", addr);
-    while(1);
     exp_to_usr(PAGE_FAULT);
+
+    // printf("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA \n");
+    // deliver_signal(t); 
+    // printf("BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB \n");
+    
 }
 
 void do_coprocessor_error() {

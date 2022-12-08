@@ -25,6 +25,7 @@
 #include <pro/process.h>
 #include <boot/page.h>
 #include <pro/sched.h>
+#include <pro/signal.h>
 // #include <pro/cfs.h>
 #include <drivers/keyboard.h>
 #include <boot/x86_desc.h>
@@ -504,6 +505,9 @@ static int32_t process_create(thread_t *current, uint8_t kthread) {
 
     /* allocate memory for context */
     t->context = kmalloc(sizeof(context_t));
+    t->sig = kmalloc(sizeof(signal_struct_t));
+    thread_sig_init(t);
+
 
     if (!current->children)
         current->children = children_create();

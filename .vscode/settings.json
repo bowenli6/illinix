@@ -7,6 +7,8 @@
         "signal.h": "c",
         "types.h": "c",
         "process.h": "c",
-        "fs.h": "c"
+        "fs.h": "c",
+        "kmalloc.h": "c",
+        "page.h": "c"
     }
 }

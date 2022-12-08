@@ -1,0 +1,119 @@
+boot.o: boot.S include/boot/multiboot.h include/boot/x86_desc.h \
+  include/types.h
+handler.o: kernel/handler.S
+sig.o: kernel/sig.S
+switch.o: kernel/switch.S
+x86_desc.o: kernel/x86_desc.S include/boot/x86_desc.h include/types.h
+fs.o: drivers/fs.c include/drivers/fs.h include/types.h \
+  include/pro/process.h include/vfs/vfs.h include/vfs/file.h \
+  include/drivers/terminal.h include/drivers/keyboard.h include/access.h \
+  include/list.h include/lib.h include/kmalloc.h include/errno.h
+keyboard.o: drivers/keyboard.c include/drivers/keyboard.h include/types.h \
+  include/drivers/terminal.h include/pro/process.h include/vfs/vfs.h \
+  include/vfs/file.h include/drivers/fs.h include/access.h include/list.h \
+  include/lib.h include/boot/i8259.h include/io.h
+rtc.o: drivers/rtc.c include/drivers/rtc.h include/types.h \
+  include/boot/i8259.h include/vfs/file.h include/drivers/fs.h \
+  include/vfs/vfs.h include/pro/process.h include/drivers/terminal.h \
+  include/drivers/keyboard.h include/access.h include/list.h \
+  include/lib.h include/io.h
+terminal.o: drivers/terminal.c include/drivers/terminal.h \
+  include/drivers/keyboard.h include/types.h include/vfs/vfs.h \
+  include/vfs/file.h include/drivers/fs.h include/pro/sched.h \
+  include/list.h include/lib.h include/pro/process.h include/access.h \
+  include/kmalloc.h include/drivers/vga.h include/io.h \
+  include/boot/page.h
+time.o: drivers/time.c include/drivers/time.h include/boot/i8259.h \
+  include/types.h include/pro/process.h include/vfs/vfs.h \
+  include/vfs/file.h include/drivers/fs.h include/drivers/terminal.h \
+  include/drivers/keyboard.h include/access.h include/list.h \
+  include/lib.h include/pro/sched.h include/io.h
+vga.o: drivers/vga.c include/drivers/vga.h include/types.h \
+  include/drivers/terminal.h include/drivers/keyboard.h include/lib.h
+access.o: kernel/access.c include/access.h include/types.h \
+  include/pro/process.h include/vfs/vfs.h include/vfs/file.h \
+  include/drivers/fs.h include/drivers/terminal.h \
+  include/drivers/keyboard.h include/list.h include/lib.h include/errno.h \
+  include/boot/x86_desc.h include/boot/page.h include/kmalloc.h \
+  include/io.h
+cfs.o: kernel/cfs.c
+exception.o: kernel/exception.c include/boot/exception.h include/access.h \
+  include/types.h include/pro/process.h include/vfs/vfs.h \
+  include/vfs/file.h include/drivers/fs.h include/drivers/terminal.h \
+  include/drivers/keyboard.h include/list.h include/lib.h \
+  include/pro/signal.h include/boot/syscall.h include/boot/x86_desc.h \
+  include/boot/page.h include/io.h include/kmalloc.h
+file.o: kernel/file.c include/vfs/file.h include/types.h \
+  include/drivers/fs.h include/vfs/vfs.h include/lib.h \
+  include/pro/process.h include/drivers/terminal.h \
+  include/drivers/keyboard.h include/access.h include/list.h include/io.h
+i8259.o: kernel/i8259.c include/boot/i8259.h include/types.h \
+  include/lib.h
+idt.o: kernel/idt.c include/types.h include/boot/idt.h \
+  include/boot/x86_desc.h include/boot/exception.h \
+  include/boot/interrupt.h include/boot/syscall.h include/lib.h \
+  include/io.h include/drivers/terminal.h include/drivers/keyboard.h
+kernel.o: kernel/kernel.c include/boot/multiboot.h include/types.h \
+  include/boot/x86_desc.h include/boot/page.h include/pro/process.h \
+  include/vfs/vfs.h include/vfs/file.h include/drivers/fs.h \
+  include/drivers/terminal.h include/drivers/keyboard.h include/access.h \
+  include/list.h include/lib.h include/boot/idt.h include/boot/i8259.h \
+  include/drivers/rtc.h include/drivers/time.h include/drivers/vga.h \
+  include/pro/sched.h include/pro/signal.h include/boot/syscall.h \
+  include/debug.h include/io.h include/kmalloc.h include/tests/tests.h
+kmalloc.o: kernel/kmalloc.c include/lib.h include/types.h \
+  include/kmalloc.h include/boot/x86_desc.h include/boot/page.h \
+  include/pro/process.h include/vfs/vfs.h include/vfs/file.h \
+  include/drivers/fs.h include/drivers/terminal.h \
+  include/drivers/keyboard.h include/access.h include/list.h
+pid.o: kernel/pid.c include/pro/pid.h include/pro/process.h \
+  include/vfs/vfs.h include/vfs/file.h include/types.h \
+  include/drivers/fs.h include/drivers/terminal.h \
+  include/drivers/keyboard.h include/access.h include/list.h \
+  include/lib.h include/errno.h
+process.o: kernel/process.c include/pro/process.h include/vfs/vfs.h \
+  include/vfs/file.h include/types.h include/drivers/fs.h \
+  include/drivers/terminal.h include/drivers/keyboard.h include/access.h \
+  include/list.h include/lib.h include/boot/page.h include/pro/sched.h \
+  include/pro/signal.h include/boot/syscall.h include/boot/x86_desc.h \
+  include/pro/pid.h include/drivers/vga.h include/kmalloc.h \
+  include/errno.h
+sched.o: kernel/sched.c include/pro/process.h include/vfs/vfs.h \
+  include/vfs/file.h include/types.h include/drivers/fs.h \
+  include/drivers/terminal.h include/drivers/keyboard.h include/access.h \
+  include/list.h include/lib.h include/pro/sched.h include/kmalloc.h \
+  include/drivers/vga.h include/io.h
+signal.o: kernel/signal.c include/pro/process.h include/vfs/vfs.h \
+  include/vfs/file.h include/types.h include/drivers/fs.h \
+  include/drivers/terminal.h include/drivers/keyboard.h include/access.h \
+  include/list.h include/lib.h include/pro/signal.h \
+  include/boot/syscall.h
+syscall.o: kernel/syscall.c include/boot/syscall.h include/types.h \
+  include/pro/process.h include/vfs/vfs.h include/vfs/file.h \
+  include/drivers/fs.h include/drivers/terminal.h \
+  include/drivers/keyboard.h include/access.h include/list.h \
+  include/lib.h include/pro/sched.h include/errno.h include/boot/page.h \
+  include/io.h
+vfs.o: kernel/vfs.c include/drivers/fs.h include/types.h \
+  include/drivers/rtc.h include/pro/process.h include/vfs/vfs.h \
+  include/vfs/file.h include/drivers/terminal.h \
+  include/drivers/keyboard.h include/access.h include/list.h \
+  include/lib.h include/kmalloc.h include/errno.h
+vm.o: kernel/vm.c include/boot/x86_desc.h include/types.h \
+  include/boot/page.h include/pro/process.h include/vfs/vfs.h \
+  include/vfs/file.h include/drivers/fs.h include/drivers/terminal.h \
+  include/drivers/keyboard.h include/access.h include/list.h \
+  include/lib.h include/kmalloc.h include/io.h
+io.o: lib/io.c include/io.h include/types.h include/drivers/terminal.h \
+  include/drivers/keyboard.h include/lib.h include/boot/syscall.h \
+  include/pro/process.h include/vfs/vfs.h include/vfs/file.h \
+  include/drivers/fs.h include/access.h include/list.h \
+  include/drivers/vga.h
+lib.o: lib/lib.c include/lib.h include/types.h
+rbtree.o: lib/rbtree.c include/rbtree.h include/types.h include/lib.h
+tests.o: tests/tests.c include/boot/x86_desc.h include/types.h \
+  include/lib.h include/io.h include/drivers/terminal.h \
+  include/drivers/keyboard.h include/drivers/rtc.h include/tests/tests.h \
+  include/vfs/vfs.h include/vfs/file.h include/drivers/fs.h \
+  include/boot/syscall.h include/boot/page.h include/pro/process.h \
+  include/access.h include/list.h include/kmalloc.h

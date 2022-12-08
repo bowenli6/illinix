@@ -16,6 +16,7 @@
 #include <vfs/vfs.h>
 #include <pro/process.h>
 #include <pro/sched.h>
+#include <pro/signal.h>
 #include <debug.h>
 #include <lib.h>
 #include <io.h>
@@ -174,6 +175,7 @@ void entry(unsigned long magic, unsigned long addr) {
     rtc_init();                     /* Initialize the RTC driver. */
     pit_init();                     /* Initialize the PIT driver */
     vga_init();                     /* Initialize the VGA driver */
+    sig_init();
 
 
     clear();

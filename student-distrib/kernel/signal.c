@@ -3,6 +3,7 @@
 #include <boot/syscall.h>
 
 
+
 default_action default_arr[SIG_COUNT];
 
 static int32_t div_zero_hdler(void);
@@ -13,18 +14,19 @@ static int32_t user1_hdler(void);
 
 static
 int32_t div_zero_hdler(void){
-    // do_halt(256);
+    do_exit(256);
     return 0;
 }
 
 static
 int32_t segfault_hdler(void){
-    // do_halt(256);
+    do_exit(256);
     return 0;
 }
 
 static
 int32_t interrupt_hdler(void){
+    do_exit(256);
     return 0;
 }
 
@@ -173,6 +175,8 @@ int32_t deliver_signal(thread_t *thread){
             break;
         }
     }
+
+    sig_num = 1;  /* need to commnets out *////////////////////////////////////////////////////////
 
     /* According to ULK P.441, if ka.sa.sa_handler is equal to ISG_DFL, we must perform default handler */
     if (thread->sig->exe_sig_act[sig_num] == default_arr[sig_num]) {
