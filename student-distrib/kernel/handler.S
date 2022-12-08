@@ -26,7 +26,7 @@ syscall_table:
     .long sys_execve 
     .long sys_wait
     .long sys_waitpid 
-    .long sys_getpid 
+    .long sys_getpid
     .long sys_getppid 
     .long sys_sbrk
     .long sys_mmap
@@ -214,7 +214,7 @@ page_fault_handler:
     movl	%cr2, %eax
 	pushl	%eax		
     pushl   $0                  # no error code now: pad the hardware error code on the stack.
-    #pushl   $do_page_fault      # push the do_handler function address. 
+    # pushl   $do_page_fault      # push the do_handler function address. 
     call    do_page_fault
     add     $12, %esp
     popal

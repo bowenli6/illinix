@@ -67,6 +67,36 @@ asmlinkage int32_t sys_fork(void) {
     return pid;
 }
 
+
+asmlinkage int32_t sys_execve(const int8_t *pathname, int8_t *const argv[]) {
+    thread_t *curr;
+    int32_t status;
+
+    cli();
+    GETPRO(curr);
+
+    status = do_execve(curr, pathname, argv);
+    sti();
+
+    return status;
+}
+
+
+asmlinkage int32_t sys_getpid(void) {
+    thread_t *t;
+    GETPRO(t);
+    return t->pid;
+}
+
+
+
+asmlinkage int32_t sys_getppid(void) {
+    thread_t *t;
+    GETPRO(t);
+    return t->parent->pid;
+}   
+
+
 /**
  * @brief A system call service routine for creating a process
  * The calling convation of this function is to use the
@@ -279,6 +309,16 @@ asmlinkage int32_t sys_mmap(void *addr, uint32_t size) {
  * @return int32_t : positive or 0 denote success, negative values denote an error condition
  */
 asmlinkage int32_t sys_munmap(void *addr, uint32_t size) {
+    return 0;
+}
+
+
+
+asmlinkage int32_t sys_wait(int *wstatus) {
+    return 0;
+}
+
+asmlinkage int32_t sys_waitpid(pid_t pid, int *wstatus) {
     return 0;
 }
 

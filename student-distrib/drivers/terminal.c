@@ -191,7 +191,7 @@ static inline void terminal_switch(uint32_t scancode, terminal_t *terminal, int 
 
     if (next->state == SLEEPING) {
         next->state = RUNNABLE;
-        enqueue_entity(&next->sched_info, 1);
+        enqueue_task(next, 1);
     }   
 
     memcpy((void*)video_mem, (void*)next_terminal->saved_vidmem, VIDMEM_SIZE);

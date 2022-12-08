@@ -151,7 +151,7 @@ void inline context_switch(thread_t *prev, thread_t *next);
 void process_free(thread_t *current);
 
 void do_exit(uint32_t status);
-void do_halt(uint32_t status);
+int32_t do_execve(thread_t *curr, const int8_t *pathname, int8_t *const argv[]);
 int32_t do_fork(thread_t *parent, uint8_t kthread);
 int32_t do_execute(thread_t *parent, const int8_t *cmd);
 pid_t do_getpid(void);
@@ -166,7 +166,6 @@ thread_t **children_create(void);
 int32_t pro_loader(const int8_t *fname, uint32_t *EIP, thread_t* curr);
 
 /* implemented in switch.S */
-
 void swtch(context_t *prev, context_t *next);
 
 /* implemented in access.c */
@@ -192,6 +191,7 @@ void __schedule(thread_t *curr);
 void sched_fork(thread_t *task);
 void sched_sleep(thread_t *task);
 void sched_wakeup(thread_t *from, thread_t *task);
+void enqueue_task(thread_t *new, int8_t wakeup);
 void sched_exit(thread_t *child, thread_t *parent);
 void activate_task(thread_t *task);
 void wakeup_preempt(thread_t *task);

@@ -23,11 +23,12 @@ typedef enum {
     SYS_GETPID,
     SYS_GETPPID,
     SYS_SBRK,
-    SYS_VIDMAP,
     SYS_MMAP,
     SYS_MUNMAP
 } sysnum;
 
+
+int syscall(sysnum sysnum, int arg0, int arg1, int arg2);
 
 /* process */
 pid_t fork(void);
@@ -51,6 +52,7 @@ ssize_t write(int fd, const void *buf, size_t count);
 void *sbrk(size_t increment);
 int vidmap(char **screen_start);
 void *mmap(void *addr, size_t size);
+int munmap(void *addr, size_t size);
 
 
 /* signal */

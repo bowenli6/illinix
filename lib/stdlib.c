@@ -1,11 +1,12 @@
-#include "../include/stdio.h"
-#include "../include/unistd.h"
-#include "../include/stdlib.h"
+#include <string.h>
+#include <stdio.h>
+#include <unistd.h>
+#include <stdlib.h>
 
 #define START 5     // 5 is the first size of base 2 allocation can be made.
 #define END 12      // 12 is the last size of base 2 allocation can be made.
 #define LEN 8       // length of the void **index.
-#define LAST_BIT 63 // index of the last bit in X86-64.
+#define LAST_BIT 31 // index of the last bit in X86-32.
 
 
 /* When requesting memory from the OS using sbrk(), request it in
@@ -21,6 +22,8 @@ typedef struct {
 } List;
 
 
+static List *free_list = NULL;
+
 
 static void *bulk_alloc(size_t size);
 static void bulk_free(void *ptr, size_t size);
@@ -33,8 +36,6 @@ static int check_flag(void *ptr);
 static void set_up_free_list();
 static void *allocate(size_t size);
 static void transferring_data(void *src, void *dst, size_t size);
-
-
 
 
 
@@ -228,11 +229,6 @@ static inline __attribute__((unused)) int block_index(size_t x) {
         return 32 - __builtin_clz((unsigned int)x + 7);
     }
 }
-
-
-
-// The free list of the allocator.
-static List * free_list = NULL;
 
 
 // add node to the head of the linkedList.

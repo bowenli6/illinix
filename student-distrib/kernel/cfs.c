@@ -105,7 +105,7 @@ static void put_prev_task(sched_t *prev);
 static void dequeue_task(thread_t *prev);
 static void dequeue_entity(sched_t *prev);
 static void __dequeue_entity(sched_t *s);
-static void enqueue_task(thread_t *new, int8_t wakeup);
+// static void enqueue_task(thread_t *new, int8_t wakeup);
 // static void enqueue_entity(sched_t *s, int8_t wakeup);
 static void __enqueue_entity(sched_t *s);
 static uint64_t sched_key(sched_t *s);
@@ -250,7 +250,7 @@ void sched_wakeup(thread_t *from, thread_t *task) {
     task->flag = WAKEUP;
     if (task == current->task) {
         task->state = RUNNABLE;
-        enqueue_entity(&task->sched_info, 1);
+        enqueue_task(task, 1);
     }
     __schedule(from);
 }
@@ -474,7 +474,7 @@ static void __dequeue_entity(sched_t *s) {
  * @param new : new task thread info
  * @param wakeup : does the process just wake up?
  */
-static void enqueue_task(thread_t *new, int8_t wakeup) {
+void enqueue_task(thread_t *new, int8_t wakeup) {
     sched_t *s = &new->sched_info;
     
     if (s->on_rq) return;

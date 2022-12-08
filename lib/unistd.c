@@ -1,38 +1,4 @@
-#include "../include/unistd.h"
-
-
-/**
- * @brief : System call interface for requesting services from the kernel
- * 
- * @param sysnum : syscall number
- * @param arg0 : argument 0
- * @param arg1 : argument 1
- * @param arg2 : argument 2
- * @return int : positive or 0 denote success, negative values denote an 
- * error condition
- */
-static int syscall(sysnum sysnum, int arg0, int arg1, int arg2) {
-    asm volatile ("                             \n\
-                    pushl	%%ebx               \n\
-	                movl	%[sysnum], %%eax    \n\
-	                movl	%[arg0],   %%ebx    \n\
-	                movl	%[arg1],   %%ecx    \n\
-	                movl	%[arg2],   %%edx    \n\
-	                int	    $0x80               \n\
-	                popl	%ebx                \n\
-                    leave                       \n\
-	                ret                         \n\
-                  "     
-                  :
-                  : [sysnum] "rm"(sysnum),
-                    [arg0] "rm"(arg0),
-                    [arg1] "rm"(arg1),
-                    [arg2] "rm"(arg2)
-                  : "memory", "cc"            
-    );
-
-    return 0;
-}
+#include <unistd.h>
 
 
 /**
@@ -48,7 +14,7 @@ static int syscall(sysnum sysnum, int arg0, int arg1, int arg2) {
  * and errno is set appropriately.
  */
 pid_t fork(void) {
-    return syscall(SYS_FORK, 0, 0, 0);
+    return (pid_t) syscall(SYS_FORK, 0, 0, 0);
 }
 
 
@@ -95,7 +61,7 @@ int execute(const char *cmd) {
  * by the parent using one of the wait(2) family of calls.
  */
 void _exit(int status) {
-    return syscall(SYS_EXIT, status, 0, 0);
+    syscall(SYS_EXIT, status, 0, 0);
 }
 
 
@@ -111,7 +77,7 @@ void _exit(int status) {
 
  */
 pid_t wait(int *wstatus) {
-    return syscall(SYS_WAIT, (int) wstatus, 0, 0);
+    return (pid_t) syscall(SYS_WAIT, (int) wstatus, 0, 0);
 }
 
 
@@ -125,7 +91,7 @@ pid_t wait(int *wstatus) {
  * whose state has changed; On error, -1 is returned.
  */
 pid_t waitpid(pid_t pid, int *wstatus) {
-    return syscall(SYS_WAITPID, (int) pid, (int) wstatus, 0);
+    return (pid_t) syscall(SYS_WAITPID, (int) pid, (int) wstatus, 0);
 }
 
 
@@ -136,7 +102,7 @@ pid_t waitpid(pid_t pid, int *wstatus) {
  * @return pid_t : pid of the calling process.
  */
 pid_t getpid(void) {
-    return syscall(SYS_GETPID, 0, 0, 0);
+    return (pid_t) syscall(SYS_GETPID, 0, 0, 0);
 }
 
 
@@ -149,7 +115,7 @@ pid_t getpid(void) {
  * @return pid_t : pid of the parent of the calling process.
  */
 pid_t getppid(void) {
-    return syscall(SYS_GETPPID, 0, 0, 0);
+    return (pid_t) syscall(SYS_GETPPID, 0, 0, 0);
 }
 
 
@@ -213,7 +179,7 @@ int close(int fd) {
  * or because read() was interrupted by a signal.
  */
 ssize_t read(int fd, void *buf, size_t count) {
-    return syscall(SYS_READ, fd, (int) buf, (int) count);
+    return (ssize_t) syscall(SYS_READ, fd, (int) buf, (int) count);
 }   
 
 
@@ -229,7 +195,7 @@ ssize_t read(int fd, void *buf, size_t count) {
  * On error, -1 is returned, and errno is set to indicate the cause of the error.
  */
 ssize_t write(int fd, const void *buf, size_t count) {
-    return syscall(SYS_WRITE, fd, (int) buf, (int) count);
+    return (ssize_t) syscall(SYS_WRITE, fd, (int) buf, (int) count);
 }
 
 
@@ -256,7 +222,7 @@ ssize_t write(int fd, const void *buf, size_t count) {
  * errno is set to ENOMEM.
  */
 void *sbrk(size_t increment) {
-    return syscall(SYS_SBRK, (int) increment, 0, 0);
+    return (void *) syscall(SYS_SBRK, (int) increment, 0, 0);
 }
 
 
@@ -292,7 +258,7 @@ int vidmap(char **screen_start) {
  * the cause of the error.
  */
 void *mmap(void *addr, size_t size) {
-    return syscall(SYS_MMAP, (int) addr, (int) size, 0);
+    return (void *) syscall(SYS_MMAP, (int) addr, (int) size, 0);
 }
 
 

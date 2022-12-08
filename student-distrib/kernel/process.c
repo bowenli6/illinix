@@ -233,7 +233,7 @@ void do_exit(uint32_t status) {
 
     /* if it has children runnable/sleeping */
     if (child->n_children) {
-        /* leave its children to init */
+        /* leave its children to its parent's parnent */
         place_children(child);
     }
     
@@ -735,8 +735,9 @@ static inline void place_children(thread_t *task) {
     int i;
 
     for (i = 0; i < task->n_children; ++i) {
-        overflow_children(init);
-        init->children[init->n_children++] = task->children[i];
+        overflow_children(task->parent);
+        task->parent->children[init->n_children++] = task->children[i];
+        task->children[i]->parent = task->parent;
     }
 }
 
