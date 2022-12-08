@@ -29,7 +29,7 @@ asmlinkage int32_t sys_execve(const int8_t *pathname, int8_t *const argv[]);
 asmlinkage int32_t sys_getpid(void);
 asmlinkage void   *sys_sbrk(uint32_t size);
 asmlinkage int32_t sys_mmap(void *addr, uint32_t size);
-asmlinkage int32_t sys_munmap(void *addr, uint32_t size);
+asmlinkage int32_t sys_munmap(void *addr);
 
 
 /* --------------------------------Process-------------------------------- */
