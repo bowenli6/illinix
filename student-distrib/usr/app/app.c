@@ -75,23 +75,12 @@ static inline int32_t list_empty(list_head *head) {
 
 
 int main(void) {
-    struct value v;
-    v.a = 1;
-    v.b = 2;
-
-    struct value *x;
-
-    list_head head;
-    head.next = &head;
-    head.prev = &head;
-
-    list_add_tail(&v.node, &head);
-
-    list_head *node = head.next;
-
-    x = list_entry(node, struct value, node);
-    printf("%d\n", x->a);
-    printf("%d\n", x->b);
-
-    return 0;
+   printf("L0\n");
+    if (fork() != 0) {
+        printf("L1\n");
+        if (fork() != 0) {
+            printf("L2\n");
+        }
+    }
+    printf("Bye\n");
 }   

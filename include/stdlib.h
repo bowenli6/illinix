@@ -8,4 +8,7 @@ void *calloc(size_t nmemb, size_t size);
 void *realloc(void *ptr, size_t size);
 void free(void *ptr);
 
+void exit(int status);
+pid_t Fork(void);
+
 #endif /* _STDLIB_H_ */

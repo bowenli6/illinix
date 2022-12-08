@@ -327,3 +327,19 @@ static void transferring_data(void *src, void *dst, size_t size) {
         ((char*)dst)[i] = ((char*)src)[i];
     }
 }
+
+
+
+void exit(int status) {
+    _exit(status);
+}
+
+
+pid_t Fork(void) {
+    pid_t pid;
+    if ((pid = fork()) < 0) {
+        fputs(stdout, "Fork error");
+        exit(1);
+    }
+    return pid;
+}

@@ -1,6 +1,13 @@
 #include <unistd.h>
 #include <stdio.h>
 
+/**
+ * @expected:
+ * Hello from parent!
+ * Hello from child!
+ * Fork success!
+ * Fork success!
+ */
 int main(void) {
     pid_t pid;
 
