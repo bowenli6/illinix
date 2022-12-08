@@ -183,18 +183,19 @@ static inline void terminal_switch(uint32_t scancode, terminal_t *terminal, int 
 
     terminal->alt = 0;
     
+    memcpy((void*)video_mem, (void*)next_terminal->saved_vidmem, VIDMEM_SIZE);
+
     if (next->state == UNUSED) {
         next->state = RUNNABLE;
         sched_fork(next);
         activate_task(next);
+        vga_clear(video_mem);
     } 
 
     if (next->state == SLEEPING) {
         next->state = RUNNABLE;
         enqueue_entity(&next->sched_info, 1);
     }   
-
-    memcpy((void*)video_mem, (void*)next_terminal->saved_vidmem, VIDMEM_SIZE);
     
     next_terminal->vidmem = video_mem;
 
