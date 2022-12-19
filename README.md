@@ -1,3 +1,64 @@
+Features
+========
+
+Required by ECE 391:
+---------
+
+Booting the OS image file with GRUB on x86
+
+Load and Initialize GDT, IDT, TSS, and Paging
+
+Programmable Interrupt Controller (PIC)
+
+Interrupt handling
+
+keyboard Driver
+
+Real-time Clock Driver
+
+Programmable Interval Timer 
+
+Terminal driver with VGA text-mode support
+
+Virtual Memory
+
+Filesystem Driver
+
+Virtual Filesystem
+
+System Calls
+
+Process Abstraction
+
+Real-time Scheduler (Round-Robin)
+
+Multitasking
+
+Extension
+---------
+Dynamic Memory Allocation
+
+1. Buddy System
+
+2. Slab Cache Allocation
+
+Memory Management
+
+1. Page Fault Handler
+
+2. sbrk
+
+3. mmap
+
+4. vmalloc
+
+Process Management
+
+1. fork / exit / exec
+
+2. Linux Completely Fair Scheduler
+
+
 LEGAL
 -----
 Permission to use, copy, modify, and distribute this software and its
@@ -18,21 +79,3 @@ MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE.  THE SOFTWARE
 PROVIDED HEREUNDER IS ON AN "AS IS" BASIS, AND NEITHER THE AUTHOR NOR
 THE UNIVERSITY OF ILLINOIS HAS ANY OBLIGATION TO PROVIDE MAINTENANCE,
 SUPPORT, UPDATES, ENHANCEMENTS, OR MODIFICATIONS."
-
-
-Features
-1. Kmalloc
-  a. Buddy system
-  b. Memory cache & Slab allocator
-  
-2. Memory Management
-  a. User physical memory malloc
-  b. User memmory map
-  c. Dynamically allocating heap(sbrk, mmap)
-  d. Page fault handler
- 
-3. Kmalloc managing data structure in kernel
-
-4. Process Managememnt
-5. Fork/Execv System calls
-6. Re-desigend the Linux CFS scheduler
