@@ -1,6 +1,9 @@
 # Illinix
+## 0 WARNING
+You SHOULD NOT copy any of source code from this repository into your own ECE 391 project without proper citation. ANY plagiarizing WILL cause a violation of academic integrity.
+
 ## 1 Introduction
-This project was initially designed as a team project for the ECE 391 Computer Systems Engineering course, with the aim of developing the core of a UNIX-like operating system. The basic requirements for the project included the core subsystems of the OS kernel, such as process management, virtual memory abstraction, scheduling, file system, and multiple device drivers. 
+This project was initially designed as a team project for the ECE 391 Computer Systems Engineering course, with the aim of developing the core of a UNIX-like operating system. The basic requirements for the project included the core subsystems of the OS kernel, including process management, virtual memory abstraction, scheduling, file system, and multiple device drivers. 
 
 Additionally, two of the kernel developers on the team went beyond the scope of the course project and expanded the kernel's features by adding a sophisticated multitasking scheduler, memory management subsystem, and more than ten system calls. As a result of the team's design and implementation efforts, we won the Operating System Design competition sponsored by Microsoft. 
 
