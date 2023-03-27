@@ -10,7 +10,7 @@ The goal of this project was to provide us with hands-on experience in developin
 This section describes how to build your new OS which will be embedded, together with the ``filesys.img``, in ``mp3.img``. 
 
 ### 2.1 Running with QEMU
-```qemu-system-i386 -hda "student-distrib/mp3.img" -m 512 -name test -gdb tcp:127.0.0.1:1234 -soundhw pcspk -soundhw sb16 -serial /dev/ttyUSB0```
+```qemu-system-i386 -hda "student-distrib/mp3.img" -m 256 -name test -gdb tcp:127.0.0.1:1234```
 ### 2.2 Debugging with QEMU
 Whenever a change is made to the kernel or file system, you need to ``sudo make`` a new kernel, which consequently prepares the ``mp3.img`` file which is used in the newly modified test debug.lnk file.
 
