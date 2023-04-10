@@ -210,6 +210,16 @@ The three routines provided by the file system module return -1 on failure, indi
 
 When successful, the first two calls fill in the dentry t block passed as their second argument with the file name, file type, and inode number for the file, then return 0. The last routine works much like the read system call, reading up to length bytes starting from position offset in the file with inode number inode and returning the number of bytes read and placed in the buffer. A return value of 0 thus indicates that the end of the file has been reached.
 
+Header files: 
+```
+student-distrib/include/drivers/fs.h
+```
+
+Source files:
+```
+student-distrib/drivers/fs.c
+```
+
 ### 4.6 VGA Text-Mode Driver
 
 The most used VGA video mode for a text UI is "VGA mode 3". This is the most commonly used, as it allows direct memory access to a linear address containing each character and its associated attributes. VGA mode 3 provides a text interface 80 characters wide and 25 characters lines per screen, although on modern computers Drawing In a Linear Framebuffer is preferrable, and often mandatory.
@@ -298,29 +308,89 @@ uint16_t get_cursor_position(void)
 }
 ```
 
-## 5 Virtual Memory 
+Header files: 
+```
+student-distrib/include/drivers/vga.h
+student-distrib/include/lib.h
+```
 
+Source files:
+```
+student-distrib/drivers/io.c
+student-distrib/lib/io.c
+```
 
-## 6 Process Management 
-### 6.1 Process Control Block
-### 6.2 ``fork`` 
-### 6.3 ``exit``
-### 6.4 ``execute`` && ``execv``
-### 6.5 Linux Completely Fair Scheduler (CFS)
+## 5 Virtual Filesystem ##
+Each task can have up to 8 open files. These open files are represented with a file array, stored in the process control block (PCB). The integer index into this array is called a file descriptor, and this integer is how user-level programs identify the open file.
 
-## 7 Memory Management
-### 7.1 Dynamic Memory Allocation
-### 7.2 Process Address Space
-### 7.3 Demand Paging
-### 7.4 Copy On Write
+This array should store a structure containing:
+1. The file operations jump table associated with the correct file type. This jump table should contain entries for open, read, write, and close to perform type-specific actions for each operation. open is used for performing type-specific initialization. For example, if we just open’d the RTC, the jump table pointer in this structure should store the RTC’s file operations table.
 
-## 8 System Calls
+2. The inode number for this file. This is only valid for data files, and should be 0 for directories and the RTC device file.
 
+3. A “file position” member that keeps track of where the user is currently reading from in the file. Every read system call should update this member.
 
+4. A “flags” member for, among other things, marking this file descriptor as “in-use.”
 
-## 9 C Standard Library
+<img width="493" alt="Screen Shot 2023-04-10 at 10 56 33" src="https://user-images.githubusercontent.com/58064743/230940476-c4d533ce-dbf9-4350-9cf0-b7882af84cc3.png">
 
-## 10 LEGAL
+When a process is started, the kernel should automatically open stdin and stdout, which correspond to file descrip- tors 0 and 1, respectively. stdin is a read-only file which corresponds to keyboard input. stdout is a write-only file corresponding to terminal output. “Opening” these files consists of storing appropriate jump tables in these two locations in the file array, and marking the files as in-use. For the remaining six file descriptors available, an entry in the file array is dynamically associated with the file being open’d whenever the open system call is made (return -1 if the array is full).
+
+Header files: 
+```
+student-distrib/include/vfs/vfs.h
+student-distrib/include/vfs/file.h
+```
+
+Source files:
+```
+student-distrib/kernel/vfs.c
+student-distrib/kernel/file.c
+```
+
+## 6 Virtual Memory 
+
+## 7 Process Management 
+
+Header files: 
+```
+student-distrib/include/pro/pid.h
+student-distrib/include/pro/process.h
+```
+
+Source files:
+```
+student-distrib/kernel/pid.c
+student-distrib/kernel/process.c
+```
+
+### 7.1 Process Control Block
+### 7.2 ``fork`` 
+### 7.3 ``exit``
+### 7.4 ``execute`` && ``execv``
+### 7.5 Linux Completely Fair Scheduler (CFS)
+
+Header files: 
+```
+student-distrib/include/pro/cfs.h
+```
+
+Source files:
+```
+student-distrib/kernel/cfs.c
+```
+
+## 8 Memory Management
+### 8.1 Dynamic Memory Allocation
+### 8.2 Process Address Space
+### 8.3 Demand Paging
+### 8.4 Copy On Write
+
+## 9 System Calls
+
+## 10 C Standard Library
+
+## 11 LEGAL
 Permission to use, copy, modify, and distribute this software and its
 documentation for any purpose, without fee, and without written agreement is
 hereby granted, provided that the above copyright notice and the following
