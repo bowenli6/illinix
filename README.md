@@ -350,6 +350,44 @@ student-distrib/kernel/file.c
 
 ## 6 Virtual Memory 
 
+The virtualization of DRAM uses the x86 segmentation and page tables.
+
+<img width="617" alt="Screen Shot 2023-04-10 at 13 35 22" src="https://user-images.githubusercontent.com/58064743/230969577-a83f5fdd-8b4c-444c-b82d-0f8cdf16abe8.png">
+
+Like the choice of Linux, Illinix also uses segmentation in a very limited way. In fact, segmentation and paging are somewhat redundant, because both can be used to separate the physical address spaces of processes: segmentation can assign a differ- ent linear address space to each process, while paging can map the same linear address space into different physical address spaces.
+
+The 32 bits of a linear address are divided into three fields:
+
+Directory: The most significant 10 bits
+
+Table: The intermediate 10 bits
+
+Offset: The least significant 12 bits
+
+The translation of linear addresses is accomplished in two steps, each based on a type of translation table. The first translation table is called the Page Directory, and the second is called the Page Table.
+
+The aim of this two-level scheme is to reduce the amount of RAM required for per- process Page Tables. If a simple one-level Page Table was used, then it would require up to 220 entries (i.e., at 4 bytes per entry, 4 MB of RAM) to represent the Page Table for each process (if the process used a full 4 GB linear address space), even though a process does not use all addresses in that range. The two-level scheme reduces the memory by requiring Page Tables only for those virtual memory regions actually used by a process.
+
+Each active process must have a Page Directory assigned to it. However, there is no need to allocate RAM for all Page Tables of a process at once; it is more efficient to allocate RAM for a Page Table only when the process effectively needs it.
+
+The physical address of the Page Directory in use is stored in a control register named cr3. The Directory field within the linear address determines the entry in the Page Directory that points to the proper Page Table. The address’s Table field, in turn, determines the entry in the Page Table that contains the physical address of the page frame containing the page. The Offset field determines the relative position within the page frame (see Figure 2-7). Because it is 12 bits long, each page consists of 4096 bytes of data.
+
+<img width="609" alt="Screen Shot 2023-04-10 at 13 48 34" src="https://user-images.githubusercontent.com/58064743/230993695-1e61877d-3334-4f14-885f-fadcb4be73b2.png">
+
+Header files: 
+
+```
+student-distrib/include/boot/page.h
+student-distrib/include/access.h
+
+```
+
+Source files:
+```
+student-distrib/kernel/vm.c
+student-distrib/kernel/access.c
+```
+
 ## 7 Process Management 
 
 The process manager is used for virtualizing the CPU. By running one
@@ -362,12 +400,14 @@ slowly if the CPU(s) must be shared.
 
 Header files: 
 ```
+student-distrib/include/access.h
 student-distrib/include/pro/pid.h
 student-distrib/include/pro/process.h
 ```
 
 Source files:
 ```
+student-distrib/kernel/access.c
 student-distrib/kernel/pid.c
 student-distrib/kernel/process.c
 ```
