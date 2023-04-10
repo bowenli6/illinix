@@ -352,6 +352,14 @@ student-distrib/kernel/file.c
 
 ## 7 Process Management 
 
+The process manager is used for virtualizing the CPU. By running one
+process, then stopping it and running another, and so forth, the OS can
+promote the illusion that many virtual CPUs exist when in fact there is
+only one physical CPU (or a few). This basic technique, known as time
+sharing of the CPU, allows users to run as many concurrent processes as
+they would like; the potential cost is performance, as each will run more
+slowly if the CPU(s) must be shared.
+
 Header files: 
 ```
 student-distrib/include/pro/pid.h
@@ -365,12 +373,120 @@ student-distrib/kernel/process.c
 ```
 
 ### 7.1 Process Control Block
+
+In illinix, each process uses 8KB memory, for both the kernel stack and the process descriptor entry.
+
+The structure called ``process_t``
+
+```
+/* two 4 KB pages containing both the process descriptor and the kernel stack. */
+typedef union {
+    thread_t thread;
+    uint32_t stack[KSTACK_SIZE];
+} process_t;
+```
+
+The PCB and then be split up to two different parts. The first part is the process descriptor entry for this process (``thread_t thread``) and the remaining part is the kernel stack.
+
+Each process descriptor entry has this structure:
+
+```
+/* define a thread that run as a process */
+typedef struct thread {
+    list_head          task_node;       /* a list of all tasks  */
+    list_head          wait_node;       /* a list of all sleeping tasks */
+    list_head          run_node;        /* a list of all runnable tasks */
+    volatile uint32_t  count;           /* time slice for a task */
+    sched_t            sched_info;      /* info used for scheduler */
+    volatile pro_state state;	        /* process state */
+    volatile uint8_t   flag;            /* process flag */
+    int32_t            argc;            /* number of arguments */
+    int8_t             **argv;          /* user command line argument */
+    pid_t              pid;             /* process id number */
+    struct thread      *parent;         /* parent process addr */
+    struct thread      **children;      /* child process addr */
+    uint64_t           n_children;      /* number of children */
+    uint64_t           max_children;    /* max number of children */
+    context_t          *context;        /* hardware context */
+    uint32_t           usreip;          /* user eip */
+    uint32_t           usresp;          /* user esp */
+    vmem_t             vm;              /* user virtual memory info */
+    files              *fds;            /* opened file descritors */
+    uint8_t            kthread;         /* 1 if this thread is belong to the kernel */
+    terminal_t         *terminal;       /* terminal for this thread */
+    uint32_t           console_id;      /* console for this thread */
+    int32_t            nice;            /* nice value */
+    uint8_t            **user_vidmap;
+} thread_t;
+```
+
 ### 7.2 ``fork`` 
+
+``fork`` is the most fundamental interface for users to create a new process. The calling process is called the parent process and the created process is called the child process. Child process share the same address space and file descriptors with the parent until either the parent or the child attempts to modify a page, then the memory manager will copy this page and make the new page writable. This technique is called Copy on Write (COW).
+
+The workflows of ``fork``:
+
+```
+fork -> sys_fork -> 
+ *    do_fork -> process_create
+ *            -> process_clone
+ *            -> sched_fork -> enqueue_task -> check_preempt_new
+ *            -> return child's pid
+```
+
+The order of executions of parent and child processes is decided by the scheduler.
+
 ### 7.3 ``exit``
+
+When the main function returns, or a process calls ``exit``, this process will be terminated and the reserved resources will be deallocated by the kernel. 
+
+``exit`` will yield the CPU when it returns and let the schedler to decide the next running process.
+
 ### 7.4 ``execute`` && ``execv``
+
+```execute``` is the plain way to create a new process without sharing the resource with the parent, the child process will start running the given program immediately.
+
+``execv`` is often called after a ``fork``, to replace the current program image to the new one.
+
 ### 7.5 Linux Completely Fair Scheduler (CFS)
 
+CFS stands for "Completely Fair Scheduler," and is the new "desktop" process
+scheduler implemented by Ingo Molnar and merged in Linux 2.6.23.  It is the
+eplacement for the previous vanilla scheduler's SCHED_OTHER interactivity
+code.
+ 
+80% of CFS's design can be summed up in a single sentence: CFS basically models
+an "ideal, precise multi-tasking CPU" on real hardware.
+"Ideal multi-tasking CPU" is a (non-existent  :-)) CPU that has 100% physical
+power and which can run each task at precise equal speed, in parallel, each at
+1/nr_running speed.  For example: if there are 2 tasks running, then it runs
+each at 50% physical power --- i.e., actually in parallel.
+
+On real hardware, we can run only a single task at once, so we have to
+introduce the concept of "virtual runtime."  The virtual runtime of a task
+specifies when its next timeslice would start execution on the ideal
+multi-tasking CPU described above.  In practice, the virtual runtime of a task
+is its actual runtime normalized to the total number of running tasks.
+
+In CFS the virtual runtime is expressed and tracked via the per-task p->se.vruntime (nanosec-unit) value. This way, it's possible to accurately timestamp and measure the "expected CPU time" a task should have gotten.
+
+Small detail: on "ideal" hardware, at any time all tasks would have the same p->se.vruntime value --- i.e., tasks would execute simultaneously and no task would ever get "out of balance" from the "ideal" share of CPU time.
+CFS's task picking logic is based on this p->se.vruntime value and it is thus very simple: it always tries to run the task with the smallest p->se.vruntime value (i.e., the task which executed least so far). CFS always tries to split up CPU time between runnable tasks as close to "ideal multitasking hardware" as possible.
+
+Most of the rest of CFS's design just falls out of this really simple concept, with a few add-on embellishments like nice levels, multiprocessing and various algorithm variants to recognize sleepers.
+
+CFS's design is quite radical: it does not use the old data structures for the runqueues, but it uses a time-ordered rbtree to build a "timeline" of future task execution, and thus has no "array switch" artifacts (by which both the previous vanilla scheduler and RSDL/SD are affected).
+
+CFS also maintains the rq->cfs.min_vruntime value, which is a monotonic increasing value tracking the smallest vruntime among all tasks in the runqueue. The total amount of work done by the system is tracked using min_vruntime; that value is used to place newly activated entities on the left side of the tree as much as possible.
+
+The total number of running tasks in the runqueue is accounted through the rq->cfs.load value, which is the sum of the weights of the tasks queued on the runqueue.
+
+CFS maintains a time-ordered rbtree, where all runnable tasks are sorted by the p->se.vruntime key. CFS picks the "leftmost" task from this tree and sticks to it. As the system progresses forwards, the executed tasks are put into the tree more and more to the right --- slowly but surely giving a chance for every task to become the "leftmost task" and thus get on the CPU within a deterministic amount of time.
+
+Summing up, CFS works like this: it runs a task a bit, and when the task schedules (or a scheduler tick happens) the task's CPU usage is "accounted for": the (small) time it just spent using the physical CPU is added to p->se.vruntime. Once p->se.vruntime gets high enough so that another task becomes the "leftmost task" of the time-ordered rbtree it maintains (plus a small amount of "granularity" distance relative to the leftmost task so that we do not over-schedule tasks and trash the cache), then the new leftmost task is picked and the current task is preempted.
+
 Header files: 
+
 ```
 student-distrib/include/pro/cfs.h
 ```
